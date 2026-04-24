@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>محفظتي V6 — مركز إدارة الالتزامات</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="assets/css/main.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+    <div class="app-wrapper">
+        <aside class="sidebar glass">
+            <a href="index.html" class="sidebar-logo"><i class="bi bi-wallet2"></i> محفظتي</a>
+            <nav class="nav-menu">
+                <li class="nav-item"><a href="#" class="nav-link active" onclick="switchTab('dashboard')"><i class="bi bi-grid-fill"></i> الرئيسية</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" onclick="switchTab('expenses')"><i class="bi bi-arrow-down-circle"></i> المصروفات</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" onclick="switchTab('incomes')"><i class="bi bi-arrow-up-circle"></i> الدخل</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" onclick="switchTab('loans')"><i class="bi bi-bank"></i> مركز القروض</a></li>
+                <li class="nav-item"><a href="#" class="nav-link" onclick="switchTab('cards')"><i class="bi bi-credit-card"></i> مركز البطاقات Pro</a></li>
+            </nav>
+            <button class="btn btn-ghost" onclick="FinanceCore.resetAll()" style="width: 100%; justify-content: center;"><i class="bi bi-trash"></i> مسح البيانات</button>
+        </aside>
+        <main class="main-viewport" id="app-viewport"></main>
+    </div>
+
+    <div id="modals-container">
+        <!-- 3) تسجيل عملية شراء (Updated with Interest Options) -->
+        <div class="modal-overlay" id="modal-card-txn">
+            <div class="glass modal-content" style="max-width: 550px;">
+                <h2>تسجيل عملية شراء</h2>
+                <form id="card-txn-form">
+                    <div class="form-group"><label>اسم التاجر</label><input type="text" id="txn-merchant" class="input-control" placeholder="Amazon, Carrefour..." required></div>
+                    <div class="grid-2" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem; margin:1rem 0;">
+                        <div class="form-group"><label>المبلغ</label><input type="number" id="txn-amount" class="input-control" required></div>
+                        <div class="form-group"><label>التاريخ</label><input type="date" id="txn-date" class="input-control" required></div>
+                    </div>
+                    <div class="form-group"><label>الفئة</label>
+                        <select id="txn-cat" class="input-control">
+                            <option>إلكترونيات</option><option>ملابس</option><option>سوبر ماركت</option><option>أثاث</option><option>أخرى</option>
+                        </select>
+                    </div>
+
+                    <!-- قسم التقسيط المتقدم -->
+                    <div class="glass" style="padding:1.2rem; margin:1.2rem 0; border: 1px solid rgba(255,255,255,0.1);">
+                        <label style="display:flex; align-items:center; gap:0.5rem; cursor:pointer; margin-bottom:1rem;">
+                            <input type="checkbox" id="txn-is-inst">
+                            <strong>تحويل لعملية تقسيط (بفائدة)</strong>
+                        </label>
+                        
+                        <div id="txn-inst-pro-fields" style="display:grid; grid-template-columns: 1fr 1fr; gap:1rem;">
+                            <div class="form-group"><label>عدد الأقساط</label><input type="number" id="txn-months" class="input-control" value="6" min="2"></div>
+                            <div class="form-group"><label>نسبة الفائدة (%)</label><input type="number" id="txn-rate" class="input-control" value="0" step="0.1"></div>
+                            <div class="form-group" style="grid-column: span 2;">
+                                <label>نوع الفائدة</label>
+                                <select id="txn-type" class="input-control">
+                                    <option value="flat">فائدة ثابتة (تضاف مرة واحدة)</option>
+                                    <option value="reducing">فائدة متناقصة (تحسب على المتبقي)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 mt-2">تسجيل العملية</button>
+                    <button type="button" class="btn btn-ghost w-100 mt-1" onclick="hideModal('card-txn')">إلغاء</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Remaining Modals (Pro Card, Payment, etc.) -->
+        <div class="modal-overlay" id="modal-card-pro"><div class="glass modal-content">...</div></div>
+        <div class="modal-overlay" id="modal-card-pay-pro"><div class="glass modal-content">...</div></div>
+    </div>
+
+    <script src="assets/js/core.js"></script>
+    <script src="assets/js/ui.js"></script>
+</body>
+</html>
