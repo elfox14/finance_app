@@ -5,6 +5,7 @@ import Layout from './components/Layout';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
+import Expenses from './pages/Expenses';
 
 function App() {
   return (
@@ -14,7 +15,6 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* جميع الصفحات المحمية ستكون داخل الـ Layout */}
           <Route path="/" element={
             <ProtectedRoute>
               <Layout>
@@ -23,8 +23,7 @@ function App() {
             </ProtectedRoute>
           } />
 
-          {/* إضافة مسارات فارغة للصفحات الأخرى لتجنب الخطأ حالياً */}
-          <Route path="/expenses" element={<ProtectedRoute><Layout><div className="text-white">قريباً: صفحة المصروفات</div></Layout></ProtectedRoute>} />
+          <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
           <Route path="/incomes" element={<ProtectedRoute><Layout><div className="text-white">قريباً: صفحة المدخولات</div></Layout></ProtectedRoute>} />
           <Route path="/cards" element={<ProtectedRoute><Layout><div className="text-white">قريباً: مركز البطاقات</div></Layout></ProtectedRoute>} />
           <Route path="/loans" element={<ProtectedRoute><Layout><div className="text-white">قريباً: مركز القروض</div></Layout></ProtectedRoute>} />
