@@ -38,7 +38,8 @@ const Expenses = () => {
             setNote('');
             fetchExpenses();
         } catch (err) {
-            alert('حدث خطأ أثناء الإضافة');
+            const errorMsg = err.response?.data?.message || 'حدث خطأ أثناء الإضافة';
+            alert(errorMsg);
         } finally {
             setLoading(false);
         }
