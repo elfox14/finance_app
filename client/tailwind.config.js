@@ -6,9 +6,12 @@ export default {
   ],
   theme: {
     extend: {
-      fontFamily: {
-        cairo: ['Cairo', 'sans-serif'],
-      },
+      colors: {
+        primary: "#3b82f6",
+        secondary: "#64748b",
+        accent: "#10b981",
+        danger: "#ef4444",
+      }
     },
   },
   plugins: [],
