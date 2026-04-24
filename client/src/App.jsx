@@ -7,7 +7,7 @@ import Dashboard from './pages/Dashboard';
 function App() {
   return (
     <AuthProvider>
-      <Router>
+      <Router basename="/fin"> {/* هذا السطر يخبر التطبيق أنه يبدأ من مجلد /fin */}
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/" element={
