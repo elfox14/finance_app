@@ -19,8 +19,8 @@ const Login = () => {
     };
 
     return (
-        <div className="min-height-screen flex items-center justify-center bg-slate-950 p-6" dir="rtl">
-            <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl">
+        <div className="min-h-screen flex items-center justify-center bg-slate-950 p-6" dir="rtl">
+            <div className="w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-3xl shadow-2xl z-10">
                 <h2 className="text-3xl font-bold text-white text-center mb-8">تسجيل الدخول</h2>
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
