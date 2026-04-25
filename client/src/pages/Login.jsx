@@ -21,8 +21,8 @@ const Login = () => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-4">
             <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-8 shadow-2xl" dir="rtl">
-                <h2 className="text-2xl font-bold text-white text-center mb-6">نظام الإدارة المالية</h2>
-                <p className="text-center text-slate-400 mb-8">سجل دخولك للمتابعة</p>
+                <h2 className="text-3xl font-black text-white text-center mb-2">جيبي 💰</h2>
+                <p className="text-center text-slate-400 mb-8">نظامك المالي الذكي في جيبك</p>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input 
                         type="email" 

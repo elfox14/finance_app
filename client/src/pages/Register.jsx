@@ -22,7 +22,7 @@ const Register = () => {
     return (
         <div className="flex flex-col items-center justify-center min-h-screen bg-slate-950 p-4" dir="rtl">
             <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl p-8 shadow-2xl">
-                <h2 className="text-2xl font-bold text-white text-center mb-6">إنشاء حساب جديد</h2>
+                <h2 className="text-3xl font-black text-white text-center mb-6">جيبي 💰</h2>
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <input 
                         type="text" 

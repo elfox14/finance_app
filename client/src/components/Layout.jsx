@@ -47,8 +47,8 @@ const Layout = ({ children }) => {
             {/* Mobile Header */}
             <header className="lg:hidden bg-slate-900/50 backdrop-blur-md border-b border-slate-800 p-4 sticky top-0 z-50 flex justify-between items-center">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">M</div>
-                    <span className="font-bold text-white tracking-tight">محفظتي Pro</span>
+                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">ج</div>
+                    <span className="font-bold text-white tracking-tight">جيبي</span>
                 </div>
                 <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} className="p-2 bg-slate-800 rounded-lg text-white">
                     {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -63,8 +63,8 @@ const Layout = ({ children }) => {
                 `}>
                     <div className="h-full flex flex-col p-6">
                         <div className="hidden lg:flex items-center gap-3 mb-10 px-2">
-                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-900/20">M</div>
-                            <span className="font-black text-xl text-white tracking-tighter">محفظتي Pro</span>
+                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-black text-xl shadow-lg shadow-blue-900/20">ج</div>
+                            <span className="font-black text-xl text-white tracking-tighter">جيبي</span>
                         </div>
 
                         <nav className="flex-1 space-y-1 overflow-y-auto custom-scrollbar">
