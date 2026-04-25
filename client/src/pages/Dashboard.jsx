@@ -46,115 +46,104 @@ const Dashboard = () => {
         return 'text-red-500';
     };
 
+    const TopStatItem = ({ label, val, colorClass }) => (
+        <div className="flex-shrink-0 w-32 md:w-auto md:flex-1 text-center border-l border-slate-800 last:border-0 px-2">
+            <p className={`text-[9px] md:text-[10px] font-bold mb-1 ${colorClass}`}>{label}</p>
+            <p className="text-xs md:text-sm font-black text-white">{val.toLocaleString()}</p>
+        </div>
+    );
+
     return (
-        <div className="space-y-8 fade-in text-right pb-20" dir="rtl">
-            {/* 🚀 Strategic Top Bar */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 bg-slate-900/50 p-6 rounded-[2.5rem] border border-slate-800 shadow-xl backdrop-blur-md sticky top-0 z-50">
-                <div className="text-center border-l border-slate-800 last:border-0">
-                    <p className="text-[10px] text-slate-500 font-bold mb-1">الرصيد الحالي</p>
-                    <p className="text-sm font-black text-white">{stats?.topStats.currentBalance.toLocaleString()}</p>
-                </div>
-                <div className="text-center border-l border-slate-800 last:border-0">
-                    <p className="text-[10px] text-indigo-400 font-bold mb-1">الرصيد المتاح</p>
-                    <p className="text-sm font-black text-white">{stats?.topStats.availableBalance.toLocaleString()}</p>
-                </div>
-                <div className="text-center border-l border-slate-800 last:border-0">
-                    <p className="text-[10px] text-red-400 font-bold mb-1">التزامات 30 يوم</p>
-                    <p className="text-sm font-black text-white">{stats?.topStats.total30DayObligations.toLocaleString()}</p>
-                </div>
-                <div className="text-center border-l border-slate-800 last:border-0">
-                    <p className="text-[10px] text-emerald-400 font-bold mb-1">الدخل المتوقع</p>
-                    <p className="text-sm font-black text-white">{stats?.topStats.expectedIncome.toLocaleString()}</p>
-                </div>
-                <div className="text-center border-l border-slate-800 last:border-0">
-                    <p className="text-[10px] text-orange-400 font-bold mb-1">المصروف المتوقع</p>
-                    <p className="text-sm font-black text-white">{stats?.topStats.expectedExpense.toLocaleString()}</p>
-                </div>
-                <div className="text-center">
-                    <p className="text-[10px] text-slate-500 font-bold mb-1">مؤشر الصحة المالية</p>
-                    <div className={`flex items-center justify-center gap-1 font-black text-sm ${getHealthColor(stats?.topStats.healthScore)}`}>
-                        <Activity size={14} /> {stats?.topStats.healthScore}%
+        <div className="space-y-6 md:space-y-8 fade-in text-right pb-20" dir="rtl">
+            {/* 🚀 Strategic Top Bar - Horizontal Scroll on Mobile */}
+            <div className="flex overflow-x-auto md:grid md:grid-cols-6 gap-2 md:gap-4 bg-slate-900/50 p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] border border-slate-800 shadow-xl backdrop-blur-md sticky top-0 md:top-0 z-50 no-scrollbar">
+                <TopStatItem label="الرصيد الحالي" val={stats?.topStats.currentBalance} colorClass="text-slate-500" />
+                <TopStatItem label="الرصيد المتاح" val={stats?.topStats.availableBalance} colorClass="text-indigo-400" />
+                <TopStatItem label="التزامات 30 يوم" val={stats?.topStats.total30DayObligations} colorClass="text-red-400" />
+                <TopStatItem label="الدخل المتوقع" val={stats?.topStats.expectedIncome} colorClass="text-emerald-400" />
+                <TopStatItem label="المصروف المتوقع" val={stats?.topStats.expectedExpense} colorClass="text-orange-400" />
+                <div className="flex-shrink-0 w-32 md:w-auto md:flex-1 text-center px-2">
+                    <p className="text-[9px] md:text-[10px] text-slate-500 font-bold mb-1">مؤشر الصحة</p>
+                    <div className={`flex items-center justify-center gap-1 font-black text-xs md:text-sm ${getHealthColor(stats?.topStats.healthScore)}`}>
+                        <Activity size={12} /> {stats?.topStats.healthScore}%
                     </div>
                 </div>
             </div>
 
-            <header>
-                <h1 className="text-3xl font-black text-white">لوحة القيادة الذكية</h1>
-                <p className="text-slate-500 text-sm mt-1">تحليل شامل للتدفقات النقدية والالتزامات</p>
+            <header className="px-2 md:px-0">
+                <h1 className="text-2xl md:text-3xl font-black text-white italic">لوحة القيادة الذكية</h1>
+                <p className="text-slate-500 text-xs md:text-sm mt-1 font-medium">تحليل شامل وموحد كما في نسخة الكمبيوتر</p>
             </header>
 
             {/* Main Indicators Section */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
                 {/* Health Gauge Card */}
-                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col items-center justify-center text-center">
-                    <div className="relative w-48 h-48 flex items-center justify-center">
+                <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl md:rounded-[3rem] shadow-2xl flex flex-col items-center justify-center text-center">
+                    <div className="relative w-32 h-32 md:w-48 md:h-48 flex items-center justify-center">
                         <svg className="w-full h-full -rotate-90">
-                            <circle cx="96" cy="96" r="80" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-800" />
-                            <circle cx="96" cy="96" r="80" stroke="currentColor" strokeWidth="12" fill="transparent" className={getHealthColor(stats?.topStats.healthScore)} strokeDasharray={502} strokeDashoffset={502 - (502 * stats?.topStats.healthScore) / 100} strokeLinecap="round" />
+                            <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800 md:cx-[96] md:cy-[96] md:r-[80] md:stroke-width-[12]" />
+                            <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className={getHealthColor(stats?.topStats.healthScore)} strokeDasharray={352} strokeDashoffset={352 - (352 * stats?.topStats.healthScore) / 100} strokeLinecap="round" className="md:cx-[96] md:cy-[96] md:r-[80] md:stroke-width-[12]" />
                         </svg>
                         <div className="absolute">
-                            <p className={`text-5xl font-black ${getHealthColor(stats?.topStats.healthScore)}`}>{stats?.topStats.healthScore}</p>
-                            <p className="text-[10px] text-slate-500 font-bold uppercase">درجة الأمان</p>
+                            <p className={`text-3xl md:text-5xl font-black ${getHealthColor(stats?.topStats.healthScore)}`}>{stats?.topStats.healthScore}</p>
+                            <p className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase">الدرجة</p>
                         </div>
                     </div>
-                    <div className="mt-6">
-                        <p className="text-white font-bold">وضعك المالي حالياً {stats?.topStats.healthScore > 70 ? 'ممتاز' : stats?.topStats.healthScore > 40 ? 'مستقر' : 'يحتاج انتباه'}</p>
-                        <p className="text-xs text-slate-500 mt-2">مبني على الالتزامات، الادخار، والتأخيرات</p>
+                    <div className="mt-4 md:mt-6">
+                        <p className="text-white font-bold text-sm md:text-base">وضعك المالي {stats?.topStats.healthScore > 70 ? 'ممتاز' : 'مستقر'}</p>
+                        <p className="text-[10px] text-slate-500 mt-1">مبني على 4 معايير محاسبية</p>
                     </div>
                 </div>
 
                 {/* Indicators List */}
-                <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-xl">
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-2xl"><TrendingUp size={24} /></div>
-                            <span className="text-xs text-slate-500 font-bold">SAVINGS</span>
+                <div className="lg:col-span-2 grid grid-cols-2 gap-4 md:gap-6">
+                    <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl">
+                        <div className="flex justify-between items-center mb-3 md:mb-4">
+                            <div className="p-2 md:p-3 bg-emerald-500/10 text-emerald-500 rounded-xl md:rounded-2xl"><TrendingUp size={20} /></div>
                         </div>
-                        <p className="text-slate-500 text-xs mb-1">معدل الادخار الفعلي</p>
-                        <p className="text-3xl font-black text-white">{stats?.indicators.savingsRate}%</p>
+                        <p className="text-slate-500 text-[9px] md:text-xs mb-1 font-bold">الادخار</p>
+                        <p className="text-xl md:text-3xl font-black text-white">{stats?.indicators.savingsRate}%</p>
                     </div>
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-xl">
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="p-3 bg-red-500/10 text-red-500 rounded-2xl"><AlertCircle size={24} /></div>
-                            <span className="text-xs text-slate-500 font-bold">DEBT BURDEN</span>
+                    <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl">
+                        <div className="flex justify-between items-center mb-3 md:mb-4">
+                            <div className="p-2 md:p-3 bg-red-500/10 text-red-500 rounded-xl md:rounded-2xl"><AlertCircle size={20} /></div>
                         </div>
-                        <p className="text-slate-500 text-xs mb-1">نسبة الالتزام للدخل</p>
-                        <p className="text-3xl font-black text-white">{stats?.indicators.debtToIncomeRatio}%</p>
+                        <p className="text-slate-500 text-[9px] md:text-xs mb-1 font-bold">الديون</p>
+                        <p className="text-xl md:text-3xl font-black text-white">{stats?.indicators.debtToIncomeRatio}%</p>
                     </div>
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-xl col-span-1 md:col-span-2 flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <div className={`p-4 rounded-2xl ${stats?.indicators.hasOverdue ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                <ShieldCheck size={32} />
+                    <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl col-span-2 flex items-center justify-between">
+                        <div className="flex items-center gap-3 md:gap-4">
+                            <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl ${stats?.indicators.hasOverdue ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                <ShieldCheck size={24} md:size={32} />
                             </div>
                             <div>
-                                <h4 className="text-xl font-bold text-white">{stats?.indicators.hasOverdue ? 'تنبيه: توجد متأخرات سداد' : 'سجل سداد نظيف'}</h4>
-                                <p className="text-xs text-slate-500 mt-1">{stats?.indicators.hasOverdue ? 'يرجى مراجعة قسم السلف والقروض فوراً' : 'أنت ملتزم تماماً بمواعيد السداد'}</p>
+                                <h4 className="text-sm md:text-xl font-bold text-white">{stats?.indicators.hasOverdue ? 'متأخرات قائمة' : 'سجل نظيف'}</h4>
+                                <p className="text-[9px] md:text-xs text-slate-500 mt-0.5">التزام كامل بالمواعيد</p>
                             </div>
                         </div>
-                        <ArrowRight className="text-slate-700" />
+                        <ArrowRight className="text-slate-700" size={16} />
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Expense Chart */}
-                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-xl h-80">
-                    <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
-                        <PieIcon size={20} className="text-blue-500" /> توزيع المصروفات
+            {/* Same as Desktop Grid for lower sections */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
+                <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl">
+                    <h3 className="text-base md:text-lg font-bold text-white mb-6 flex items-center gap-2">
+                        <PieIcon size={18} className="text-blue-500" /> توزيع المصاريف
                     </h3>
-                    <div className="h-48 flex justify-center">
-                        <Pie data={distributionData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#64748b' } } } }} />
+                    <div className="h-48 md:h-56 flex justify-center">
+                        <Pie data={distributionData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 9 } } } } }} />
                     </div>
                 </div>
 
-                {/* Recent Activities */}
-                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-xl">
-                    <h3 className="text-lg font-bold text-white mb-6">آخر النشاطات</h3>
-                    <div className="space-y-4">
+                <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl">
+                    <h3 className="text-base md:text-lg font-bold text-white mb-6">أحدث الحركات</h3>
+                    <div className="space-y-3">
                         {stats?.recentActions.map((action, i) => (
-                            <div key={i} className="flex justify-between items-center p-3 bg-slate-800/30 rounded-2xl">
-                                <span className="text-sm font-bold text-white">{action.source || action.note}</span>
-                                <span className={`font-black ${action.source ? 'text-emerald-500' : 'text-red-500'}`}>
+                            <div key={i} className="flex justify-between items-center p-3 bg-slate-800/30 rounded-xl md:rounded-2xl border border-slate-800/50">
+                                <span className="text-xs md:text-sm font-bold text-white truncate max-w-[150px]">{action.source || action.note}</span>
+                                <span className={`text-xs md:text-sm font-black ${action.source ? 'text-emerald-500' : 'text-red-500'}`}>
                                     {action.source ? '+' : '-'}{action.amount.toLocaleString()}
                                 </span>
                             </div>
