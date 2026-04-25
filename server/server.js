@@ -27,9 +27,11 @@ app.get('/', (req, res) => res.send('Smart Finance System API is running...'));
 
 // Error Middleware
 app.use((err, req, res, next) => {
+    console.error('🔥 Server Error:', err.stack);
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
     res.status(statusCode).json({
         message: err.message,
+        success: false,
         stack: process.env.NODE_ENV === 'production' ? null : err.stack,
     });
 });

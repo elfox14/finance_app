@@ -5,6 +5,7 @@ import { Wallet, TrendingDown, Landmark, PiggyBank, History } from 'lucide-react
 
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
+    const [error, setError] = useState(null);
     const { user } = useAuth();
 
     useEffect(() => {
@@ -16,11 +17,13 @@ const Dashboard = () => {
                 setStats(res.data);
             } catch (err) {
                 console.error(err);
+                setError(err.response?.data?.message || 'فشل تحميل البيانات من السيرفر');
             }
         };
         fetchStats();
     }, [user.token]);
 
+    if (error) return <div className="text-red-500 text-center p-20 font-bold">{error}</div>;
     if (!stats) return (
         <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
