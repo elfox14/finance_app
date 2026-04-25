@@ -1,51 +1,40 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { FileBadge, Plus, Trash2, Calendar, Landmark, Edit2, X, TrendingUp } from 'lucide-react';
+import { 
+    Plus, Trash2, FileBadge, Calendar, 
+    ArrowUpCircle, Percent, AlertCircle, 
+    ChevronRight, X, LayoutGrid, Receipt, Edit2, Landmark
+} from 'lucide-react';
 
 const Certificates = () => {
     const [certs, setCerts] = useState([]);
-    const [form, setForm] = useState({
-        bankName: '', certificateType: '', principalAmount: '', interestRate: '', durationMonths: '', startDate: ''
+    const [loading, setLoading] = useState(true);
+    const [form, setForm] = useState({ 
+        bankName: '', 
+        amount: '', 
+        interestRate: '', 
+        durationMonths: '', 
+        purchaseDate: new Date().toISOString().split('T')[0],
+        payoutType: 'monthly' 
     });
-    const [loading, setLoading] = useState(false);
-    const [editingId, setEditingId] = useState(null);
 
     const fetchCerts = async () => {
         try {
             const res = await api.get('/certificates');
             setCerts(res.data);
         } catch (err) { console.error(err); }
+        finally { setLoading(false); }
     };
 
     useEffect(() => { fetchCerts(); }, []);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
         try {
-            if (editingId) {
-                await api.put(`/certificates/${editingId}`, form);
-                setEditingId(null);
-            } else {
-                await api.post('/certificates', form);
-            }
-            setForm({ bankName: '', certificateType: '', principalAmount: '', interestRate: '', durationMonths: '', startDate: '' });
+            await api.post('/certificates', form);
+            setForm({ bankName: '', amount: '', interestRate: '', durationMonths: '', purchaseDate: new Date().toISOString().split('T')[0], payoutType: 'monthly' });
             fetchCerts();
-        } catch (err) { alert('حدث خطأ أثناء الحفظ'); }
-        finally { setLoading(false); }
-    };
-
-    const handleEdit = (cert) => {
-        setEditingId(cert._id);
-        setForm({
-            bankName: cert.bankName,
-            certificateType: cert.certificateType,
-            principalAmount: cert.principalAmount,
-            interestRate: cert.interestRate,
-            durationMonths: cert.durationMonths,
-            startDate: cert.startDate?.split('T')[0] || ''
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+        } catch (err) { alert('خطأ في الإضافة'); }
     };
 
     const handleDelete = async (id) => {
@@ -56,60 +45,80 @@ const Certificates = () => {
         } catch (err) { alert('خطأ في الحذف'); }
     };
 
+    if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>;
+
     return (
-        <div className="space-y-8 fade-in" dir="rtl">
-            <h1 className="text-3xl font-bold text-white">إدارة الشهادات الادخارية</h1>
+        <div className="space-y-8 fade-in text-right pb-20" dir="rtl">
+            <h1 className="text-3xl font-black text-white italic">إدارة الشهادات والودائع</h1>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className={`p-8 rounded-3xl border shadow-xl h-fit transition-all ${editingId ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}`}>
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold flex items-center gap-2 text-white">
-                            {editingId ? <Edit2 className="text-indigo-400" /> : <FileBadge className="text-blue-500" />}
-                            {editingId ? 'تعديل الشهادة' : 'إضافة شهادة جديدة'}
-                        </h3>
-                        {editingId && (
-                            <button onClick={() => {setEditingId(null); setForm({bankName:'', certificateType:'', principalAmount:'', interestRate:'', durationMonths:'', startDate:''});}} className="text-slate-500 hover:text-white"><X size={20}/></button>
-                        )}
-                    </div>
+                {/* Form Section */}
+                <div className="p-8 bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl h-fit">
+                    <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                        <Plus className="text-blue-500" /> إضافة شهادة جديدة
+                    </h3>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <input placeholder="اسم البنك" className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.bankName} onChange={e => setForm({...form, bankName: e.target.value})} required />
-                        <input placeholder="نوع الشهادة" className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.certificateType} onChange={e => setForm({...form, certificateType: e.target.value})} required />
+                        <input placeholder="اسم البنك" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.bankName} onChange={e => setForm({...form, bankName: e.target.value})} required />
                         <div className="grid grid-cols-2 gap-4">
-                            <input type="number" placeholder="المبلغ" className="bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.principalAmount} onChange={e => setForm({...form, principalAmount: e.target.value})} required />
-                            <input type="number" placeholder="الفائدة %" className="bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.interestRate} onChange={e => setForm({...form, interestRate: e.target.value})} required />
+                            <input type="number" placeholder="المبلغ" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required />
+                            <input type="number" step="0.01" placeholder="الفائدة %" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.interestRate} onChange={e => setForm({...form, interestRate: e.target.value})} required />
                         </div>
-                        <button type="submit" disabled={loading} className={`w-full font-bold py-4 rounded-xl shadow-lg ${editingId ? 'bg-indigo-600' : 'bg-blue-600'}`}>
-                            {loading ? 'جاري الحفظ...' : (editingId ? 'تحديث الشهادة' : 'حفظ الشهادة')}
-                        </button>
+                        <div className="grid grid-cols-2 gap-4">
+                            <input type="number" placeholder="المدة (شهور)" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.durationMonths} onChange={e => setForm({...form, durationMonths: e.target.value})} required />
+                            <select className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.payoutType} onChange={e => setForm({...form, payoutType: e.target.value})}>
+                                <option value="monthly">عائد شهري</option>
+                                <option value="quarterly">عائد ربع سنوي</option>
+                                <option value="annual">عائد سنوي</option>
+                                <option value="at_maturity">في نهاية المدة</option>
+                            </select>
+                        </div>
+                        <input type="date" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.purchaseDate} onChange={e => setForm({...form, purchaseDate: e.target.value})} />
+                        <button type="submit" className="w-full py-4 bg-blue-600 rounded-2xl font-black text-white shadow-lg">حفظ الشهادة</button>
                     </form>
                 </div>
 
+                {/* List Section - FIXING ACTIONS FOR MOBILE */}
                 <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6">
                     {certs.map((cert) => (
-                        <div key={cert._id} className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl hover:border-blue-500/30 transition-all group">
-                            <div className="flex justify-between items-start mb-6">
-                                <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center">
-                                        <FileBadge size={24} />
+                        <div key={cert._id} className="group relative bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] hover:border-blue-500/30 transition-all shadow-xl overflow-hidden">
+                            {/* Action Buttons: Always visible on Mobile, hover on Desktop */}
+                            <div className="absolute top-6 left-6 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-20">
+                                <button onClick={() => handleDelete(cert._id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors">
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+
+                            <div className="flex flex-col h-full space-y-6">
+                                <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 bg-blue-600/10 text-blue-500 rounded-2xl flex items-center justify-center">
+                                        <Landmark size={24} />
                                     </div>
                                     <div>
-                                        <h4 className="text-xl font-bold text-white">{cert.certificateType}</h4>
-                                        <p className="text-slate-500 text-sm">{cert.bankName}</p>
+                                        <h4 className="text-xl font-black text-white">{cert.bankName}</h4>
+                                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">{cert.payoutType === 'monthly' ? 'عائد شهري' : 'نظام عائد مختلف'}</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleEdit(cert)} className="text-slate-500 hover:text-blue-400"><Edit2 size={18} /></button>
-                                    <button onClick={() => handleDelete(cert._id)} className="text-slate-500 hover:text-red-500"><Trash2 size={18} /></button>
-                                </div>
-                            </div>
-                            <div className="flex justify-between items-end border-t border-slate-800 pt-4">
-                                <div>
-                                    <p className="text-slate-500 text-xs mb-1">المبلغ المودع</p>
-                                    <p className="text-xl font-bold text-emerald-400">{cert.principalAmount.toLocaleString()} ج.م</p>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-slate-500 text-xs mb-1">الفائدة</p>
-                                    <p className="text-lg font-bold text-blue-400">{cert.interestRate}%</p>
+
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-end">
+                                        <p className="text-2xl font-black text-white">{cert.amount.toLocaleString()} <span className="text-xs font-normal opacity-50">ج.م</span></p>
+                                        <div className="text-right">
+                                            <p className="text-xs font-black text-emerald-500">+{cert.interestRate}%</p>
+                                            <p className="text-[8px] text-slate-500 font-bold uppercase">الفائدة</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="p-4 bg-slate-800/50 rounded-2xl border border-slate-800 flex justify-between items-center">
+                                        <div className="text-center">
+                                            <p className="text-[8px] text-slate-500 mb-1">الربح الشهري التقريبي</p>
+                                            <p className="text-sm font-black text-white">{Math.round((cert.amount * (cert.interestRate/100)) / 12).toLocaleString()} ج.م</p>
+                                        </div>
+                                        <div className="w-px h-8 bg-slate-700"></div>
+                                        <div className="text-center">
+                                            <p className="text-[8px] text-slate-500 mb-1">المدة المتبقية</p>
+                                            <p className="text-sm font-black text-blue-400">{cert.durationMonths} شهر</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

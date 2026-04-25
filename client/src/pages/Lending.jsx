@@ -88,17 +88,24 @@ const Lending = () => {
                     </form>
                 </div>
 
-                {/* Ledger Cards */}
+                {/* Ledger Cards - FIXING ACTIONS FOR MOBILE */}
                 <div className="lg:col-span-2 space-y-6">
                     {debts.map((debt) => (
-                        <div key={debt._id} className={`p-8 rounded-[2.5rem] border transition-all relative overflow-hidden ${debt.isPaid ? 'bg-slate-900/50 border-slate-800 opacity-60' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
+                        <div key={debt._id} className={`group p-8 rounded-[2.5rem] border transition-all relative overflow-hidden ${debt.isPaid ? 'bg-slate-900/50 border-slate-800 opacity-60' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
                             {debt.analytics.delayDays > 0 && !debt.isPaid && (
                                 <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-black px-4 py-1 rounded-br-2xl">
                                     متأخر {debt.analytics.delayDays} يوم
                                 </div>
                             )}
                             
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                            {/* Action Buttons: Always visible on Mobile, hover on Desktop */}
+                            <div className="absolute top-6 left-6 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-20">
+                                <button onClick={() => handleDelete(debt._id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors">
+                                    <Trash2 size={18} />
+                                </button>
+                            </div>
+                            
+                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
                                 <div className="flex items-center gap-5">
                                     <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${debt.isPaid ? 'bg-emerald-500/20 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
                                         {debt.isPaid ? <CheckCircle2 size={28} /> : <User size={28} />}
@@ -146,7 +153,7 @@ const Lending = () => {
                 </div>
             </div>
 
-            {/* Partial Payment Modal */}
+            {/* Modal for Partial Payment */}
             {showPaymentModal && (
                 <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
                     <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl scale-in">

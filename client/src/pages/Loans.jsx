@@ -76,9 +76,12 @@ const Loans = () => {
 
             <div className="grid grid-cols-1 gap-10">
                 {loans.map((loan) => (
-                    <div key={loan._id} className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative group">
-                        <div className="absolute top-8 left-8 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                             <button onClick={() => handleDelete(loan._id)} className="text-slate-600 hover:text-red-500"><Trash2 size={18} /></button>
+                    <div key={loan._id} className="group relative bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden">
+                        {/* Action Buttons: Always visible on Mobile, hover on Desktop */}
+                        <div className="absolute top-8 left-8 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-20">
+                            <button onClick={() => handleDelete(loan._id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors">
+                                <Trash2 size={18} />
+                            </button>
                         </div>
                         
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center relative z-10">

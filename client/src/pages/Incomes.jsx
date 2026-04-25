@@ -1,194 +1,112 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { 
-    Plus, Trash2, Calendar, TrendingUp, DollarSign, 
-    Edit2, X, Wallet, Building2, Landmark, 
-    RefreshCcw, ShieldCheck, Timer
+    Plus, Trash2, Calendar, TrendingUp, 
+    Wallet, ArrowUpCircle, AlertCircle, 
+    ChevronRight, X, LayoutGrid, Receipt, Edit2
 } from 'lucide-react';
 
 const Incomes = () => {
     const [incomes, setIncomes] = useState([]);
     const [stats, setStats] = useState(null);
-    const [form, setForm] = useState({
-        amount: '', source: '', incomeType: 'ثابت', cashFlowType: 'محصل', 
-        isRecurring: false, recurringPeriod: 'لا يوجد', account: 'نقدي'
-    });
-    const [loading, setLoading] = useState(false);
-    const [editingId, setEditingId] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [form, setForm] = useState({ amount: '', source: '', date: new Date().toISOString().split('T')[0], note: '', incomeType: 'fixed', cashFlowType: 'received', account: 'cash' });
 
-    const fetchIncomes = async () => {
+    const fetchData = async () => {
         try {
             const res = await api.get('/incomes');
             setIncomes(res.data.incomes);
             setStats(res.data.stats);
         } catch (err) { console.error(err); }
-    };
-
-    useEffect(() => { fetchIncomes(); }, []);
-
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        try {
-            if (editingId) {
-                await api.put(`/incomes/${editingId}`, form);
-                setEditingId(null);
-            } else {
-                await api.post('/incomes', form);
-            }
-            setForm({ amount: '', source: '', incomeType: 'ثابت', cashFlowType: 'محصل', isRecurring: false, recurringPeriod: 'لا يوجد', account: 'نقدي' });
-            fetchIncomes();
-        } catch (err) { alert('حدث خطأ أثناء الحفظ'); }
         finally { setLoading(false); }
     };
 
-    const handleEdit = (item) => {
-        setEditingId(item._id);
-        setForm({
-            amount: item.amount,
-            source: item.source,
-            incomeType: item.incomeType,
-            cashFlowType: item.cashFlowType,
-            isRecurring: item.isRecurring,
-            recurringPeriod: item.recurringPeriod,
-            account: item.account
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+    useEffect(() => { fetchData(); }, []);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/incomes', form);
+            setForm({ amount: '', source: '', date: new Date().toISOString().split('T')[0], note: '', incomeType: 'fixed', cashFlowType: 'received', account: 'cash' });
+            fetchData();
+        } catch (err) { alert('خطأ في الحفظ'); }
     };
 
     const handleDelete = async (id) => {
-        if (!confirm('هل أنت متأكد؟')) return;
+        if (!confirm('هل أنت متأكد من الحذف؟')) return;
         try {
             await api.delete(`/incomes/${id}`);
-            fetchIncomes();
+            fetchData();
         } catch (err) { alert('خطأ في الحذف'); }
     };
 
+    if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>;
+
     return (
-        <div className="space-y-8 fade-in text-right" dir="rtl">
-            <h1 className="text-3xl font-bold text-white">إدارة التدفقات النقدية (المدخولات)</h1>
+        <div className="space-y-8 fade-in text-right pb-20" dir="rtl">
+            <h1 className="text-3xl font-black text-white">إدارة المدخولات والتدفقات النقدية</h1>
 
-            {/* Accounting Header Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-emerald-600 p-6 rounded-[2rem] text-white shadow-xl shadow-emerald-900/20">
-                    <div className="flex justify-between items-center mb-4">
-                        <ShieldCheck size={24} />
-                        <span className="text-[10px] bg-white/20 px-2 py-1 rounded-full uppercase tracking-widest font-bold">محصل فعلي</span>
-                    </div>
-                    <p className="text-emerald-100 text-xs mb-1">دخل محصل هذا الشهر</p>
-                    <p className="text-2xl font-black">{stats?.receivedThisMonth.toLocaleString()} ج.م</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-emerald-600 p-8 rounded-[2.5rem] text-white shadow-xl shadow-emerald-900/20 relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 blur-3xl rounded-full translate-x-10 -translate-y-10 group-hover:scale-150 transition-transform duration-700"></div>
+                    <p className="text-emerald-100 text-xs mb-1 font-bold">إجمالي المحصل فعلياً (هذا الشهر)</p>
+                    <p className="text-4xl font-black">{stats?.totalReceived.toLocaleString()} <span className="text-sm font-normal">ج.م</span></p>
                 </div>
-
-                <div className="bg-indigo-600 p-6 rounded-[2rem] text-white shadow-xl shadow-indigo-900/20">
-                    <div className="flex justify-between items-center mb-4">
-                        <Timer size={24} />
-                        <span className="text-[10px] bg-white/20 px-2 py-1 rounded-full uppercase tracking-widest font-bold">متوقع</span>
-                    </div>
-                    <p className="text-indigo-100 text-xs mb-1">دخل مستحق (متوقع)</p>
-                    <p className="text-2xl font-black">{stats?.accruedThisMonth.toLocaleString()} ج.م</p>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl">
-                    <div className="flex justify-between items-center mb-4">
-                        <TrendingUp className="text-blue-500" size={24} />
-                        <span className="text-[10px] text-slate-500 font-bold">استقرار الدخل</span>
-                    </div>
-                    <p className="text-slate-400 text-xs mb-1">نسبة الدخل الثابت</p>
-                    <div className="flex items-end gap-2">
-                        <p className="text-2xl font-black text-white">{stats?.fixedRatio}%</p>
-                        <div className="flex-1 bg-slate-800 h-1.5 rounded-full mb-2">
-                            <div className="bg-blue-600 h-full rounded-full" style={{ width: `${stats?.fixedRatio}%` }}></div>
-                        </div>
-                    </div>
+                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl relative overflow-hidden group">
+                    <p className="text-slate-500 text-xs mb-1 font-bold">إجمالي المستحق / متوقع</p>
+                    <p className="text-4xl font-black text-white">{stats?.totalExpected.toLocaleString()} <span className="text-sm font-normal">ج.م</span></p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Advanced Form */}
-                <div className={`p-8 rounded-3xl border shadow-xl h-fit transition-all ${editingId ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}`}>
+                {/* Form Section */}
+                <div className="p-8 bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl h-fit">
                     <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                        {editingId ? <Edit2 className="text-indigo-400" /> : <Plus className="text-emerald-500" />}
-                        {editingId ? 'تعديل التدفق' : 'تسجيل دخل جديد'}
+                        <Plus className="text-emerald-500" /> تسجيل دخل جديد
                     </h3>
                     <form onSubmit={handleSubmit} className="space-y-4">
-                        <input type="number" placeholder="المبلغ" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required />
-                        <input type="text" placeholder="مصدر الدخل (مثلاً: راتب، مشروع...)" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500" value={form.source} onChange={e => setForm({...form, source: e.target.value})} required />
-                        
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-[10px] text-slate-500 mb-1 block mr-2">نوع الدخل</label>
-                                <select className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none text-sm" value={form.incomeType} onChange={e => setForm({...form, incomeType: e.target.value})}>
-                                    <option value="ثابت">ثابت</option>
-                                    <option value="متغير">متغير</option>
-                                    <option value="موسمي">موسمي</option>
-                                    <option value="استثنائي">استثنائي</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-[10px] text-slate-500 mb-1 block mr-2">الحالة المالية</label>
-                                <select className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none text-sm" value={form.cashFlowType} onChange={e => setForm({...form, cashFlowType: e.target.value})}>
-                                    <option value="محصل">محصل</option>
-                                    <option value="مستحق">مستحق</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label className="text-[10px] text-slate-500 mb-1 block mr-2">الحساب المستلم</label>
-                            <select className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none text-sm" value={form.account} onChange={e => setForm({...form, account: e.target.value})}>
-                                <option value="نقدي">نقدي (كاش)</option>
-                                <option value="بنك">حساب بنكي</option>
-                                <option value="محفظة">محفظة إلكترونية</option>
-                            </select>
-                        </div>
-
-                        <div className="flex items-center gap-3 p-2">
-                            <input type="checkbox" checked={form.isRecurring} onChange={e => setForm({...form, isRecurring: e.target.checked})} className="w-4 h-4 rounded text-emerald-500" />
-                            <span className="text-sm text-slate-300 font-bold">دخل متكرر دورياً</span>
-                        </div>
-
-                        <button type="submit" disabled={loading} className={`w-full font-black py-4 rounded-xl shadow-lg transition-all ${editingId ? 'bg-indigo-600' : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-900/40'}`}>
-                            {loading ? 'جاري الحفظ...' : (editingId ? 'تحديث البيانات' : 'تسجيل التدفق')}
-                        </button>
+                        <input type="number" placeholder="المبلغ" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-emerald-500 transition-all" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required />
+                        <input type="text" placeholder="المصدر (مثلاً: الراتب)" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.source} onChange={e => setForm({...form, source: e.target.value})} required />
+                        <select className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.incomeType} onChange={e => setForm({...form, incomeType: e.target.value})}>
+                            <option value="fixed">دخل ثابت</option>
+                            <option value="variable">دخل متغير / إضافي</option>
+                        </select>
+                        <select className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.cashFlowType} onChange={e => setForm({...form, cashFlowType: e.target.value})}>
+                            <option value="received">تم الاستلام فعلياً</option>
+                            <option value="accrued">مستحق (لم يستلم بعد)</option>
+                        </select>
+                        <input type="date" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
+                        <button type="submit" className="w-full py-4 bg-emerald-600 rounded-2xl font-black text-white shadow-lg shadow-emerald-900/20 hover:bg-emerald-700 transition-all">تأكيد الإدخال</button>
                     </form>
                 </div>
 
-                {/* Analytical List */}
-                <div className="lg:col-span-2 bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-xl">
-                    <h3 className="text-xl font-bold mb-6">قائمة التدفقات النقدية</h3>
-                    <div className="space-y-4">
-                        {incomes.map((item) => (
-                            <div key={item._id} className="flex items-center justify-between p-5 bg-slate-800/40 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all group">
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${item.cashFlowType === 'محصل' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-indigo-500/10 text-indigo-500'}`}>
-                                        {item.account === 'بنك' ? <Landmark size={20} /> : item.account === 'محفظة' ? <Wallet size={20} /> : <DollarSign size={20} />}
+                {/* List Section - FIXING ACTIONS FOR MOBILE */}
+                <div className="lg:col-span-2 space-y-4">
+                    {incomes.map((inc) => (
+                        <div key={inc._id} className="group relative bg-slate-900 border border-slate-800 p-6 rounded-[2rem] hover:border-emerald-500/30 transition-all shadow-xl">
+                            <div className="flex justify-between items-center">
+                                <div className="flex items-center gap-4">
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${inc.cashFlowType === 'accrued' ? 'bg-orange-500/10 text-orange-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                                        <ArrowUpCircle size={20} />
                                     </div>
                                     <div>
-                                        <div className="font-bold text-lg text-white flex items-center gap-2">
-                                            {item.source}
-                                            {item.isRecurring && <RefreshCcw size={12} className="text-blue-400" />}
-                                        </div>
-                                        <div className="flex items-center gap-3 text-[10px] text-slate-500 mt-1">
-                                            <span className="bg-slate-800 px-2 py-0.5 rounded uppercase font-bold">{item.incomeType}</span>
-                                            <span><Calendar size={12} className="inline ml-1" /> {new Date(item.date).toLocaleDateString('ar-EG')}</span>
-                                        </div>
+                                        <p className="font-black text-white text-lg">{inc.amount.toLocaleString()} <span className="text-xs font-normal opacity-50">ج.م</span></p>
+                                        <p className="text-slate-500 text-xs mt-1">{inc.source} • {inc.cashFlowType === 'received' ? 'محصل' : 'مستحق'} • {new Date(inc.date).toLocaleDateString('ar-EG')}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-6">
-                                    <div className="text-left">
-                                        <div className={`text-xl font-black ${item.cashFlowType === 'محصل' ? 'text-emerald-400' : 'text-slate-500 italic'}`}>
-                                            {item.cashFlowType === 'محصل' ? '+' : 'قيد الانتظار '}{item.amount.toLocaleString()} ج.م
-                                        </div>
-                                        <div className="text-[10px] text-slate-600 text-left">{item.account}</div>
-                                    </div>
-                                    <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                        <button onClick={() => handleEdit(item)} className="text-blue-400 hover:text-blue-300"><Edit2 size={18} /></button>
-                                        <button onClick={() => handleDelete(item._id)} className="text-slate-600 hover:text-red-500"><Trash2 size={18} /></button>
-                                    </div>
+
+                                {/* ACTIONS: Always visible on Mobile, hover on Desktop */}
+                                <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all">
+                                    <button className="p-2 text-slate-500 hover:text-emerald-500 transition-colors">
+                                        <Edit2 size={18} />
+                                    </button>
+                                    <button onClick={() => handleDelete(inc._id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors">
+                                        <Trash2 size={18} />
+                                    </button>
                                 </div>
                             </div>
-                        ))}
-                    </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         </div>
