@@ -13,7 +13,7 @@ const protect = async (req, res, next) => {
                 return res.status(500).json({ message: 'خطأ في إعدادات السيرفر' });
             }
 
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            const decoded = jwt.verify(token, process.env.JWT_SECRET.trim());
             req.user = await User.findById(decoded.id).select('-password');
             
             if (!req.user) {
