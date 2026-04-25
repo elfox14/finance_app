@@ -1,10 +1,35 @@
 const Income = require('../models/Income');
 
-// @desc    Get all incomes
+// @desc    Get all incomes with stats
 exports.getIncomes = async (req, res) => {
     try {
-        const incomes = await Income.find({ userId: req.user._id }).sort({ createdAt: -1 });
-        res.json(incomes);
+        const incomes = await Income.find({ userId: req.user._id, deletedAt: null }).sort({ date: -1 });
+        
+        // حساب الإحصائيات المحاسبية
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const receivedThisMonth = incomes
+            .filter(i => i.cashFlowType === 'محصل' && new Date(i.date) >= startOfMonth)
+            .reduce((sum, i) => sum + i.amount, 0);
+
+        const accruedThisMonth = incomes
+            .filter(i => i.cashFlowType === 'مستحق' && new Date(i.date) >= startOfMonth)
+            .reduce((sum, i) => sum + i.amount, 0);
+
+        const fixedIncomeTotal = incomes
+            .filter(i => i.incomeType === 'ثابت')
+            .reduce((sum, i) => sum + i.amount, 0);
+
+        res.json({
+            incomes,
+            stats: {
+                receivedThisMonth,
+                accruedThisMonth,
+                fixedIncomeTotal,
+                fixedRatio: incomes.length > 0 ? ((fixedIncomeTotal / incomes.reduce((s, i) => s + i.amount, 0)) * 100).toFixed(1) : 0
+            }
+        });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
