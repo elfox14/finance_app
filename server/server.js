@@ -1,44 +1,48 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-require('dotenv').config();
-const connectDB = require('./config/db');
-
-// Connect to Database
-connectDB();
+const connectDB = async () => {
+    const mongoose = require('mongoose');
+    try {
+        const conn = await mongoose.connect(process.env.MONGO_URI);
+        console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+        return true;
+    } catch (error) {
+        console.error(`❌ DB Error: ${error.message}`);
+        process.exit(1);
+    }
+};
 
 const app = express();
 
 // Middleware
-app.use(helmet());
-app.use(cors());
-app.use(morgan('dev'));
 app.use(express.json());
+app.use(cors());
+app.use(helmet());
+app.use(morgan('dev'));
 
 // Routes
 app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/incomes', require('./routes/incomeRoutes'));
+app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
+app.use('/api/incomes', require('./routes/incomeRoutes'));
 app.use('/api/cards', require('./routes/cardRoutes'));
 app.use('/api/loans', require('./routes/loanRoutes'));
 app.use('/api/groups', require('./routes/groupRoutes'));
 app.use('/api/peer-debts', require('./routes/peerDebtRoutes'));
-app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
-// Base Route
-app.get('/', (req, res) => res.send('Smart Finance System API is running...'));
+app.get('/', (req, res) => res.send('جيبي API يعمل بنجاح 🚀'));
 
-// Error Middleware
-app.use((err, req, res, next) => {
-    console.error('🔥 Server Error:', err.stack);
-    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
-    res.status(statusCode).json({
-        message: err.message,
-        success: false,
-        stack: process.env.NODE_ENV === 'production' ? null : err.stack,
+const PORT = process.env.PORT || 10000;
+
+// بدء السيرفر فقط بعد نجاح الاتصال بالقاعدة
+const startServer = async () => {
+    await connectDB();
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
     });
-});
+};
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+startServer();

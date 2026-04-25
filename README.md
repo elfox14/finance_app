@@ -41,6 +41,12 @@ npm run dev
 ```
 
 ## 🌐 النشر (Deployment)
+### ملاحظة هامة حول المجلدات الفرعية (Subdirectories)
+تم إعداد هذا المشروع ليعمل تحت مسار فرعي باسم `/fin` (مثلاً: `mcprim.com/fin`). إذا كنت ستنشر المشروع على "النطاق الرئيسي" مباشرة (Root Domain)، يجب عليك:
+1. إزالة `basename="/fin"` من ملف `client/src/App.jsx`.
+2. إزالة `base: '/fin/'` من ملف `client/vite.config.js`.
+3. تعديل `window.location.href = '/fin/login'` في ملف `client/src/api/axios.js`.
+
 - **Backend**: يمكن نشره بسهولة على **Render** أو Heroku.
 - **Frontend**: يمكن نشره على **mcprim.com** أو Vercel.
   - تأكد من بناء المشروع باستخدام `npm run build` ورفع مجلد `dist`.
