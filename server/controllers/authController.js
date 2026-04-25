@@ -1,18 +1,17 @@
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 
-// توليد توكن
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-// @desc    Register new user
-// @route   POST /api/auth/register
 exports.registerUser = async (req, res) => {
     const { name, email, password } = req.body;
     try {
         const userExists = await User.findOne({ email });
-        if (userExists) return res.status(400).json({ message: 'المستخدم موجود بالفعل' });
+        if (userExists) {
+            return res.status(400).json({ message: 'المستخدم موجود بالفعل' });
+        }
 
         const user = await User.create({ name, email, password });
         res.status(201).json({
@@ -22,16 +21,15 @@ exports.registerUser = async (req, res) => {
             token: generateToken(user._id)
         });
     } catch (error) {
+        console.error('Registration Error:', error.message);
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Login user
-// @route   POST /api/auth/login
 exports.loginUser = async (req, res) => {
     const { email, password } = req.body;
     try {
-        const user = await User.findOne({ email }).select('+password');
+        const user = await User.findOne({ email });
         if (user && (await user.matchPassword(password))) {
             res.json({
                 _id: user._id,
@@ -40,15 +38,15 @@ exports.loginUser = async (req, res) => {
                 token: generateToken(user._id)
             });
         } else {
-            res.status(401).json({ message: 'البريد الإلكتروني أو كلمة السر غير صحيحة' });
+            console.log(`❌ Login failed for email: ${email}`);
+            res.status(401).json({ message: 'البريد أو كلمة السر غير صحيحة' });
         }
     } catch (error) {
+        console.error('Login Error:', error.message);
         res.status(500).json({ message: error.message });
     }
 };
 
-// @desc    Get current user profile
-// @route   GET /api/auth/me
-exports.getMe = async (req, res) => {
+exports.getUserProfile = async (req, res) => {
     res.json(req.user);
 };
