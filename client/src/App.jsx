@@ -6,6 +6,12 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Expenses from './pages/Expenses';
+import Incomes from './pages/Incomes';
+import Cards from './pages/Cards';
+import Loans from './pages/Loans';
+import Groups from './pages/Groups';
+import Notifications from './pages/Notifications';
+import Settings from './pages/Settings';
 
 function App() {
   return (
@@ -15,21 +21,19 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* الصفحة الرئيسية أصبحت متاحة للجميع بدون ProtectedRoute */}
           <Route path="/" element={
             <Layout>
               <Dashboard />
             </Layout>
           } />
 
-          {/* الصفحات التي تتطلب بيانات خاصة تظل محمية */}
           <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
-          <Route path="/incomes" element={<ProtectedRoute><Layout><div className="text-white p-20">قريباً: صفحة المدخولات</div></Layout></ProtectedRoute>} />
-          <Route path="/cards" element={<ProtectedRoute><Layout><div className="text-white p-20">مركز البطاقات</div></Layout></ProtectedRoute>} />
-          <Route path="/loans" element={<ProtectedRoute><Layout><div className="text-white p-20">مركز القروض</div></Layout></ProtectedRoute>} />
-          <Route path="/groups" element={<ProtectedRoute><Layout><div className="text-white p-20">الجمعيات</div></Layout></ProtectedRoute>} />
-          <Route path="/notifications" element={<ProtectedRoute><Layout><div className="text-white p-20">التنبيهات</div></Layout></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Layout><div className="text-white p-20">الإعدادات</div></Layout></ProtectedRoute>} />
+          <Route path="/incomes" element={<ProtectedRoute><Layout><Incomes /></Layout></ProtectedRoute>} />
+          <Route path="/cards" element={<ProtectedRoute><Layout><Cards /></Layout></ProtectedRoute>} />
+          <Route path="/loans" element={<ProtectedRoute><Layout><Loans /></Layout></ProtectedRoute>} />
+          <Route path="/groups" element={<ProtectedRoute><Layout><Groups /></Layout></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute><Layout><Notifications /></Layout></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
         </Routes>
       </Router>
     </AuthProvider>
