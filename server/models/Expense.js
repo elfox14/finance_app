@@ -3,15 +3,31 @@ const mongoose = require('mongoose');
 const expenseSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     amount: { type: Number, required: true },
-    categoryId: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
-    paymentMethod: { type: String, default: 'كاش' },
+    note: { type: String, required: true },
+    expenseType: { 
+        type: String, 
+        enum: ['ثابت', 'متغير', 'طارئ', 'موسمي'], 
+        default: 'متغير' 
+    },
+    necessityLevel: { 
+        type: String, 
+        enum: ['أساسي', 'مهم', 'كمالي'], 
+        default: 'أساسي' 
+    },
+    budgetCategory: { 
+        type: String, 
+        enum: ['طعام', 'مواصلات', 'فواتير', 'تسوق', 'صحة', 'تعليم', 'ترفيه', 'أخرى'], 
+        default: 'أخرى' 
+    },
+    paymentSource: { 
+        type: String, 
+        enum: ['كاش', 'بنك', 'بطاقة', 'محفظة'], 
+        default: 'كاش' 
+    },
+    isRecurring: { type: Boolean, default: false },
+    vendor: String, // التاجر أو المكان
     date: { type: Date, default: Date.now },
-    note: String,
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
-
-expenseSchema.pre(/^find/, function() {
-    this.where({ deletedAt: null });
-});
 
 module.exports = mongoose.model('Expense', expenseSchema);
