@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useContext } from 'react';
 import api from '../api/axios';
 
 const AuthContext = createContext();
@@ -8,41 +8,48 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const verifyUser = async () => {
+        const checkAuth = async () => {
             const token = localStorage.getItem('token');
-            if (!token) {
-                setLoading(false);
-                return;
+            if (token) {
+                try {
+                    const res = await api.get('/auth/me');
+                    setUser(res.data);
+                } catch (err) {
+                    localStorage.removeItem('token');
+                    setUser(null);
+                }
             }
-            try {
-                // محاولة التحقق من التوكن مع مهلة زمنية قصيرة
-                const res = await api.get('/auth/me', { timeout: 5000 });
-                setUser(res.data);
-            } catch (err) {
-                console.error('Auth verification failed:', err);
-                localStorage.removeItem('token');
-            } finally {
-                setLoading(false);
-            }
+            setLoading(false);
         };
-        verifyUser();
+        checkAuth();
     }, []);
 
-    const login = (userData, token) => {
-        setUser(userData);
-        localStorage.setItem('token', token);
+    const login = async (credentials) => {
+        setLoading(true);
+        try {
+            const res = await api.post('/auth/login', credentials);
+            localStorage.setItem('token', res.data.token);
+            // جلب بيانات المستخدم فوراً بعد الحفظ لضمان مزامنة الحالة
+            const userRes = await api.get('/auth/me');
+            setUser(userRes.data);
+            return { success: true };
+        } catch (err) {
+            return { success: false, message: err.response?.data?.message || 'خطأ في الدخول' };
+        } finally {
+            setLoading(false);
+        }
     };
 
     const logout = () => {
-        setUser(null);
         localStorage.removeItem('token');
-        window.location.href = '/fin/login'; // التأكد من العودة لمسار /fin/
+        setUser(null);
+        window.location.href = '/fin/login'; // توجيه قسري للمسار الصحيح
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, loading, login, logout }}>
             {!loading ? children : (
-                <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                <div className="flex items-center justify-center h-screen bg-black">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                 </div>
             )}
