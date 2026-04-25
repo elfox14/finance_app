@@ -5,25 +5,26 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 
-// فحص وجود المتغيرات مع طباعة المفاتيح المتاحة للتشخيص
 const checkEnv = () => {
-    console.log('🔍 Available Environment Keys:', Object.keys(process.env).filter(k => !k.includes('TOKEN') && !k.includes('SECRET') && !k.includes('KEY')));
-    
-    const required = ['MONGO_URI', 'JWT_SECRET'];
-    let missing = false;
+    // دعم كلا الاسمين الشائعين لرابط قاعدة البيانات
+    const dbUri = process.env.MONGO_URI || process.env.MONGODB_URI;
+    const jwtSecret = process.env.JWT_SECRET || process.env.JWT_KEY || process.env.SECRET_KEY;
 
-    required.forEach(variable => {
-        if (!process.env[variable]) {
-            console.error(`❌ CRITICAL ERROR: Variable "${variable}" is missing!`);
-            missing = true;
-        }
-    });
-
-    if (missing) {
-        // محاولة فحص أسماء بديلة شائعة
-        if (process.env.MONGODB_URI) console.log('💡 Found "MONGODB_URI", maybe you meant to name it "MONGO_URI"?');
+    if (!dbUri) {
+        console.error('❌ CRITICAL ERROR: Database URI is missing! (Tried MONGO_URI and MONGODB_URI)');
         process.exit(1);
     }
+
+    if (!jwtSecret) {
+        console.error('❌ CRITICAL ERROR: JWT Secret is missing! (Tried JWT_SECRET, JWT_KEY, SECRET_KEY)');
+        process.exit(1);
+    }
+
+    // تعيين القيم المختارة للمتغيرات التي يعتمد عليها الكود
+    process.env.MONGO_URI = dbUri;
+    process.env.JWT_SECRET = jwtSecret;
+
+    console.log('✅ Environment check passed!');
 };
 
 const connectDB = async () => {
