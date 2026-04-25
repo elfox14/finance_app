@@ -3,7 +3,7 @@ const router = express.Router();
 const { getIncomes, createIncome, updateIncome, deleteIncome } = require('../controllers/incomeController');
 const { protect } = require('../middleware/authMiddleware');
 
-router.use(protect); // جميع المسارات محمية
+router.use(protect);
 
 router.route('/')
     .get(getIncomes)

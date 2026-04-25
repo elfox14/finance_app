@@ -20,6 +20,25 @@ exports.createExpense = async (req, res) => {
     }
 };
 
+// @desc    Update expense
+exports.updateExpense = async (req, res) => {
+    try {
+        const expense = await Expense.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            req.body,
+            { new: true, runValidators: true }
+        );
+
+        if (!expense) {
+            return res.status(404).json({ message: 'المصروف غير موجود أو لا تملك صلاحية تعديله' });
+        }
+
+        res.json(expense);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 // @desc    Delete expense (Soft Delete)
 exports.deleteExpense = async (req, res) => {
     try {

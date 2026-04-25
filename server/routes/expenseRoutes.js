@@ -10,6 +10,7 @@ router.route('/')
     .post(createExpense);
 
 router.route('/:id')
+    .put(updateExpense)
     .delete(deleteExpense);
 
 module.exports = router;
