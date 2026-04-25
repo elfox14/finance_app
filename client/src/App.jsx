@@ -14,6 +14,7 @@ import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import Borrowed from './pages/Borrowed';
 import Lending from './pages/Lending';
+import Certificates from './pages/Certificates';
 
 function App() {
   return (
@@ -30,6 +31,7 @@ function App() {
           <Route path="/incomes" element={<ProtectedRoute><Layout><Incomes /></Layout></ProtectedRoute>} />
           <Route path="/cards" element={<ProtectedRoute><Layout><Cards /></Layout></ProtectedRoute>} />
           <Route path="/loans" element={<ProtectedRoute><Layout><Loans /></Layout></ProtectedRoute>} />
+          <Route path="/certificates" element={<ProtectedRoute><Layout><Certificates /></Layout></ProtectedRoute>} />
           <Route path="/groups" element={<ProtectedRoute><Layout><Groups /></Layout></ProtectedRoute>} />
           <Route path="/borrowed" element={<ProtectedRoute><Layout><Borrowed /></Layout></ProtectedRoute>} />
           <Route path="/lending" element={<ProtectedRoute><Layout><Lending /></Layout></ProtectedRoute>} />

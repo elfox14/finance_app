@@ -15,7 +15,8 @@ import {
     X,
     Wallet,
     Handshake,
-    CircleDollarSign
+    CircleDollarSign,
+    FileBadge
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -28,6 +29,7 @@ const Layout = ({ children }) => {
         { name: 'الرئيسية', icon: <LayoutDashboard size={20} />, path: '/' },
         { name: 'المصروفات', icon: <ArrowDownCircle size={20} />, path: '/expenses' },
         { name: 'المدخولات', icon: <ArrowUpCircle size={20} />, path: '/incomes' },
+        { name: 'الشهادات', icon: <FileBadge size={20} />, path: '/certificates' },
         { name: 'البطاقات', icon: <CreditCard size={20} />, path: '/cards' },
         { name: 'القروض', icon: <Landmark size={20} />, path: '/loans' },
         { name: 'الجمعيات', icon: <Users size={20} />, path: '/groups' },

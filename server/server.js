@@ -50,6 +50,7 @@ app.use('/api/incomes', require('./routes/incomeRoutes'));
 app.use('/api/cards', require('./routes/cardRoutes'));
 app.use('/api/loans', require('./routes/loanRoutes'));
 app.use('/api/groups', require('./routes/groupRoutes'));
+app.use('/api/certificates', require('./routes/certificateRoutes'));
 app.use('/api/peer-debts', require('./routes/peerDebtRoutes'));
 
 app.get('/', (req, res) => res.send('جيبي API يعمل بنجاح 🚀'));
