@@ -4,33 +4,23 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
+const path = require('path');
 
 const checkEnv = () => {
-    // دعم كلا الاسمين الشائعين لرابط قاعدة البيانات
     const dbUri = process.env.MONGO_URI || process.env.MONGODB_URI;
     const jwtSecret = process.env.JWT_SECRET || process.env.JWT_KEY || process.env.SECRET_KEY;
-
-    if (!dbUri) {
-        console.error('❌ CRITICAL ERROR: Database URI is missing! (Tried MONGO_URI and MONGODB_URI)');
+    if (!dbUri || !jwtSecret) {
+        console.error('❌ CRITICAL ERROR: Environment variables missing!');
         process.exit(1);
     }
-
-    if (!jwtSecret) {
-        console.error('❌ CRITICAL ERROR: JWT Secret is missing! (Tried JWT_SECRET, JWT_KEY, SECRET_KEY)');
-        process.exit(1);
-    }
-
-    // تعيين القيم المختارة للمتغيرات التي يعتمد عليها الكود
     process.env.MONGO_URI = dbUri;
     process.env.JWT_SECRET = jwtSecret;
-
-    console.log('✅ Environment check passed!');
 };
 
 const connectDB = async () => {
     try {
-        const conn = await mongoose.connect(process.env.MONGO_URI);
-        console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log(`✅ MongoDB Connected`);
     } catch (error) {
         console.error(`❌ DB Connection Failed: ${error.message}`);
         process.exit(1);
@@ -40,9 +30,10 @@ const connectDB = async () => {
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 
+// API Routes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 app.use('/api/expenses', require('./routes/expenseRoutes'));
@@ -55,16 +46,22 @@ app.use('/api/budgets', require('./routes/budgetRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/peer-debts', require('./routes/peerDebtRoutes'));
 
-app.get('/', (req, res) => res.send('جيبي API يعمل بنجاح 🚀'));
+// 🚀 دعم المسار الفرعي /fin للملفات الثابتة
+const clientDistPath = path.join(__dirname, '../client/dist');
+app.use('/fin', express.static(clientDistPath));
+app.use(express.static(clientDistPath)); // دعم المسار الرئيسي أيضاً للاحتياط
+
+// أي طلب لا يخص الـ API يتم توجيهه لـ index.html لدعم React Router
+app.get('*', (req, res) => {
+    if (req.url.startsWith('/api')) return;
+    res.sendFile(path.join(clientDistPath, 'index.html'));
+});
 
 const PORT = process.env.PORT || 10000;
-
 const startServer = async () => {
     checkEnv();
     await connectDB();
-    app.listen(PORT, () => {
-        console.log(`🚀 Server running on port ${PORT}`);
-    });
+    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 };
 
 startServer();
