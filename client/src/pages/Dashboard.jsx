@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom'; // السطر المفقود الذي سبب المشكلة
 import { 
     ShieldCheck, AlertTriangle, Landmark, 
     ArrowUpCircle, ArrowDownCircle, History, Info, 
@@ -32,7 +33,6 @@ const Dashboard = () => {
 
     if (loading) return <div className="flex items-center justify-center h-screen bg-slate-950"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>;
     
-    // إذا لم تكن هناك بيانات، نعرض رسالة ترحيبية بدلاً من شاشة بيضاء
     if (!data) return <div className="text-center p-20 text-slate-500">مرحباً {user?.name}، ابدأ بإضافة مصروفاتك لترى التحليلات هنا.</div>;
 
     const liquidityData = {
@@ -90,9 +90,11 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Recent Transactions List */}
             <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl">
-                <h3 className="text-xl font-bold text-white mb-6">آخر العمليات</h3>
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold text-white">آخر العمليات</h3>
+                    <Link to="/expenses" className="text-blue-500 text-sm hover:underline flex items-center gap-1">المزيد <ChevronRight size={16} /></Link>
+                </div>
                 <div className="space-y-4">
                     {data.recentTransactions?.length > 0 ? data.recentTransactions.map((t, idx) => (
                         <div key={idx} className="flex justify-between items-center p-4 bg-slate-800/20 rounded-2xl">
