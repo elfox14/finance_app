@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
-import { Wallet, TrendingDown, Landmark, PiggyBank, History, Lock, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
+import { Wallet, TrendingDown, Landmark, PiggyBank, History, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Dashboard = () => {
@@ -11,17 +11,6 @@ const Dashboard = () => {
 
     useEffect(() => {
         const fetchStats = async () => {
-            if (!user) {
-                setStats({
-                    currentBalance: 0,
-                    totalLoanRemaining: 0,
-                    totalCertValue: 0,
-                    totalExpense: 0,
-                    recentTransactions: []
-                });
-                return;
-            }
-
             try {
                 const res = await axios.get(`${import.meta.env.VITE_API_URL}/dashboard`, {
                     headers: { Authorization: `Bearer ${user.token}` }
@@ -29,35 +18,27 @@ const Dashboard = () => {
                 setStats(res.data);
             } catch (err) {
                 console.error('Dashboard Fetch Error:', err);
-                setError('تعذر الاتصال بالسيرفر حالياً');
+                setError('فشل تحميل بيانات لوحة التحكم من السيرفر');
             }
         };
         fetchStats();
-    }, [user]);
+    }, [user.token]);
 
     if (error) return <div className="text-red-500 text-center p-20 font-bold">{error}</div>;
     
     if (!stats) return (
-        <div className="flex items-center justify-center h-screen bg-slate-950">
+        <div className="flex items-center justify-center h-64">
             <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
         </div>
     );
 
     return (
-        <div className="fade-in space-y-10 p-4 md:p-0">
-            {/* Guest Banner */}
-            {!user && (
-                <div className="bg-gradient-to-r from-blue-600/20 to-transparent border border-blue-500/20 p-8 rounded-[2rem] flex flex-col md:flex-row items-center justify-between gap-6">
-                    <div>
-                        <h2 className="text-2xl font-bold text-white mb-2">أهلاً بك في محفظتي الذكية ✨</h2>
-                        <p className="text-slate-400">سجل دخولك الآن لتبدأ إدارة أموالك باحترافية وتأمين بياناتك.</p>
-                    </div>
-                    <div className="flex gap-4">
-                        <Link to="/login" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-2xl font-bold transition-all shadow-lg shadow-blue-900/40">دخول</Link>
-                        <Link to="/register" className="bg-slate-800 hover:bg-slate-700 text-white px-8 py-3 rounded-2xl font-bold transition-all">إنشاء حساب</Link>
-                    </div>
-                </div>
-            )}
+        <div className="fade-in space-y-10">
+            {/* Welcome Header */}
+            <div className="mb-10">
+                <h2 className="text-3xl font-black text-white mb-2">أهلاً بك يا {user?.name?.split(' ')[0]} 👋</h2>
+                <p className="text-slate-500">إليك ملخص سريع لحالتك المالية اليوم</p>
+            </div>
 
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -74,7 +55,7 @@ const Dashboard = () => {
                         <h3 className="text-xl font-bold text-white flex items-center gap-3">
                             <History className="text-blue-500" /> آخر العمليات
                         </h3>
-                        {user && <Link to="/expenses" className="text-blue-500 text-sm hover:underline">عرض الكل</Link>}
+                        <Link to="/expenses" className="text-blue-500 text-sm hover:underline">عرض الكل</Link>
                     </div>
                     
                     <div className="space-y-4">
@@ -101,12 +82,15 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-[2.5rem] p-10 text-white relative overflow-hidden shadow-2xl shadow-blue-900/30">
-                    <div className="absolute -right-10 -bottom-10 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
-                    <Lock className="mb-6 opacity-50" size={40} />
-                    <h4 className="text-2xl font-bold mb-4 leading-tight">أموالك في أمان تام مع نظامنا الذكي</h4>
-                    <p className="text-blue-100 text-sm leading-relaxed mb-8">نستخدم أحدث تقنيات التشفير لضمان أن بياناتك المالية تظل ملكاً لك وحدك.</p>
-                    {!user && <Link to="/register" className="block w-full bg-white text-blue-600 py-4 rounded-2xl font-bold text-center hover:bg-blue-50 transition-colors shadow-lg">اشترك الآن مجاناً</Link>}
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl">
+                    <h4 className="text-lg font-bold text-white mb-6">توفير ذكي 💡</h4>
+                    <p className="text-slate-400 text-sm leading-relaxed mb-6">
+                        تذكر أن تدوين كل مصروف صغير هو البداية الحقيقية للتحكم في ثروتك.
+                    </p>
+                    <div className="p-4 bg-blue-600/10 rounded-2xl border border-blue-500/20">
+                        <p className="text-blue-400 text-sm font-bold">نصيحة اليوم:</p>
+                        <p className="text-white text-sm mt-1">حاول توفير 10% من دخلك هذا الشهر.</p>
+                    </div>
                 </div>
             </div>
         </div>
