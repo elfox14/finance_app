@@ -20,14 +20,29 @@ exports.createGroup = async (req, res) => {
     }
 };
 
+// @desc    Update group
+exports.updateGroup = async (req, res) => {
+    try {
+        const group = await Group.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!group) return res.status(404).json({ message: 'الجمعية غير موجودة' });
+        res.json(group);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 // @desc    Delete group
 exports.deleteGroup = async (req, res) => {
     try {
         const group = await Group.findOneAndUpdate(
             { _id: req.params.id, userId: req.user._id },
-            { deletedAt: new Date() },
-            { new: true }
+            { deletedAt: new Date() }
         );
+        if (!group) return res.status(404).json({ message: 'الجمعية غير موجودة' });
         res.json({ message: 'تم حذف الجمعية بنجاح' });
     } catch (error) {
         res.status(500).json({ message: error.message });
