@@ -4,7 +4,7 @@ import {
     Wallet, TrendingUp, TrendingDown, Clock, 
     ShieldCheck, AlertCircle, Calendar, ArrowUpRight, 
     ArrowDownLeft, Zap, Target, PieChart as PieIcon,
-    Activity, ArrowRight
+    Activity, ArrowRight, ChevronDown
 } from 'lucide-react';
 import { 
     Chart as ChartJS, CategoryScale, LinearScale, 
@@ -17,6 +17,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [showMoreIndicators, setShowMoreIndicators] = useState(false);
 
     const fetchStats = async () => {
         try {
@@ -46,8 +47,8 @@ const Dashboard = () => {
         return 'text-red-500';
     };
 
-    const TopStatItem = ({ label, val, colorClass }) => (
-        <div className="flex-shrink-0 w-32 md:w-auto md:flex-1 text-center border-l border-slate-800 last:border-0 px-2">
+    const TopStatItem = ({ label, val, colorClass, hideOnMobile = false }) => (
+        <div className={`flex-shrink-0 w-32 md:w-auto md:flex-1 text-center border-l border-slate-800 last:border-0 px-2 ${hideOnMobile ? 'hidden md:block' : ''}`}>
             <p className={`text-[9px] md:text-[10px] font-bold mb-1 ${colorClass}`}>{label}</p>
             <p className="text-xs md:text-sm font-black text-white">{val.toLocaleString()}</p>
         </div>
@@ -55,13 +56,16 @@ const Dashboard = () => {
 
     return (
         <div className="space-y-6 md:space-y-8 fade-in text-right pb-20" dir="rtl">
-            {/* 🚀 Strategic Top Bar - Horizontal Scroll on Mobile */}
+            {/* 🚀 Strategic Top Bar - Cleaned & Minimized for Mobile */}
             <div className="flex overflow-x-auto md:grid md:grid-cols-6 gap-2 md:gap-4 bg-slate-900/50 p-4 md:p-6 rounded-2xl md:rounded-[2.5rem] border border-slate-800 shadow-xl backdrop-blur-md sticky top-0 md:top-0 z-50 no-scrollbar">
                 <TopStatItem label="الرصيد الحالي" val={stats?.topStats.currentBalance} colorClass="text-slate-500" />
                 <TopStatItem label="الرصيد المتاح" val={stats?.topStats.availableBalance} colorClass="text-indigo-400" />
                 <TopStatItem label="التزامات 30 يوم" val={stats?.topStats.total30DayObligations} colorClass="text-red-400" />
-                <TopStatItem label="الدخل المتوقع" val={stats?.topStats.expectedIncome} colorClass="text-emerald-400" />
-                <TopStatItem label="المصروف المتوقع" val={stats?.topStats.expectedExpense} colorClass="text-orange-400" />
+                
+                {/* Expected values hidden on mobile to reduce density, visible on Desktop */}
+                <TopStatItem label="الدخل المتوقع" val={stats?.topStats.expectedIncome} colorClass="text-emerald-400" hideOnMobile={true} />
+                <TopStatItem label="المصروف المتوقع" val={stats?.topStats.expectedExpense} colorClass="text-orange-400" hideOnMobile={true} />
+                
                 <div className="flex-shrink-0 w-32 md:w-auto md:flex-1 text-center px-2">
                     <p className="text-[9px] md:text-[10px] text-slate-500 font-bold mb-1">مؤشر الصحة</p>
                     <div className={`flex items-center justify-center gap-1 font-black text-xs md:text-sm ${getHealthColor(stats?.topStats.healthScore)}`}>
@@ -70,23 +74,43 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            <header className="px-2 md:px-0">
-                <h1 className="text-2xl md:text-3xl font-black text-white italic">لوحة القيادة الذكية</h1>
-                <p className="text-slate-500 text-xs md:text-sm mt-1 font-medium">تحليل شامل وموحد كما في نسخة الكمبيوتر</p>
+            <header className="px-2 md:px-0 flex justify-between items-end">
+                <div>
+                    <h1 className="text-2xl md:text-3xl font-black text-white italic">لوحة القيادة الذكية</h1>
+                    <p className="text-slate-500 text-xs md:text-sm mt-1 font-medium">تحليل شامل وموحد لوضعك المالي</p>
+                </div>
+                {/* Mobile-only toggle for extra indicators */}
+                <button 
+                    onClick={() => setShowMoreIndicators(!showMoreIndicators)}
+                    className="md:hidden flex items-center gap-1 text-[10px] font-bold text-blue-500 bg-blue-500/10 px-3 py-1.5 rounded-full"
+                >
+                    مؤشرات إضافية <ChevronDown size={12} className={`transition-transform ${showMoreIndicators ? 'rotate-180' : ''}`} />
+                </button>
             </header>
 
             {/* Main Indicators Section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-                {/* Health Gauge Card */}
+                {/* Health Gauge Card - Cleaned Code */}
                 <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-3xl md:rounded-[3rem] shadow-2xl flex flex-col items-center justify-center text-center">
                     <div className="relative w-32 h-32 md:w-48 md:h-48 flex items-center justify-center">
                         <svg className="w-full h-full -rotate-90">
-                            <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800 md:cx-[96] md:cy-[96] md:r-[80] md:stroke-width-[12]" />
-                            <circle cx="64" cy="64" r="56" stroke="currentColor" strokeWidth="8" fill="transparent" className={getHealthColor(stats?.topStats.healthScore)} strokeDasharray={352} strokeDashoffset={352 - (352 * stats?.topStats.healthScore) / 100} strokeLinecap="round" className="md:cx-[96] md:cy-[96] md:r-[80] md:stroke-width-[12]" />
+                            <circle 
+                                cx="50%" cy="50%" r="44%" 
+                                stroke="currentColor" strokeWidth="8" fill="transparent" 
+                                className="text-slate-800"
+                            />
+                            <circle 
+                                cx="50%" cy="50%" r="44%" 
+                                stroke="currentColor" strokeWidth="8" fill="transparent" 
+                                className={getHealthColor(stats?.topStats.healthScore)} 
+                                strokeDasharray="276" 
+                                strokeDashoffset={276 - (276 * stats?.topStats.healthScore) / 100} 
+                                strokeLinecap="round" 
+                            />
                         </svg>
                         <div className="absolute">
                             <p className={`text-3xl md:text-5xl font-black ${getHealthColor(stats?.topStats.healthScore)}`}>{stats?.topStats.healthScore}</p>
-                            <p className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase">الدرجة</p>
+                            <p className="text-[8px] md:text-[10px] text-slate-500 font-bold uppercase tracking-widest">الدرجة</p>
                         </div>
                     </div>
                     <div className="mt-4 md:mt-6">
@@ -95,8 +119,8 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Indicators List */}
-                <div className="lg:col-span-2 grid grid-cols-2 gap-4 md:gap-6">
+                {/* Indicators Grid - Optimized for Mobile with Toggle */}
+                <div className={`lg:col-span-2 grid grid-cols-2 gap-4 md:gap-6 ${!showMoreIndicators ? 'hidden md:grid' : 'grid'}`}>
                     <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl">
                         <div className="flex justify-between items-center mb-3 md:mb-4">
                             <div className="p-2 md:p-3 bg-emerald-500/10 text-emerald-500 rounded-xl md:rounded-2xl"><TrendingUp size={20} /></div>
@@ -114,11 +138,11 @@ const Dashboard = () => {
                     <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl col-span-2 flex items-center justify-between">
                         <div className="flex items-center gap-3 md:gap-4">
                             <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl ${stats?.indicators.hasOverdue ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-                                <ShieldCheck size={24} md:size={32} />
+                                <ShieldCheck size={28} />
                             </div>
                             <div>
                                 <h4 className="text-sm md:text-xl font-bold text-white">{stats?.indicators.hasOverdue ? 'متأخرات قائمة' : 'سجل نظيف'}</h4>
-                                <p className="text-[9px] md:text-xs text-slate-500 mt-0.5">التزام كامل بالمواعيد</p>
+                                <p className="text-[9px] md:text-xs text-slate-500 mt-0.5">التزام كامل بمواعيد السداد</p>
                             </div>
                         </div>
                         <ArrowRight className="text-slate-700" size={16} />
@@ -126,23 +150,37 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Same as Desktop Grid for lower sections */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8">
-                <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl">
+                {/* Expense Chart */}
+                <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl overflow-hidden">
                     <h3 className="text-base md:text-lg font-bold text-white mb-6 flex items-center gap-2">
                         <PieIcon size={18} className="text-blue-500" /> توزيع المصاريف
                     </h3>
                     <div className="h-48 md:h-56 flex justify-center">
-                        <Pie data={distributionData} options={{ maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#64748b', font: { size: 9 } } } } }} />
+                        <Pie data={distributionData} options={{ 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                legend: { 
+                                    position: 'bottom', 
+                                    labels: { color: '#64748b', font: { size: 9, family: 'sans-serif' }, boxWidth: 10 } 
+                                } 
+                            } 
+                        }} />
                     </div>
                 </div>
 
+                {/* Recent Activities */}
                 <div className="bg-slate-900 border border-slate-800 p-6 md:p-8 rounded-2xl md:rounded-[3rem] shadow-xl">
                     <h3 className="text-base md:text-lg font-bold text-white mb-6">أحدث الحركات</h3>
                     <div className="space-y-3">
                         {stats?.recentActions.map((action, i) => (
                             <div key={i} className="flex justify-between items-center p-3 bg-slate-800/30 rounded-xl md:rounded-2xl border border-slate-800/50">
-                                <span className="text-xs md:text-sm font-bold text-white truncate max-w-[150px]">{action.source || action.note}</span>
+                                <div className="flex items-center gap-3">
+                                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${action.source ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                                        {action.source ? <ArrowUpRight size={14} /> : <ArrowDownLeft size={14} />}
+                                    </div>
+                                    <span className="text-xs md:text-sm font-bold text-white truncate max-w-[120px] md:max-w-[200px]">{action.source || action.note}</span>
+                                </div>
                                 <span className={`text-xs md:text-sm font-black ${action.source ? 'text-emerald-500' : 'text-red-500'}`}>
                                     {action.source ? '+' : '-'}{action.amount.toLocaleString()}
                                 </span>
