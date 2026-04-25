@@ -20,18 +20,12 @@ function App() {
     <AuthProvider>
       <Router basename="/fin">
         <Routes>
+          {/* المسارات العامة (بدون Layout) */}
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           
-          {/* إعادة الحماية للمسار الرئيسي */}
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Layout>
-                <Dashboard />
-              </Layout>
-            </ProtectedRoute>
-          } />
-
+          {/* المسارات المحمية - كلها داخل ProtectedRoute */}
+          <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
           <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
           <Route path="/incomes" element={<ProtectedRoute><Layout><Incomes /></Layout></ProtectedRoute>} />
           <Route path="/cards" element={<ProtectedRoute><Layout><Cards /></Layout></ProtectedRoute>} />
