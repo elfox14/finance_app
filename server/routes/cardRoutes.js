@@ -9,6 +9,8 @@ router.route('/')
     .get(getCards)
     .post(createCard);
 
+router.post('/action', addCardAction);
+
 router.route('/:id')
     .put(updateCard)
     .delete(deleteCard);
