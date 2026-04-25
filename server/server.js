@@ -3,14 +3,25 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const mongoose = require('mongoose');
+
+// فحص وجود المتغيرات الأساسية قبل بدء التشغيل
+const checkEnv = () => {
+    const required = ['MONGO_URI', 'JWT_SECRET'];
+    required.forEach(variable => {
+        if (!process.env[variable]) {
+            console.error(`❌ CRITICAL ERROR: Variable "${variable}" is missing in environment!`);
+            process.exit(1);
+        }
+    });
+};
+
 const connectDB = async () => {
-    const mongoose = require('mongoose');
     try {
         const conn = await mongoose.connect(process.env.MONGO_URI);
         console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-        return true;
     } catch (error) {
-        console.error(`❌ DB Error: ${error.message}`);
+        console.error(`❌ DB Connection Failed: ${error.message}`);
         process.exit(1);
     }
 };
@@ -37,8 +48,8 @@ app.get('/', (req, res) => res.send('جيبي API يعمل بنجاح 🚀'));
 
 const PORT = process.env.PORT || 10000;
 
-// بدء السيرفر فقط بعد نجاح الاتصال بالقاعدة
 const startServer = async () => {
+    checkEnv(); // فحص الأمان أولاً
     await connectDB();
     app.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`);
