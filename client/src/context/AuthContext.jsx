@@ -1,5 +1,5 @@
-import { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
+import { createContext, useContext, useState, useEffect } from 'react';
+import api from '../api/axios';
 
 const AuthContext = createContext();
 
@@ -7,36 +7,52 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    // التحقق من التوكن وجلب بيانات المستخدم عند تحميل التطبيق
     useEffect(() => {
-        const storedUser = localStorage.getItem('user');
-        if (storedUser) {
-            setUser(JSON.parse(storedUser));
-        }
-        setLoading(false);
+        const verifyUser = async () => {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                const res = await api.get('/auth/me');
+                setUser(res.data);
+            } catch (err) {
+                console.error('Session Verification Failed:', err);
+                localStorage.removeItem('token');
+                setUser(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        verifyUser();
     }, []);
 
     const login = async (email, password) => {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, { email, password });
-        setUser(res.data);
-        localStorage.setItem('user', JSON.stringify(res.data));
+        const res = await api.post('/auth/login', { email, password });
+        localStorage.setItem('token', res.data.token);
+        setUser(res.data.user || res.data); // التعامل مع اختلاف شكل الـ Response
         return res.data;
     };
 
     const register = async (userData) => {
-        const res = await axios.post(`${import.meta.env.VITE_API_URL}/auth/register`, userData);
-        setUser(res.data);
-        localStorage.setItem('user', JSON.stringify(res.data));
+        const res = await api.post('/auth/register', userData);
+        localStorage.setItem('token', res.data.token);
+        setUser(res.data.user || res.data);
         return res.data;
     };
 
     const logout = () => {
+        localStorage.removeItem('token');
         setUser(null);
-        localStorage.removeItem('user');
     };
 
     return (
         <AuthContext.Provider value={{ user, login, register, logout, loading }}>
-            {children}
+            {!loading && children}
         </AuthContext.Provider>
     );
 };

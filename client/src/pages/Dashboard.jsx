@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
 import { Wallet, TrendingDown, Landmark, PiggyBank, History, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -12,9 +12,7 @@ const Dashboard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
-                const res = await axios.get(`${import.meta.env.VITE_API_URL}/dashboard`, {
-                    headers: { Authorization: `Bearer ${user.token}` }
-                });
+                const res = await api.get('/dashboard');
                 setStats(res.data);
             } catch (err) {
                 console.error('Dashboard Fetch Error:', err);

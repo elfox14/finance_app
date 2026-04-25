@@ -28,6 +28,11 @@ exports.deleteExpense = async (req, res) => {
             { deletedAt: new Date() },
             { new: true }
         );
+
+        if (!expense) {
+            return res.status(404).json({ message: 'المصروف غير موجود أو لا تملك صلاحية حذفه' });
+        }
+
         res.json({ message: 'تم حذف المصروف بنجاح' });
     } catch (error) {
         res.status(500).json({ message: error.message });

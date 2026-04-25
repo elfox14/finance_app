@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
+import api from '../api/axios';
 import { Plus, Trash2, Calendar, Tag, CreditCard } from 'lucide-react';
 
 const Expenses = () => {
@@ -9,13 +8,10 @@ const Expenses = () => {
     const [note, setNote] = useState('');
     const [paymentMethod, setPaymentMethod] = useState('كاش');
     const [loading, setLoading] = useState(false);
-    const { user } = useAuth();
 
     const fetchExpenses = async () => {
         try {
-            const res = await axios.get(`${import.meta.env.VITE_API_URL}/expenses`, {
-                headers: { Authorization: `Bearer ${user.token}` }
-            });
+            const res = await api.get('/expenses');
             setExpenses(res.data);
         } catch (err) {
             console.error(err);
@@ -30,10 +26,7 @@ const Expenses = () => {
         e.preventDefault();
         setLoading(true);
         try {
-            await axios.post(`${import.meta.env.VITE_API_URL}/expenses`, 
-                { amount, note, paymentMethod },
-                { headers: { Authorization: `Bearer ${user.token}` } }
-            );
+            await api.post('/expenses', { amount, note, paymentMethod });
             setAmount('');
             setNote('');
             fetchExpenses();
@@ -48,9 +41,7 @@ const Expenses = () => {
     const handleDelete = async (id) => {
         if (!confirm('هل أنت متأكد من حذف هذا المصروف؟')) return;
         try {
-            await axios.delete(`${import.meta.env.VITE_API_URL}/expenses/${id}`, {
-                headers: { Authorization: `Bearer ${user.token}` }
-            });
+            await api.delete(`/expenses/${id}`);
             fetchExpenses();
         } catch (err) {
             alert('خطأ في الحذف');
