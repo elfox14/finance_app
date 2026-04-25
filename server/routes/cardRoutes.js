@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getCards, createCard, deleteCard } = require('../controllers/cardController');
+const { getCards, createCard, updateCard, deleteCard } = require('../controllers/cardController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getExpenses, createExpense, deleteExpense } = require('../controllers/expenseController');
+const { getExpenses, createExpense, updateExpense, deleteExpense } = require('../controllers/expenseController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);
