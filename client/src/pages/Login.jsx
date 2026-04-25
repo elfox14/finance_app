@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
-import { Wallet, LogIn, UserPlus, Eye, EyeOff } from 'lucide-react';
+import { Wallet, LogIn, UserPlus, Eye, EyeOff, HelpCircle } from 'lucide-react';
 
 const Login = () => {
     const [email, setEmail] = useState('');
@@ -14,7 +14,7 @@ const Login = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        if (loading) return; // منع التكرار
+        if (loading) return;
         
         setError('');
         setLoading(true);
@@ -37,7 +37,7 @@ const Login = () => {
         <div className="flex flex-col items-center justify-center min-h-screen bg-black p-4 font-sans">
             <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-[2.5rem] p-10 shadow-2xl shadow-blue-900/10 scale-in" dir="rtl">
                 <div className="flex flex-col items-center mb-8">
-                    <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 mb-4 animate-pulse">
+                    <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40 mb-4">
                         <Wallet className="text-white" size={32} />
                     </div>
                     <h2 className="text-3xl font-black text-white text-center">جيبي <span className="text-blue-500">Geybi</span></h2>
@@ -46,7 +46,7 @@ const Login = () => {
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     {error && (
-                        <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-3 rounded-xl text-center font-bold animate-bounce">
+                        <div className="bg-red-500/10 border border-red-500/20 text-red-500 text-xs p-3 rounded-xl text-center font-bold">
                             {error}
                         </div>
                     )}
@@ -65,8 +65,13 @@ const Login = () => {
                         />
                     </div>
 
-                    <div className="space-y-2 relative">
-                        <label className="text-xs text-slate-500 mr-2 font-bold uppercase">كلمة السر</label>
+                    <div className="space-y-2">
+                        <div className="flex justify-between items-center mb-1 px-2">
+                            <label className="text-xs text-slate-500 font-bold uppercase">كلمة السر</label>
+                            <Link to="/reset-password" size={14} className="text-[10px] text-blue-500 hover:underline font-bold flex items-center gap-1">
+                                <HelpCircle size={12}/> نسيت كلمة السر؟
+                            </Link>
+                        </div>
                         <div className="relative">
                             <input 
                                 type={showPassword ? "text" : "password"}
