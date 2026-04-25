@@ -4,5 +4,15 @@ import react from '@vitejs/plugin-react'
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/fin/', // هذا السطر ضروري جداً لأنك ترفع على mcprim.com/fin
+  base: '/fin/',
+  build: {
+    rollupOptions: {
+      output: {
+        // تعطيل الأرقام العشوائية في أسماء الملفات
+        entryFileNames: `assets/[name].js`,
+        chunkFileNames: `assets/[name].js`,
+        assetFileNames: `assets/[name].[ext]`
+      }
+    }
+  }
 })
