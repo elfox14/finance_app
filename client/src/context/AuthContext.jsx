@@ -7,7 +7,6 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    // التحقق من التوكن وجلب بيانات المستخدم عند تحميل التطبيق
     useEffect(() => {
         const verifyUser = async () => {
             const token = localStorage.getItem('token');
@@ -15,44 +14,38 @@ export const AuthProvider = ({ children }) => {
                 setLoading(false);
                 return;
             }
-
             try {
-                const res = await api.get('/auth/me');
+                // محاولة التحقق من التوكن مع مهلة زمنية قصيرة
+                const res = await api.get('/auth/me', { timeout: 5000 });
                 setUser(res.data);
             } catch (err) {
-                console.error('Session Verification Failed:', err);
+                console.error('Auth verification failed:', err);
                 localStorage.removeItem('token');
-                setUser(null);
             } finally {
                 setLoading(false);
             }
         };
-
         verifyUser();
     }, []);
 
-    const login = async (email, password) => {
-        const res = await api.post('/auth/login', { email, password });
-        localStorage.setItem('token', res.data.token);
-        setUser(res.data.user || res.data); // التعامل مع اختلاف شكل الـ Response
-        return res.data;
-    };
-
-    const register = async (userData) => {
-        const res = await api.post('/auth/register', userData);
-        localStorage.setItem('token', res.data.token);
-        setUser(res.data.user || res.data);
-        return res.data;
+    const login = (userData, token) => {
+        setUser(userData);
+        localStorage.setItem('token', token);
     };
 
     const logout = () => {
-        localStorage.removeItem('token');
         setUser(null);
+        localStorage.removeItem('token');
+        window.location.href = '/fin/login'; // التأكد من العودة لمسار /fin/
     };
 
     return (
-        <AuthContext.Provider value={{ user, login, register, logout, loading }}>
-            {!loading && children}
+        <AuthContext.Provider value={{ user, login, logout, loading }}>
+            {!loading ? children : (
+                <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+            )}
         </AuthContext.Provider>
     );
 };
