@@ -16,11 +16,17 @@ const ResetPassword = () => {
         setStatus({ type: '', message: '' });
 
         try {
-            const res = await api.post('/auth/rescue-reset', { email, newPassword });
+            // تنظيف البيانات قبل الإرسال لضمان الدقة
+            const cleanEmail = email.trim().toLowerCase();
+            const res = await api.post('/auth/rescue-reset', { email: cleanEmail, newPassword });
+            
             setStatus({ type: 'success', message: res.data.message });
             setTimeout(() => navigate('/login'), 2000);
         } catch (err) {
-            setStatus({ type: 'error', message: err.response?.data?.message || 'حدث خطأ أثناء التغيير' });
+            setStatus({ 
+                type: 'error', 
+                message: err.response?.data?.message || 'حدث خطأ غير متوقع، تأكد من اتصالك بالإنترنت' 
+            });
         } finally {
             setLoading(false);
         }
