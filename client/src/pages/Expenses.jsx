@@ -3,28 +3,43 @@ import api from '../api/axios';
 import { 
     Plus, Trash2, Calendar, Tag, CreditCard, 
     Edit2, X, AlertCircle, ShoppingBag, Utensils, 
-    Bus, Receipt, Coffee, MoreHorizontal
+    Bus, Receipt, Coffee, Target, Save
 } from 'lucide-react';
 
 const Expenses = () => {
     const [expenses, setExpenses] = useState([]);
     const [analytics, setAnalytics] = useState(null);
+    const [budgets, setBudgets] = useState([]);
     const [form, setForm] = useState({
         amount: '', note: '', expenseType: 'متغير', necessityLevel: 'أساسي', 
         budgetCategory: 'طعام', paymentSource: 'كاش', vendor: ''
     });
+    const [budgetLimit, setBudgetLimit] = useState('');
     const [loading, setLoading] = useState(false);
     const [editingId, setEditingId] = useState(null);
 
-    const fetchExpenses = async () => {
+    const fetchData = async () => {
         try {
-            const res = await api.get('/expenses');
-            setExpenses(res.data.expenses);
-            setAnalytics(res.data.analytics);
+            const [expRes, budRes] = await Promise.all([
+                api.get('/expenses'),
+                api.get('/budgets')
+            ]);
+            setExpenses(expRes.data.expenses);
+            setAnalytics(expRes.data.analytics);
+            setBudgets(budRes.data);
         } catch (err) { console.error(err); }
     };
 
-    useEffect(() => { fetchExpenses(); }, []);
+    useEffect(() => { fetchData(); }, []);
+
+    const handleSetBudget = async (category) => {
+        if (!budgetLimit) return;
+        try {
+            await api.post('/budgets', { category, limit: budgetLimit });
+            setBudgetLimit('');
+            fetchData();
+        } catch (err) { alert('خطأ في تعيين الميزانية'); }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -37,7 +52,7 @@ const Expenses = () => {
                 await api.post('/expenses', form);
             }
             setForm({ amount: '', note: '', expenseType: 'متغير', necessityLevel: 'أساسي', budgetCategory: 'طعام', paymentSource: 'كاش', vendor: '' });
-            fetchExpenses();
+            fetchData();
         } catch (err) { alert('حدث خطأ أثناء الحفظ'); }
         finally { setLoading(false); }
     };
@@ -60,57 +75,48 @@ const Expenses = () => {
         if (!confirm('هل أنت متأكد؟')) return;
         try {
             await api.delete(`/expenses/${id}`);
-            fetchExpenses();
+            fetchData();
         } catch (err) { alert('خطأ في الحذف'); }
     };
 
-    const getCategoryIcon = (cat) => {
-        switch(cat) {
-            case 'طعام': return <Utensils size={18} />;
-            case 'مواصلات': return <Bus size={18} />;
-            case 'فواتير': return <Receipt size={18} />;
-            case 'تسوق': return <ShoppingBag size={18} />;
-            case 'ترفيه': return <Coffee size={18} />;
-            default: return <Tag size={18} />;
-        }
-    };
-
     return (
-        <div className="space-y-8 fade-in text-right" dir="rtl">
-            <h1 className="text-3xl font-bold text-white">إدارة الرقابة المالية (المصروفات)</h1>
+        <div className="space-y-8 fade-in text-right pb-20" dir="rtl">
+            <h1 className="text-3xl font-bold text-white">الرقابة المالية والموازنة</h1>
 
-            {/* Analytics Header */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="bg-red-600 p-6 rounded-[2rem] text-white shadow-xl shadow-red-900/20">
-                    <div className="flex justify-between items-center mb-4">
-                        <AlertCircle size={24} />
-                        <span className="text-[10px] bg-white/20 px-2 py-1 rounded-full font-bold uppercase">استنزاف</span>
-                    </div>
-                    <p className="text-red-100 text-xs mb-1">أعلى فئة إنفاق</p>
-                    <p className="text-2xl font-black">{analytics?.topCategory}</p>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl">
-                    <div className="flex justify-between items-center mb-4">
-                        <CreditCard className="text-blue-500" size={24} />
-                        <span className="text-[10px] text-slate-500 font-bold">الميزانية</span>
-                    </div>
-                    <p className="text-slate-400 text-xs mb-1">إجمالي إنفاق الشهر</p>
-                    <p className="text-2xl font-black text-white">{analytics?.totalSpentThisMonth.toLocaleString()} ج.م</p>
-                </div>
-
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl">
-                    <div className="flex justify-between items-center mb-4 text-orange-500">
-                        <MoreHorizontal size={24} />
-                        <span className="text-[10px] text-slate-500 font-bold">جودة الإنفاق</span>
-                    </div>
-                    <p className="text-slate-400 text-xs mb-1">نسبة الكماليات</p>
-                    <div className="flex items-end gap-2">
-                        <p className="text-2xl font-black text-white">{analytics?.basicVsLuxury.ratio}%</p>
-                        <div className="flex-1 bg-slate-800 h-1.5 rounded-full mb-2 overflow-hidden">
-                            <div className="bg-orange-500 h-full" style={{ width: `${analytics?.basicVsLuxury.ratio}%` }}></div>
-                        </div>
-                    </div>
+            {/* Budget Monitoring Layer */}
+            <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl">
+                <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                    <Target className="text-blue-500" /> مراقبة الميزانيات الشهرية
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {['طعام', 'مواصلات', 'فواتير', 'تسوق'].map(cat => {
+                        const b = budgets.find(x => x.category === cat);
+                        const isExceeded = b?.percent > 100;
+                        return (
+                            <div key={cat} className="p-5 bg-slate-800/40 rounded-3xl border border-slate-800">
+                                <div className="flex justify-between items-start mb-4">
+                                    <span className="font-bold text-white">{cat}</span>
+                                    {b ? (
+                                        <span className={`text-[10px] px-2 py-1 rounded-full font-bold ${isExceeded ? 'bg-red-500/20 text-red-500' : 'bg-emerald-500/20 text-emerald-500'}`}>
+                                            {b.percent}%
+                                        </span>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <input type="number" placeholder="الميزانية" className="w-16 bg-slate-900 border border-slate-700 rounded p-1 text-[10px]" onChange={e => setBudgetLimit(e.target.value)} />
+                                            <button onClick={() => handleSetBudget(cat)} className="text-blue-500"><Plus size={14}/></button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div className={`h-full transition-all duration-1000 ${isExceeded ? 'bg-red-500' : 'bg-blue-600'}`} style={{ width: `${Math.min(b?.percent || 0, 100)}%` }}></div>
+                                </div>
+                                <div className="flex justify-between mt-2 text-[10px]">
+                                    <span className="text-slate-500">من {b?.limit.toLocaleString() || 0}</span>
+                                    <span className={isExceeded ? 'text-red-400 font-bold' : 'text-slate-400'}>{b ? (isExceeded ? 'تجاوزت!' : `متبقي ${b.remaining.toLocaleString()}`) : 'لم تحدد'}</span>
+                                </div>
+                            </div>
+                        )
+                    })}
                 </div>
             </div>
 
@@ -147,28 +153,7 @@ const Expenses = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <label className="text-[10px] text-slate-500 mb-1 block mr-2">النوع</label>
-                                <select className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none text-sm" value={form.expenseType} onChange={e => setForm({...form, expenseType: e.target.value})}>
-                                    <option value="ثابت">ثابت</option>
-                                    <option value="متغير">متغير</option>
-                                    <option value="طارئ">طارئ</option>
-                                    <option value="موسمي">موسمي</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label className="text-[10px] text-slate-500 mb-1 block mr-2">المصدر</label>
-                                <select className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none text-sm" value={form.paymentSource} onChange={e => setForm({...form, paymentSource: e.target.value})}>
-                                    <option value="كاش">كاش</option>
-                                    <option value="بنك">بنك</option>
-                                    <option value="بطاقة">بطاقة ائتمان</option>
-                                    <option value="محفظة">محفظة</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <button type="submit" disabled={loading} className={`w-full font-black py-4 rounded-xl transition-all ${editingId ? 'bg-indigo-600' : 'bg-red-600 hover:bg-red-700'}`}>
+                        <button type="submit" disabled={loading} className={`w-full font-black py-4 rounded-xl shadow-lg ${editingId ? 'bg-indigo-600' : 'bg-red-600 hover:bg-red-700 shadow-red-900/40'}`}>
                             {loading ? 'جاري الحفظ...' : (editingId ? 'تحديث البيانات' : 'تسجيل المصروف')}
                         </button>
                     </form>
@@ -176,30 +161,24 @@ const Expenses = () => {
 
                 {/* List View */}
                 <div className="lg:col-span-2 bg-slate-900 p-8 rounded-3xl border border-slate-800 shadow-xl">
-                    <h3 className="text-xl font-bold mb-6">سجل المصروفات التحليلي</h3>
+                    <h3 className="text-xl font-bold mb-6">سجل المصروفات والميزانية</h3>
                     <div className="space-y-4">
                         {expenses.map((item) => (
                             <div key={item._id} className="flex items-center justify-between p-5 bg-slate-800/40 rounded-2xl border border-slate-800 hover:border-slate-700 transition-all group">
                                 <div className="flex items-center gap-5">
                                     <div className="w-12 h-12 bg-red-500/10 text-red-500 rounded-2xl flex items-center justify-center">
-                                        {getCategoryIcon(item.budgetCategory)}
+                                        <Tag size={18} />
                                     </div>
                                     <div>
                                         <div className="font-bold text-lg text-white">{item.note}</div>
                                         <div className="flex items-center gap-3 text-[10px] text-slate-500 mt-1">
                                             <span className="bg-slate-800 px-2 py-0.5 rounded text-white font-bold">{item.budgetCategory}</span>
-                                            <span className={`px-2 py-0.5 rounded font-bold ${item.necessityLevel === 'كمالي' ? 'text-orange-400 border border-orange-500/20' : 'text-slate-500'}`}>
-                                                {item.necessityLevel}
-                                            </span>
                                             <span><Calendar size={12} className="inline ml-1" /> {new Date(item.date).toLocaleDateString('ar-EG')}</span>
                                         </div>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-6">
-                                    <div className="text-left">
-                                        <div className="text-xl font-black text-white">{item.amount.toLocaleString()} ج.م</div>
-                                        <div className="text-[10px] text-slate-600">{item.paymentSource}</div>
-                                    </div>
+                                    <div className="text-left font-black text-white">{item.amount.toLocaleString()} ج.م</div>
                                     <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                         <button onClick={() => handleEdit(item)} className="text-blue-400 hover:text-blue-300"><Edit2 size={18} /></button>
                                         <button onClick={() => handleDelete(item._id)} className="text-slate-600 hover:text-red-500"><Trash2 size={18} /></button>
