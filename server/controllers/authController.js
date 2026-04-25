@@ -42,7 +42,7 @@ exports.loginUser = async (req, res) => {
             res.status(401).json({ message: 'البريد أو كلمة السر غير صحيحة' });
         }
     } catch (error) {
-        console.error('Login Error:', error.message);
+        console.error('🔥 Login Error Details:', error);
         res.status(500).json({ message: error.message });
     }
 };
