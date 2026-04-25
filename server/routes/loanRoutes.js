@@ -9,6 +9,8 @@ router.route('/')
     .get(getLoans)
     .post(createLoan);
 
+router.post('/payment', recordPayment);
+
 router.route('/:id')
     .put(updateLoan)
     .delete(deleteLoan);

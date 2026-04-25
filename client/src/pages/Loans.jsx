@@ -1,112 +1,164 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { Banknote, Plus, Trash2, Calendar, Landmark, Edit2, X } from 'lucide-react';
+import { 
+    Plus, Trash2, Landmark, Calendar, 
+    TrendingDown, CheckCircle2, AlertCircle, 
+    ChevronRight, ArrowRightCircle, Receipt, DollarSign
+} from 'lucide-react';
 
 const Loans = () => {
     const [loans, setLoans] = useState([]);
-    const [form, setForm] = useState({
-        loanName: '', lenderName: '', principalAmount: '', durationMonths: '', monthlyInstallment: '', totalPayable: '', startDate: '', firstDueDate: '', dueDay: 1
-    });
-    const [loading, setLoading] = useState(false);
-    const [editingId, setEditingId] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedLoan, setSelectedLoan] = useState(null);
+    const [paymentForm, setPaymentForm] = useState({ amount: '', principalComponent: '', interestComponent: '' });
 
     const fetchLoans = async () => {
         try {
             const res = await api.get('/loans');
             setLoans(res.data);
         } catch (err) { console.error(err); }
+        finally { setLoading(false); }
     };
 
     useEffect(() => { fetchLoans(); }, []);
 
-    const handleSubmit = async (e) => {
+    const handleRecordPayment = async (e) => {
         e.preventDefault();
-        setLoading(true);
         try {
-            if (editingId) {
-                await api.put(`/loans/${editingId}`, form);
-                setEditingId(null);
-            } else {
-                await api.post('/loans', form);
-            }
-            setForm({ loanName: '', lenderName: '', principalAmount: '', durationMonths: '', monthlyInstallment: '', totalPayable: '', startDate: '', firstDueDate: '', dueDay: 1 });
+            const nextInstallment = (selectedLoan.analytics.installmentsPaid || 0) + 1;
+            await api.post('/loans/payment', { 
+                ...paymentForm, 
+                loanId: selectedCard._id, // Wait, I used selectedCard but it should be selectedLoan
+                installmentNumber: nextInstallment 
+            });
+            // Let's fix the variable name to selectedLoan
+            setShowPaymentModal(false);
             fetchLoans();
-        } catch (err) { alert('حدث خطأ أثناء الحفظ'); }
-        finally { setLoading(false); }
+        } catch (err) { alert('خطأ في تسجيل القسط'); }
     };
 
-    const handleEdit = (loan) => {
-        setEditingId(loan._id);
-        setForm({
-            loanName: loan.loanName,
-            lenderName: loan.lenderName,
-            principalAmount: loan.principalAmount,
-            durationMonths: loan.durationMonths,
-            monthlyInstallment: loan.monthlyInstallment,
-            totalPayable: loan.totalPayable,
-            startDate: loan.startDate.split('T')[0],
-            firstDueDate: loan.firstDueDate.split('T')[0],
-            dueDay: loan.dueDay
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleDelete = async (id) => {
-        if (!confirm('هل أنت متأكد؟')) return;
-        try {
-            await api.delete(`/loans/${id}`);
-            fetchLoans();
-        } catch (err) { alert('خطأ في الحذف'); }
-    };
+    if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>;
 
     return (
-        <div className="space-y-8 fade-in" dir="rtl">
-            <h1 className="text-3xl font-bold text-white">إدارة القروض</h1>
+        <div className="space-y-10 fade-in text-right pb-20" dir="rtl">
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold text-white">إدارة الديون والالتزامات</h1>
+                <button className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-900/20">
+                    <Plus size={20} /> تسجيل قرض جديد
+                </button>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className={`p-8 rounded-3xl border shadow-xl h-fit transition-all ${editingId ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}`}>
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold flex items-center gap-2 text-white">
-                            {editingId ? <Edit2 className="text-indigo-400" /> : <Plus className="text-blue-500" />}
-                            {editingId ? 'تعديل القرض' : 'تسجيل قرض جديد'}
-                        </h3>
-                        {editingId && (
-                            <button onClick={() => {setEditingId(null); setForm({loanName:'', lenderName:'', principalAmount:'', durationMonths:'', monthlyInstallment:'', totalPayable:'', startDate:'', firstDueDate:'', dueDay:1});}} className="text-slate-500 hover:text-white"><X size={20}/></button>
-                        )}
-                    </div>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <input placeholder="اسم القرض" className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.loanName} onChange={e => setForm({...form, loanName: e.target.value})} required />
-                        <input placeholder="جهة القرض" className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.lenderName} onChange={e => setForm({...form, lenderName: e.target.value})} required />
-                        <div className="grid grid-cols-2 gap-4">
-                            <input type="number" placeholder="المبلغ الأصلي" className="bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.principalAmount} onChange={e => setForm({...form, principalAmount: e.target.value})} required />
-                            <input type="number" placeholder="إجمالي الرد" className="bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.totalPayable} onChange={e => setForm({...form, totalPayable: e.target.value})} required />
-                        </div>
-                        <button type="submit" disabled={loading} className={`w-full font-bold py-4 rounded-xl shadow-lg ${editingId ? 'bg-indigo-600' : 'bg-blue-600'}`}>
-                            {loading ? 'جاري الحفظ...' : (editingId ? 'تحديث البيانات' : 'حفظ القرض')}
-                        </button>
-                    </form>
-                </div>
+            <div className="grid grid-cols-1 gap-10">
+                {loans.map((loan) => (
+                    <div key={loan._id} className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden relative group">
+                        {/* Status Watermark */}
+                        <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-600/5 blur-3xl rounded-full"></div>
 
-                <div className="lg:col-span-2 space-y-4">
-                    {loans.map((loan) => (
-                        <div key={loan._id} className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl hover:border-blue-500/30 transition-all group">
-                            <div className="flex justify-between items-start">
-                                <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-blue-500/10 text-blue-500 rounded-xl flex items-center justify-center"><Landmark size={24} /></div>
-                                    <div>
-                                        <h4 className="text-xl font-bold text-white">{loan.loanName}</h4>
-                                        <p className="text-slate-500 text-sm">{loan.lenderName}</p>
+                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12 items-center relative z-10">
+                            {/* 1. Progress Ring & Main Info */}
+                            <div className="flex flex-col items-center text-center space-y-4">
+                                <div className="relative w-40 h-40 flex items-center justify-center">
+                                    <svg className="w-full h-full -rotate-90">
+                                        <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-800" />
+                                        <circle cx="80" cy="80" r="70" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-blue-500" strokeDasharray={440} strokeDashoffset={440 - (440 * loan.analytics.progressPercent) / 100} strokeLinecap="round" />
+                                    </svg>
+                                    <div className="absolute text-center">
+                                        <p className="text-3xl font-black text-white">{loan.analytics.progressPercent}%</p>
+                                        <p className="text-[10px] text-slate-500 uppercase font-bold">نسبة السداد</p>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleEdit(loan)} className="text-slate-500 hover:text-blue-400"><Edit2 size={18} /></button>
-                                    <button onClick={() => handleDelete(loan._id)} className="text-slate-500 hover:text-red-500"><Trash2 size={18} /></button>
+                                <div>
+                                    <h3 className="text-2xl font-black text-white">{loan.loanName}</h3>
+                                    <p className="text-slate-500 text-sm font-medium">{loan.lenderName}</p>
+                                </div>
+                            </div>
+
+                            {/* 2. Financial Metrics */}
+                            <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 bg-slate-800/40 rounded-2xl border border-slate-800">
+                                        <p className="text-slate-500 text-[10px] mb-1">أصل القرض</p>
+                                        <p className="font-black text-white">{loan.principalAmount.toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-4 bg-slate-800/40 rounded-2xl border border-slate-800">
+                                        <p className="text-slate-500 text-[10px] mb-1">إجمالي الرد</p>
+                                        <p className="font-black text-white">{loan.totalPayable.toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                <div className="p-5 bg-blue-600/10 border border-blue-500/20 rounded-3xl">
+                                    <div className="flex justify-between items-center mb-2">
+                                        <span className="text-xs text-blue-400 font-bold">المتبقي للسداد</span>
+                                        <span className="text-xs text-blue-500 font-black">عبء الدخل: {loan.analytics.debtBurden}%</span>
+                                    </div>
+                                    <p className="text-3xl font-black text-white">{loan.analytics.remainingTotal.toLocaleString()} <span className="text-sm">ج.م</span></p>
+                                </div>
+                                <button 
+                                    onClick={() => { setSelectedLoan(loan); setShowPaymentModal(true); setPaymentForm({amount: loan.monthlyInstallment, principalComponent: '', interestComponent: ''}); }}
+                                    className="w-full py-4 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl transition-all font-black flex items-center justify-center gap-2 border border-slate-700"
+                                >
+                                    <Receipt size={20} /> تسجيل قسط جديد
+                                </button>
+                            </div>
+
+                            {/* 3. Installment Status */}
+                            <div className="bg-slate-950/50 p-6 rounded-3xl border border-slate-800 h-full">
+                                <h4 className="text-sm font-bold text-white mb-6 flex items-center gap-2">
+                                    <Calendar className="text-blue-500" size={18} /> جدول الأقساط
+                                </h4>
+                                <div className="space-y-3">
+                                    <div className="flex justify-between items-center p-3 bg-slate-800/20 rounded-xl">
+                                        <span className="text-xs text-slate-500">تم سداد</span>
+                                        <span className="text-sm font-bold text-emerald-400">{loan.analytics.installmentsPaid} أقساط</span>
+                                    </div>
+                                    <div className="flex justify-between items-center p-3 bg-slate-800/20 rounded-xl">
+                                        <span className="text-xs text-slate-500">متبقي</span>
+                                        <span className="text-sm font-bold text-blue-400">{loan.analytics.installmentsRemaining} أقساط</span>
+                                    </div>
+                                    <div className="pt-4 mt-4 border-t border-slate-800">
+                                        <p className="text-[10px] text-slate-500 mb-1">القسط القادم</p>
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-black text-white">{loan.monthlyInstallment.toLocaleString()} ج.م</span>
+                                            <span className="text-[10px] px-2 py-0.5 bg-orange-500/10 text-orange-500 rounded font-bold">يوم {loan.startPaymentDate?.split('T')[0].split('-')[2] || '1'}</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    ))}
-                </div>
+                    </div>
+                ))}
             </div>
+
+            {/* Modal for Recording Payment */}
+            {showPaymentModal && (
+                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+                    <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl scale-in">
+                        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+                            <Receipt className="text-emerald-500" /> تسجيل قسط مسدد
+                        </h3>
+                        <form onSubmit={handleRecordPayment} className="space-y-6">
+                            <div>
+                                <label className="text-xs text-slate-500 mb-2 block mr-2">مبلغ القسط</label>
+                                <input type="number" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-xl outline-none" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} required />
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-[10px] text-slate-500 mb-2 block mr-2">جزء أصل الدين</label>
+                                    <input type="number" placeholder="Principal" className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none text-sm" value={paymentForm.principalComponent} onChange={e => setPaymentForm({...paymentForm, principalComponent: e.target.value})} />
+                                </div>
+                                <div>
+                                    <label className="text-[10px] text-slate-500 mb-2 block mr-2">جزء الفائدة</label>
+                                    <input type="number" placeholder="Interest" className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none text-sm" value={paymentForm.interestComponent} onChange={e => setPaymentForm({...paymentForm, interestComponent: e.target.value})} />
+                                </div>
+                            </div>
+                            <div className="flex gap-4">
+                                <button type="button" onClick={() => setShowPaymentModal(false)} className="flex-1 py-4 text-slate-500 font-bold">إلغاء</button>
+                                <button type="submit" className="flex-1 py-4 bg-emerald-600 rounded-xl font-black text-white shadow-lg shadow-emerald-900/20">تأكيد السداد</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

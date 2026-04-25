@@ -1,107 +1,116 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
-import { Users, Plus, Trash2, Calendar, UserPlus, Edit2, X } from 'lucide-react';
+import { 
+    Plus, Trash2, Users, Calendar, 
+    ArrowRightCircle, CheckCircle, Timer, 
+    TrendingUp, DollarSign, Receipt
+} from 'lucide-react';
 
 const Groups = () => {
     const [groups, setGroups] = useState([]);
-    const [form, setForm] = useState({
-        groupName: '', totalAmount: '', membersCount: '', monthlyInstallment: '', startDate: '', payoutOrder: 1
-    });
-    const [loading, setLoading] = useState(false);
-    const [editingId, setEditingId] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [selectedGroup, setSelectedGroup] = useState(null);
 
     const fetchGroups = async () => {
         try {
             const res = await api.get('/groups');
             setGroups(res.data);
         } catch (err) { console.error(err); }
+        finally { setLoading(false); }
     };
 
     useEffect(() => { fetchGroups(); }, []);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
+    const handleRecordPayment = async (group) => {
         try {
-            if (editingId) {
-                await api.put(`/groups/${editingId}`, form);
-                setEditingId(null);
-            } else {
-                await api.post('/groups', form);
-            }
-            setForm({ groupName: '', totalAmount: '', membersCount: '', monthlyInstallment: '', startDate: '', payoutOrder: 1 });
+            const nextMonth = (group.analytics.monthsPaid || 0) + 1;
+            await api.post('/groups/payment', { 
+                groupId: group._id, 
+                amount: group.monthlyAmount,
+                monthNumber: nextMonth 
+            });
             fetchGroups();
-        } catch (err) { alert('حدث خطأ أثناء الحفظ'); }
-        finally { setLoading(false); }
+        } catch (err) { alert('خطأ في تسجيل الدفعة'); }
     };
 
-    const handleEdit = (group) => {
-        setEditingId(group._id);
-        setForm({
-            groupName: group.groupName,
-            totalAmount: group.totalAmount,
-            membersCount: group.membersCount,
-            monthlyInstallment: group.monthlyInstallment,
-            startDate: group.startDate?.split('T')[0] || '',
-            payoutOrder: group.payoutOrder
-        });
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    };
-
-    const handleDelete = async (id) => {
-        if (!confirm('هل أنت متأكد؟')) return;
-        try {
-            await api.delete(`/groups/${id}`);
-            fetchGroups();
-        } catch (err) { alert('خطأ في الحذف'); }
-    };
+    if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>;
 
     return (
-        <div className="space-y-8 fade-in" dir="rtl">
-            <h1 className="text-3xl font-bold text-white">إدارة الجمعيات</h1>
+        <div className="space-y-10 fade-in text-right pb-20" dir="rtl">
+            <div className="flex justify-between items-center">
+                <h1 className="text-3xl font-bold text-white">إدارة الجمعيات والادخار الاجتماعي</h1>
+                <button className="bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold hover:bg-blue-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-900/20">
+                    <Plus size={20} /> إضافة جمعية جديدة
+                </button>
+            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className={`p-8 rounded-3xl border shadow-xl h-fit transition-all ${editingId ? 'bg-indigo-900/20 border-indigo-500/50' : 'bg-slate-900 border-slate-800'}`}>
-                    <div className="flex justify-between items-center mb-6">
-                        <h3 className="text-xl font-bold flex items-center gap-2 text-white">
-                            {editingId ? <Edit2 className="text-indigo-400" /> : <Plus className="text-blue-500" />}
-                            {editingId ? 'تعديل الجمعية' : 'إضافة جمعية'}
-                        </h3>
-                        {editingId && (
-                            <button onClick={() => {setEditingId(null); setForm({groupName:'', totalAmount:'', membersCount:'', monthlyInstallment:'', startDate:'', payoutOrder:1});}} className="text-slate-500 hover:text-white"><X size={20}/></button>
-                        )}
-                    </div>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <input placeholder="اسم الجمعية" className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.groupName} onChange={e => setForm({...form, groupName: e.target.value})} required />
-                        <div className="grid grid-cols-2 gap-4">
-                            <input type="number" placeholder="مبلغ القبض" className="bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.totalAmount} onChange={e => setForm({...form, totalAmount: e.target.value})} required />
-                            <input type="number" placeholder="القسط الشهري" className="bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none" value={form.monthlyInstallment} onChange={e => setForm({...form, monthlyInstallment: e.target.value})} required />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {groups.map((group) => (
+                    <div key={group._id} className="bg-slate-900 border border-slate-800 rounded-[2.5rem] p-8 shadow-2xl relative overflow-hidden group hover:border-blue-500/30 transition-all">
+                        {/* Payout Turn Badge */}
+                        <div className="absolute top-6 left-6 w-12 h-12 bg-blue-600 rounded-2xl flex flex-col items-center justify-center text-white shadow-lg">
+                            <span className="text-[10px] font-bold opacity-70">دورك</span>
+                            <span className="text-xl font-black">{group.userPayoutOrder}</span>
                         </div>
-                        <button type="submit" disabled={loading} className={`w-full font-bold py-4 rounded-xl shadow-lg ${editingId ? 'bg-indigo-600' : 'bg-blue-600'}`}>
-                            {loading ? 'جاري الحفظ...' : (editingId ? 'تحديث البيانات' : 'حفظ الجمعية')}
-                        </button>
-                    </form>
-                </div>
 
-                <div className="lg:col-span-2 space-y-4">
-                    {groups.map((group) => (
-                        <div key={group._id} className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl hover:border-emerald-500/30 transition-all group">
-                            <div className="flex justify-between items-start">
-                                <div className="flex gap-4">
-                                    <div className="w-12 h-12 bg-emerald-500/10 text-emerald-500 rounded-xl flex items-center justify-center"><Users size={24} /></div>
-                                    <div>
-                                        <h4 className="text-xl font-bold text-white">{group.groupName}</h4>
-                                        <p className="text-slate-500 text-sm">مبلغ القبض: {group.totalAmount?.toLocaleString()} ج.م</p>
-                                    </div>
-                                </div>
-                                <div className="flex gap-2">
-                                    <button onClick={() => handleEdit(group)} className="text-slate-500 hover:text-blue-400"><Edit2 size={18} /></button>
-                                    <button onClick={() => handleDelete(group._id)} className="text-slate-500 hover:text-red-500"><Trash2 size={18} /></button>
-                                </div>
+                        <div className="mb-8">
+                            <h3 className="text-2xl font-black text-white flex items-center gap-3">
+                                <Users className="text-blue-500" /> {group.groupName}
+                            </h3>
+                            <p className="text-slate-500 text-sm mt-1">المبلغ الإجمالي المستحق: <span className="text-white font-bold">{group.totalAmount.toLocaleString()} ج.م</span></p>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4 mb-8">
+                            <div className="p-4 bg-slate-800/40 rounded-2xl border border-slate-800">
+                                <p className="text-slate-500 text-[10px] mb-1">القسط الشهري</p>
+                                <p className="font-black text-white">{group.monthlyAmount.toLocaleString()}</p>
+                            </div>
+                            <div className="p-4 bg-slate-800/40 rounded-2xl border border-slate-800">
+                                <p className="text-slate-500 text-[10px] mb-1">تاريخ القبض</p>
+                                <p className="font-black text-blue-400 text-xs">{new Date(group.analytics.payoutDate).toLocaleDateString('ar-EG', { month: 'long', year: 'numeric' })}</p>
                             </div>
                         </div>
-                    ))}
-                </div>
+
+                        {/* Net Position Indicator */}
+                        <div className={`p-5 rounded-3xl mb-8 border ${group.analytics.netPosition >= 0 ? 'bg-emerald-500/10 border-emerald-500/20' : 'bg-orange-500/10 border-orange-500/20'}`}>
+                            <div className="flex justify-between items-center mb-2">
+                                <span className="text-xs text-slate-400 font-bold">صافي الوضع الحالي</span>
+                                <span className={`text-[10px] font-black uppercase ${group.analytics.netPosition >= 0 ? 'text-emerald-400' : 'text-orange-400'}`}>
+                                    {group.analytics.netPosition >= 0 ? 'مقبوض / ربح' : 'تمويل قيد الانتظار'}
+                                </span>
+                            </div>
+                            <p className={`text-2xl font-black ${group.analytics.netPosition >= 0 ? 'text-emerald-400' : 'text-orange-400'}`}>
+                                {group.analytics.netPosition.toLocaleString()} ج.م
+                            </p>
+                        </div>
+
+                        {/* Progress and Actions */}
+                        <div className="space-y-4">
+                            <div className="flex justify-between text-[10px] font-bold text-slate-500">
+                                <span>التقدم: {group.analytics.monthsPaid} من {group.durationMonths} شهور</span>
+                                <span>{((group.analytics.monthsPaid / group.durationMonths) * 100).toFixed(0)}%</span>
+                            </div>
+                            <div className="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                <div className="bg-blue-600 h-full transition-all duration-1000" style={{ width: `${(group.analytics.monthsPaid / group.durationMonths) * 100}%` }}></div>
+                            </div>
+                            
+                            <div className="flex gap-4 pt-4">
+                                <button 
+                                    onClick={() => handleRecordPayment(group)}
+                                    className="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-900/20 flex items-center justify-center gap-2"
+                                >
+                                    <Receipt size={16} /> دفع قسط الشهر
+                                </button>
+                                <button 
+                                    className={`px-4 py-3 rounded-xl font-bold text-sm border ${group.isPaidOut ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-400' : 'bg-slate-800 border-slate-700 text-slate-500'}`}
+                                >
+                                    {group.isPaidOut ? 'تم القبض ✓' : 'لم يُقبض'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                ))}
             </div>
         </div>
     );

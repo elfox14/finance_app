@@ -9,8 +9,10 @@ router.route('/')
     .get(getPeerDebts)
     .post(createPeerDebt);
 
+router.post('/payment', recordPayment);
+
 router.route('/:id')
-    .patch(toggleStatus)
+    .put(updatePeerDebt)
     .delete(deletePeerDebt);
 
 module.exports = router;

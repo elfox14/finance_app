@@ -9,6 +9,8 @@ router.route('/')
     .get(getGroups)
     .post(createGroup);
 
+router.post('/payment', recordGroupPayment);
+
 router.route('/:id')
     .put(updateGroup)
     .delete(deleteGroup);

@@ -15,6 +15,7 @@ import Settings from './pages/Settings';
 import Borrowed from './pages/Borrowed';
 import Lending from './pages/Lending';
 import Certificates from './pages/Certificates';
+import Reports from './pages/Reports';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
           
           {/* المسارات المحمية - كلها داخل ProtectedRoute */}
           <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
+          <Route path="/reports" element={<ProtectedRoute><Layout><Reports /></Layout></ProtectedRoute>} />
           <Route path="/expenses" element={<ProtectedRoute><Layout><Expenses /></Layout></ProtectedRoute>} />
           <Route path="/incomes" element={<ProtectedRoute><Layout><Incomes /></Layout></ProtectedRoute>} />
           <Route path="/cards" element={<ProtectedRoute><Layout><Cards /></Layout></ProtectedRoute>} />
