@@ -12,8 +12,10 @@ const Layout = ({ children }) => {
         { name: 'المصروفات', icon: <ArrowDownCircle size={20} />, path: '/expenses' },
         { name: 'المدخولات', icon: <ArrowUpCircle size={20} />, path: '/incomes' },
         { name: 'البطاقات', icon: <CreditCard size={20} />, path: '/cards' },
-        { name: 'القروض', icon: <Banknote size={20} />, path: '/loans' },
-        { name: 'الجمعيات', icon: <Group size={20} />, path: '/groups' },
+        { name: 'القروض', icon: <Landmark size={20} />, path: '/loans' },
+        { name: 'الجمعيات', icon: <Users size={20} />, path: '/groups' },
+        { name: 'السلف (عليّ)', icon: <ArrowDownCircle size={20} />, path: '/borrowed' },
+        { name: 'التسليف (لي)', icon: <ArrowUpCircle size={20} />, path: '/lending' },
         { name: 'التنبيهات', icon: <Bell size={20} />, path: '/notifications' },
         { name: 'الإعدادات', icon: <Settings size={20} />, path: '/settings' },
     ];

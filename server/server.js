@@ -23,6 +23,7 @@ app.use('/api/expenses', require('./routes/expenseRoutes'));
 app.use('/api/cards', require('./routes/cardRoutes'));
 app.use('/api/loans', require('./routes/loanRoutes'));
 app.use('/api/groups', require('./routes/groupRoutes'));
+app.use('/api/peer-debts', require('./routes/peerDebtRoutes'));
 app.use('/api/dashboard', require('./routes/dashboardRoutes'));
 
 // Base Route
