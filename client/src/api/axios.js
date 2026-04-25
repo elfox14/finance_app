@@ -1,7 +1,11 @@
 import axios from 'axios';
 
+// الحصول على المسار الأساسي من إعدادات Vite أو استخدام المسار الافتراضي
+const baseURL = import.meta.env.BASE_URL || '/fin/';
+
 const api = axios.create({
-    baseURL: '/api', // Render will proxy this or we use relative path
+    // ربط مسار الـ API بمسار الموقع لضمان عمله في الاستضافة (Render/Subdirectory)
+    baseURL: `${baseURL}api`,
 });
 
 // إضافة interceptor لإرفاق التوكن في كل طلب بشكل ديناميكي
