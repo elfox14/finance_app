@@ -9,26 +9,22 @@ exports.getDashboardStats = async (req, res) => {
     try {
         const userId = req.user._id;
 
-        // حساب المدخولات والمصروفات
-        const incomes = await Income.find({ userId });
-        const expenses = await Expense.find({ userId });
+        const incomes = await Income.find({ userId }).lean();
+        const expenses = await Expense.find({ userId }).lean();
         
         const totalIncome = incomes.reduce((sum, item) => sum + item.amount, 0);
         const totalExpense = expenses.reduce((sum, item) => sum + item.amount, 0);
         const currentBalance = totalIncome - totalExpense;
 
-        // حساب الديون (القروض)
         const loans = await Loan.find({ userId, status: 'نشط' });
         const totalLoanRemaining = loans.reduce((sum, item) => sum + item.remainingAmount, 0);
 
-        // حساب البطاقات
-        const cards = await Card.find({ userId, status: 'نشطة' });
-        // (حساب بسيط للمثال، سيتم تطويره لاحقاً ليشمل الكشوفات)
-        const totalCardUsed = 0; 
-
-        // حساب الشهادات
         const certs = await Certificate.find({ userId, status: 'نشطة' });
         const totalCertValue = certs.reduce((sum, item) => sum + item.principalAmount, 0);
+
+        // وسم العمليات بنوعها لضمان عرضها بشكل صحيح في الفرونت
+        const taggedIncomes = incomes.map(i => ({ ...i, type: 'income' }));
+        const taggedExpenses = expenses.map(e => ({ ...e, type: 'expense' }));
 
         res.json({
             currentBalance,
@@ -36,9 +32,12 @@ exports.getDashboardStats = async (req, res) => {
             totalExpense,
             totalLoanRemaining,
             totalCertValue,
-            recentTransactions: [...incomes, ...expenses].sort((a,b) => b.date - a.date).slice(0, 5)
+            recentTransactions: [...taggedIncomes, ...taggedExpenses]
+                .sort((a,b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 5)
         });
     } catch (error) {
+        console.error('Dashboard Error:', error);
         res.status(500).json({ message: error.message });
     }
 };
