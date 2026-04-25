@@ -26,14 +26,29 @@ exports.createLoan = async (req, res) => {
     }
 };
 
+// @desc    Update loan
+exports.updateLoan = async (req, res) => {
+    try {
+        const loan = await Loan.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!loan) return res.status(404).json({ message: 'القرض غير موجود' });
+        res.json(loan);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 // @desc    Delete loan
 exports.deleteLoan = async (req, res) => {
     try {
         const loan = await Loan.findOneAndUpdate(
             { _id: req.params.id, userId: req.user._id },
-            { deletedAt: new Date() },
-            { new: true }
+            { deletedAt: new Date() }
         );
+        if (!loan) return res.status(404).json({ message: 'القرض غير موجود' });
         res.json({ message: 'تم حذف القرض بنجاح' });
     } catch (error) {
         res.status(500).json({ message: error.message });

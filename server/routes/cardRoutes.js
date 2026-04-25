@@ -10,6 +10,7 @@ router.route('/')
     .post(createCard);
 
 router.route('/:id')
+    .put(updateCard)
     .delete(deleteCard);
 
 module.exports = router;

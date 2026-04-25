@@ -20,14 +20,29 @@ exports.createCard = async (req, res) => {
     }
 };
 
+// @desc    Update card
+exports.updateCard = async (req, res) => {
+    try {
+        const card = await Card.findOneAndUpdate(
+            { _id: req.params.id, userId: req.user._id },
+            req.body,
+            { new: true, runValidators: true }
+        );
+        if (!card) return res.status(404).json({ message: 'البطاقة غير موجودة' });
+        res.json(card);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 // @desc    Delete card
 exports.deleteCard = async (req, res) => {
     try {
         const card = await Card.findOneAndUpdate(
             { _id: req.params.id, userId: req.user._id },
-            { deletedAt: new Date() },
-            { new: true }
+            { deletedAt: new Date() }
         );
+        if (!card) return res.status(404).json({ message: 'البطاقة غير موجودة' });
         res.json({ message: 'تم حذف البطاقة بنجاح' });
     } catch (error) {
         res.status(500).json({ message: error.message });

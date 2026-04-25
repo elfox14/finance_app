@@ -10,6 +10,7 @@ router.route('/')
     .post(createLoan);
 
 router.route('/:id')
+    .put(updateLoan)
     .delete(deleteLoan);
 
 module.exports = router;
