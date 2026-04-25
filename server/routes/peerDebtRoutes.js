@@ -1,6 +1,12 @@
 const express = require('express');
 const router = express.Router();
-const { getPeerDebts, createPeerDebt, toggleStatus, deletePeerDebt } = require('../controllers/peerDebtController');
+const { 
+    getPeerDebts, 
+    createPeerDebt, 
+    updatePeerDebt, 
+    deletePeerDebt,
+    recordPayment 
+} = require('../controllers/peerDebtController');
 const { protect } = require('../middleware/authMiddleware');
 
 router.use(protect);
