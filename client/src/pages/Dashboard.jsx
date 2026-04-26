@@ -5,23 +5,31 @@ import {
     CreditCard, Landmark, Users, 
     TrendingUp, TrendingDown, Clock, 
     ChevronRight, AlertCircle, ShieldCheck,
-    ChevronDown, ChevronUp, Plus, Sparkles,
-    Calendar, AlertTriangle, Info, ArrowRight,
-    PieChart, Receipt
+    ChevronDown, ChevronUp, Plus, PieChart as PieIcon
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { 
+    Chart as ChartJS, ArcElement, Tooltip, Legend 
+} from 'chart.js';
+import { Pie } from 'react-chartjs-2';
+
+// تسجيل مكونات الرسم البياني
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [transactions, setTransactions] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showAllStats, setShowAllStats] = useState(false);
 
     const fetchDashboardData = async () => {
         try {
-            const res = await api.get('/dashboard');
-            const data = res.data || {};
-            setStats(data);
-            setTransactions(Array.isArray(data.recentActions) ? data.recentActions : []);
+            const [statsRes, transRes] = await Promise.all([
+                api.get('/dashboard'),
+                api.get('/expenses/latest')
+            ]);
+            setStats(statsRes.data || {});
+            setTransactions(Array.isArray(transRes.data) ? transRes.data : (transRes.data?.expenses || []));
         } catch (err) {
             console.error('Error fetching dashboard:', err);
             setStats({});
@@ -52,198 +60,170 @@ const Dashboard = () => {
     }
 
     const topStats = stats?.topStats || {};
-    const executiveSummary = stats?.executiveSummary || {};
-    const alerts = stats?.alerts || [];
     const healthFactors = stats?.healthFactors || {};
-    const upcoming = stats?.upcomingObligations || [];
+    const distribution = stats?.distribution || {};
+
+    // إعداد بيانات الرسم البياني الحقيقي
+    const chartData = {
+        labels: Object.keys(distribution).length > 0 ? Object.keys(distribution) : ['لا يوجد بيانات'],
+        datasets: [{
+            data: Object.values(distribution).length > 0 ? Object.values(distribution) : [1],
+            backgroundColor: [
+                '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#64748b'
+            ],
+            borderWidth: 0,
+            hoverOffset: 15
+        }]
+    };
+
+    const chartOptions = {
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'bottom',
+                labels: {
+                    color: '#94a3b8',
+                    font: { size: 10, weight: 'bold' },
+                    padding: 20,
+                    usePointStyle: true
+                }
+            },
+            tooltip: {
+                backgroundColor: '#1e293b',
+                padding: 12,
+                cornerRadius: 12,
+                titleFont: { size: 14, weight: 'bold' }
+            }
+        }
+    };
 
     return (
-        <div className="space-y-8 md:space-y-12 fade-in pb-20 md:pb-10" dir="rtl">
-            {/* 1) Quick Actions & Header */}
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4 md:px-0">
+        <div className="space-y-8 md:space-y-12 fade-in pb-24 md:pb-10" dir="rtl">
+            <header className="flex justify-between items-center px-4 md:px-0">
                 <div>
-                    <h1 className="text-2xl md:text-4xl font-black text-white italic">لوحة التحكم</h1>
-                    <p className="text-slate-500 text-xs md:text-sm mt-1">ذكاء مالي في متناول يدك</p>
+                    <h1 className="text-2xl md:text-4xl font-black text-white italic">نظرة عامة</h1>
+                    <p className="text-slate-500 text-xs md:text-sm mt-1">تحليل شامل لوضعك المالي الحالي</p>
                 </div>
-                <div className="flex flex-wrap gap-3">
-                    <QuickActionButton to="/incomes" icon={<Plus size={16} />} label="دخل جديد" color="bg-emerald-600" />
-                    <QuickActionButton to="/expenses" icon={<Plus size={16} />} label="مصروف جديد" color="bg-red-600" />
-                    <QuickActionButton to="/loans" icon={<Receipt size={16} />} label="دفع قسط" color="bg-blue-600" />
-                </div>
+                <Link to="/expenses" className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg shadow-blue-900/40 hover:scale-105 transition-transform">
+                    <Plus size={24} />
+                </Link>
             </header>
 
-            {/* 2) Decision Bar (Top Stats) */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 px-4 md:px-0">
-                <DecisionItem label="الرصيد الحالي" val={topStats.currentBalance} icon={<Wallet size={20} />} color="blue" />
-                <DecisionItem label="المتاح للإنفاق" val={topStats.availableBalance} icon={<TrendingUp size={20} />} color="emerald" sub="بعد الالتزامات" />
-                <DecisionItem label="التزامات 30 يوم" val={topStats.totalObligations} icon={<Clock size={20} />} color="orange" />
-                <DecisionItem label="نسبة الادخار" val={`${topStats.savingsRate}%`} icon={<TrendingDown size={20} />} color="indigo" />
+            {/* Strategic Top Stats */}
+            <div className="grid grid-cols-1 gap-6 px-4 md:px-0">
+                <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:overflow-visible">
+                    <TopStatItem label="الرصيد الحالي" val={topStats.currentBalance || 0} icon={<Wallet />} color="bg-blue-600" />
+                    <TopStatItem label="السيولة المتاحة" val={topStats.availableBalance || 0} icon={<TrendingUp />} color="bg-emerald-600" />
+                    <TopStatItem label="إجمالي الالتزامات" val={topStats.totalObligations || 0} icon={<Clock />} color="bg-orange-600" />
+                    <div className="flex-shrink-0 w-72 md:w-auto bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl flex items-center justify-between">
+                        <div>
+                            <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">الصحة المالية</p>
+                            <p className={`text-3xl font-black ${getHealthColor(topStats.healthScore)}`}>
+                                {topStats.healthScore !== undefined ? topStats.healthScore : 0}%
+                            </p>
+                        </div>
+                        <div className={`p-4 rounded-2xl bg-slate-800 ${getHealthColor(topStats.healthScore)}`}>
+                            <ShieldCheck size={28} />
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
-                <div className="lg:col-span-2 space-y-8">
-                    {/* 3) Executive Summary */}
-                    <div className="bg-gradient-to-br from-blue-600/20 to-indigo-600/20 border border-blue-500/30 p-8 rounded-[2.5rem] relative overflow-hidden group">
-                        <div className="absolute top-0 left-0 w-full h-full bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10"></div>
-                        <div className="relative z-10 flex flex-col md:flex-row items-center gap-6">
-                            <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-900/40 shrink-0">
-                                <Sparkles size={32} />
-                            </div>
-                            <div className="text-center md:text-right">
-                                <h3 className="text-xl font-black text-white mb-2">الملخص التنفيذي</h3>
-                                <p className="text-blue-100 text-sm md:text-base leading-relaxed opacity-90">{executiveSummary.text}</p>
-                                <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-blue-600/30 rounded-xl text-xs font-bold text-blue-200">
-                                    <Info size={14} /> {executiveSummary.mainInsight}
-                                </div>
-                            </div>
-                        </div>
+                {/* Real Pie Chart Section - Spending Analysis */}
+                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col items-center">
+                    <div className="w-full flex justify-between items-center mb-8">
+                        <h3 className="text-xl font-black text-white flex items-center gap-2">
+                            <PieIcon className="text-blue-500" size={20} /> تحليل الإنفاق
+                        </h3>
                     </div>
-
-                    {/* 4) Needs Attention & Health Score */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl">
-                            <h3 className="text-lg font-black text-white mb-6 flex items-center gap-3">
-                                <AlertCircle className="text-orange-500" /> ما يحتاج انتباهك
-                            </h3>
-                            <div className="space-y-4">
-                                {alerts.length > 0 ? alerts.map((alert, i) => (
-                                    <div key={i} className={`p-4 rounded-2xl flex items-center gap-4 ${alert.type === 'danger' ? 'bg-red-500/10 text-red-400' : 'bg-orange-500/10 text-orange-400'}`}>
-                                        {alert.type === 'danger' ? <AlertTriangle size={20} /> : <Info size={20} />}
-                                        <p className="text-xs font-bold">{alert.message}</p>
-                                    </div>
-                                )) : (
-                                    <div className="p-8 text-center text-slate-600">
-                                        <ShieldCheck size={40} className="mx-auto mb-3 opacity-20" />
-                                        <p className="text-xs">لا توجد تنبيهات عاجلة، وضعك المالي ممتاز</p>
-                                    </div>
-                                )}
+                    <div className="relative w-full h-64 md:h-72">
+                        {Object.keys(distribution).length > 0 ? (
+                            <Pie data={chartData} options={chartOptions} />
+                        ) : (
+                            <div className="flex flex-col items-center justify-center h-full opacity-20">
+                                <PieIcon size={64} className="mb-4" />
+                                <p className="text-sm font-bold">لا يوجد بيانات إنفاق كافية</p>
                             </div>
-                        </div>
-
-                        <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl flex flex-col justify-between">
-                            <div>
-                                <h3 className="text-lg font-black text-white mb-6 flex items-center gap-3">
-                                    <ShieldCheck className="text-blue-500" /> تحليل الصحة المالية
-                                </h3>
-                                <div className="space-y-5">
-                                    {Object.values(healthFactors).map((factor, i) => (
-                                        <HealthIndicator key={i} label={factor.label} score={factor.score} />
-                                    ))}
-                                </div>
-                            </div>
-                            <div className="mt-8 flex items-center justify-between border-t border-slate-800 pt-6">
-                                <span className="text-slate-500 text-xs font-bold uppercase">المؤشر العام</span>
-                                <span className={`text-4xl font-black ${getHealthColor(topStats.healthScore)}`}>{topStats.healthScore}%</span>
-                            </div>
-                        </div>
+                        )}
                     </div>
+                </div>
 
-                    {/* 5) Upcoming Obligations */}
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl">
-                        <div className="flex justify-between items-center mb-8">
-                            <h3 className="text-xl font-black text-white">الالتزامات القادمة</h3>
-                            <Link to="/reports" className="text-blue-500 text-xs font-bold flex items-center gap-1">عرض الكل <ArrowRight size={14} /></Link>
+                {/* Financial Efficiency - Health Gauge */}
+                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden">
+                    <h3 className="text-xl font-black text-white mb-10 flex items-center gap-3">
+                        <TrendingUp className="text-blue-500" /> جودة الميزانية
+                    </h3>
+                    <div className="flex flex-col items-center">
+                        <div className="relative w-44 h-44 flex items-center justify-center mb-8">
+                            <svg className="w-full h-full -rotate-90">
+                                <circle cx="88" cy="88" r="80" stroke="currentColor" strokeWidth="12" fill="transparent" className="text-slate-800" />
+                                <circle cx="88" cy="88" r="80" stroke="currentColor" strokeWidth="12" fill="transparent" className={getHealthColor(topStats.healthScore)} strokeDasharray={502} strokeDashoffset={502 - (502 * (topStats.healthScore || 0)) / 100} strokeLinecap="round" />
+                            </svg>
+                            <div className="absolute text-center">
+                                <p className={`text-4xl font-black ${getHealthColor(topStats.healthScore)}`}>{topStats.healthScore || 0}</p>
+                                <p className="text-[10px] text-slate-500 font-bold uppercase mt-1">نقطة</p>
+                            </div>
                         </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {upcoming.length > 0 ? upcoming.map((item, i) => (
-                                <div key={i} className="bg-slate-800/40 p-5 rounded-3xl border border-slate-800 flex items-center justify-between group hover:border-blue-500/30 transition-all">
-                                    <div className="flex items-center gap-4">
-                                        <div className="w-10 h-10 rounded-xl bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-blue-400 transition-colors">
-                                            <Calendar size={20} />
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-white">{item.name}</p>
-                                            <p className="text-[10px] text-slate-500">{new Date(item.date).toLocaleDateString('ar-EG')}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm font-black text-white">{item.amount?.toLocaleString()} <span className="text-[10px] font-normal opacity-50">ج.م</span></p>
-                                </div>
-                            )) : (
-                                <p className="col-span-2 text-center text-slate-600 py-10 text-sm">لا توجد التزامات قادمة حالياً</p>
-                            )}
+                        <div className="w-full space-y-4">
+                            <HealthFactor label="معدل الادخار" percent={healthFactors.savingsRate || 0} />
+                            <HealthFactor label="السيولة" percent={healthFactors.liquidityScore || 0} />
                         </div>
                     </div>
                 </div>
 
-                <div className="space-y-8">
-                    {/* 6) Spending Distribution (Pie) */}
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl">
-                        <h3 className="text-lg font-black text-white mb-8 flex items-center gap-3"><PieChart className="text-indigo-500" /> تحليل الإنفاق</h3>
-                        {/* Placeholder for Pie Chart Logic */}
-                        <div className="aspect-square flex items-center justify-center bg-slate-800/50 rounded-full border-8 border-slate-800 relative">
-                            <div className="text-center">
-                                <p className="text-3xl font-black text-white italic">Geybi</p>
-                                <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Analytics</p>
-                            </div>
-                        </div>
-                        <div className="mt-8 space-y-3">
-                             {Object.entries(stats?.distribution || {}).slice(0, 4).map(([cat, val], i) => (
-                                 <div key={i} className="flex justify-between items-center px-2">
-                                     <span className="text-xs text-slate-400 font-bold">{cat}</span>
-                                     <span className="text-xs text-white font-black">{val.toLocaleString()} ج.م</span>
-                                 </div>
-                             ))}
-                        </div>
-                    </div>
-
-                    {/* 7) Latest Actions */}
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl flex flex-col">
-                        <h3 className="text-lg font-black text-white mb-8">أحدث الحركات</h3>
-                        <div className="space-y-6 flex-1 overflow-y-auto max-h-[500px] no-scrollbar">
-                            {transactions.map((t, i) => (
-                                <div key={i} className="flex items-center justify-between group cursor-pointer hover:bg-slate-800/30 p-2 rounded-2xl transition-all">
+                {/* Recent Activity */}
+                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col">
+                    <h3 className="text-xl font-black text-white mb-8">آخر العمليات</h3>
+                    <div className="space-y-6 flex-1 overflow-y-auto max-h-[400px] no-scrollbar">
+                        {transactions.length > 0 ? (
+                            transactions.map((t, i) => (
+                                <div key={i} className="flex items-center justify-between group p-2 rounded-2xl hover:bg-slate-800/50 transition-all">
                                     <div className="flex items-center gap-4">
                                         <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
                                             {t.type === 'income' ? <ArrowDownLeft size={18} /> : <ArrowUpRight size={18} />}
                                         </div>
                                         <div>
-                                            <p className="text-sm font-black text-white truncate max-w-[120px]">{t.category || t.budgetCategory || t.source || 'بدون تصنيف'}</p>
+                                            <p className="text-sm font-black text-white truncate max-w-[100px]">{t.category || t.source || 'عام'}</p>
                                             <p className="text-[10px] text-slate-500">{new Date(t.date).toLocaleDateString('ar-EG')}</p>
                                         </div>
                                     </div>
                                     <p className={`text-sm font-black ${t.type === 'income' ? 'text-emerald-500' : 'text-white'}`}>
-                                        {t.type === 'income' ? '+' : '-'}{t.amount?.toLocaleString() || 0}
+                                        {t.amount?.toLocaleString() || 0}
                                     </p>
                                 </div>
-                            ))}
-                        </div>
-                        <Link to="/reports" className="mt-8 py-4 bg-slate-800 rounded-2xl text-center text-xs font-bold text-slate-300 hover:bg-slate-700 transition-all">عرض سجل الحركات بالكامل</Link>
+                            ))
+                        ) : (
+                            <div className="flex flex-col items-center justify-center py-10 opacity-20 italic text-xs">لا يوجد عمليات</div>
+                        )}
                     </div>
+                    <Link to="/reports" className="mt-8 w-full py-4 bg-slate-800 hover:bg-blue-600 text-white rounded-2xl font-black text-sm text-center transition-all">تحليل كامل</Link>
                 </div>
             </div>
         </div>
     );
 };
 
-const DecisionItem = ({ label, val, icon, color, sub }) => (
-    <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl hover:border-slate-700 transition-all group">
+const TopStatItem = ({ label, val, icon, color }) => (
+    <div className="flex-shrink-0 w-72 md:w-auto bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl group hover:border-blue-500/30 transition-all">
         <div className="flex justify-between items-start mb-4">
-            <div className={`p-3 rounded-2xl bg-${color}-500/10 text-${color}-500 shadow-inner group-hover:scale-110 transition-transform`}>{icon}</div>
+            <div className={`p-3 rounded-2xl ${color} text-white shadow-lg shadow-blue-900/10`}>{icon}</div>
         </div>
-        <div>
-            <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">{label}</p>
-            <p className="text-2xl font-black text-white">{(val || 0).toLocaleString()} <span className="text-xs font-normal opacity-50">ج.م</span></p>
-            {sub && <p className="text-[10px] text-emerald-500 font-bold mt-1 italic">{sub}</p>}
-        </div>
+        <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">{label}</p>
+        <p className="text-2xl font-black text-white">{(val || 0).toLocaleString()} <span className="text-xs font-normal opacity-50">ج.م</span></p>
     </div>
 );
 
-const HealthIndicator = ({ label, score }) => (
-    <div className="space-y-2">
+const HealthFactor = ({ label, percent }) => (
+    <div className="space-y-1.5">
         <div className="flex justify-between items-end px-1">
-            <span className="text-[10px] font-bold text-slate-400 uppercase">{label}</span>
-            <span className="text-xs font-black text-white">{score}%</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase">{label}</span>
+            <span className="text-xs font-black text-white">{percent}%</span>
         </div>
-        <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
-            <div className={`h-full transition-all duration-1000 ${score > 70 ? 'bg-emerald-500' : score > 40 ? 'bg-blue-500' : 'bg-red-500'}`} style={{ width: `${score}%` }}></div>
+        <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
+            <div className="bg-blue-600 h-full transition-all duration-1000" style={{ width: `${percent}%` }}></div>
         </div>
     </div>
-);
-
-const QuickActionButton = ({ to, icon, label, color }) => (
-    <Link to={to} className={`flex items-center gap-2 px-4 py-2.5 ${color} text-white rounded-xl text-xs font-black shadow-lg hover:scale-105 transition-all`}>
-        {icon} <span>{label}</span>
-    </Link>
 );
 
 export default Dashboard;
