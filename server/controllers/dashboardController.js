@@ -1,89 +1,128 @@
-const Expense = require('../models/Expense');
 const Income = require('../models/Income');
+const Expense = require('../models/Expense');
 const Loan = require('../models/Loan');
 const Card = require('../models/Card');
-const PeerDebt = require('../models/PeerDebt');
 const Group = require('../models/Group');
+const { PeerDebt } = require('../models/PeerDebt');
 
 exports.getDashboardStats = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user._id;
         const now = new Date();
-        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const month = now.getMonth() + 1;
+        const year = now.getFullYear();
 
-        // 1) التدفقات النقدية (Incomes & Expenses)
-        const incomes = await Income.find({ user: userId });
-        const expenses = await Expense.find({ user: userId });
+        const [incomes, expenses, loans, cards, groups, debts] = await Promise.all([
+            Income.find({ userId, deletedAt: null }),
+            Expense.find({ userId, deletedAt: null }),
+            Loan.find({ userId, deletedAt: null }),
+            Card.find({ userId, deletedAt: null }),
+            Group.find({ userId, deletedAt: null }),
+            PeerDebt.find({ userId, deletedAt: null })
+        ]);
 
-        const thisMonthIncomes = incomes.filter(inc => new Date(inc.date) >= firstDayOfMonth);
-        const totalReceivedThisMonth = thisMonthIncomes
-            .filter(inc => inc.cashFlowType === 'received')
-            .reduce((sum, inc) => sum + inc.amount, 0);
+        // 1. حسابات الدخل والمصروف
+        const totalIncome = incomes.reduce((s, i) => s + i.amount, 0);
+        const totalExpense = expenses.reduce((s, e) => s + e.amount, 0);
+        const currentBalance = totalIncome - totalExpense;
 
-        // حساب الدخل المتوقع لـ 30 يوم قادمة
-        const expectedIncome30Days = incomes
-            .filter(inc => inc.cashFlowType === 'accrued' && new Date(inc.date) >= now)
-            .reduce((sum, inc) => sum + inc.amount, 0);
+        // 2. الدخل والمصروف المتوقع (Expected)
+        const expectedIncome = incomes.filter(i => i.isRecurring).reduce((s, i) => s + i.amount, 0) || totalIncome;
+        const expectedExpense = expenses.filter(e => e.isRecurring).reduce((s, e) => s + e.amount, 0) || totalExpense;
 
-        // حساب متوسط الدخل الشهري ونسبة الثبات
-        const totalIncomeAllTime = incomes.reduce((sum, inc) => sum + inc.amount, 0);
-        const fixedIncomeTotal = incomes.filter(inc => inc.incomeType === 'fixed').reduce((sum, inc) => sum + inc.amount, 0);
+        // 3. التزامات 30 يوم
+        const upcomingLoans = loans.reduce((s, l) => s + l.monthlyInstallment, 0);
+        const upcomingGroups = groups.reduce((s, g) => s + g.monthlyAmount, 0);
+        const upcomingDebts = debts.filter(d => d.type === 'borrowed' && !d.isPaid && d.dueDate && new Date(d.dueDate).getMonth() === now.getMonth()).reduce((s, d) => s + d.amount, 0);
+        const total30DayObligations = upcomingLoans + upcomingGroups + upcomingDebts;
+
+        const availableBalance = currentBalance - total30DayObligations;
+
+        // 🧠 4. خوارزمية مؤشر الصحة المالية (Score 0-100)
+        let healthScore = 100;
         
-        // حساب عدد الشهور النشطة
-        const uniqueMonths = [...new Set(incomes.map(inc => {
-            const d = new Date(inc.date);
-            return `${d.getFullYear()}-${d.getMonth()}`;
-        }))].length || 1;
+        // أ. نسبة الالتزام للدخل (Penalty if > 40%)
+        const dti = totalIncome > 0 ? (total30DayObligations / (totalIncome / 12 || 1)) : 0;
+        if (dti > 0.4) healthScore -= 20;
+        else if (dti > 0.2) healthScore -= 10;
 
-        const avgMonthlyIncome = totalIncomeAllTime / uniqueMonths;
-        const incomeStabilityRatio = totalIncomeAllTime > 0 ? (fixedIncomeTotal / totalIncomeAllTime) * 100 : 0;
+        // ب. معدل الادخار (Bonus if > 20%)
+        const savingsRate = totalIncome > 0 ? (currentBalance / totalIncome) : 0;
+        if (savingsRate < 0.1) healthScore -= 15;
+        else if (savingsRate > 0.3) healthScore += 5;
 
-        // 2) الالتزامات (Loans, Cards, Debts, Groups)
-        const loans = await Loan.find({ user: userId });
-        const cards = await Card.find({ user: userId });
-        const peerDebts = await PeerDebt.find({ user: userId, type: 'borrowed' });
-        const groups = await Group.find({ user: userId });
+        // ج. وجود متأخرات (Heavy Penalty)
+        const hasOverdue = debts.some(d => !d.isPaid && d.dueDate && new Date(d.dueDate) < now);
+        if (hasOverdue) healthScore -= 25;
 
-        const totalObligations = 
-            loans.reduce((sum, l) => sum + (l.analytics?.remainingTotal || 0), 0) +
-            cards.reduce((sum, c) => sum + (c.analytics?.currentBalance || 0), 0) +
-            peerDebts.reduce((sum, d) => sum + (d.analytics?.remainingAmount || 0), 0) +
-            groups.reduce((sum, g) => sum + (g.analytics?.remainingPosition || 0), 0);
+        // د. استخدام البطاقات (Penalty if > 70%)
+        // (سنفترض وجود استهلاك عالي إذا كان الرصيد المتاح سالباً)
+        if (availableBalance < 0) healthScore -= 20;
 
-        // 3) الحقوق والأصول
-        const lentDebts = await PeerDebt.find({ user: userId, type: 'lent' });
-        const totalAssets = 
-            totalReceivedThisMonth + 
-            lentDebts.reduce((sum, d) => sum + (d.analytics?.remainingAmount || 0), 0);
+        healthScore = Math.max(0, Math.min(100, healthScore));
 
-        // 4) توزيع المصاريف للرسم البياني
-        const distribution = {};
-        expenses.forEach(exp => {
-            distribution[exp.category] = (distribution[exp.category] || 0) + exp.amount;
-        });
+        // --- 🧠 ذكاء مالي: التنبيهات وما يحتاج انتباه ---
+        const alerts = [];
+        if (availableBalance < 0) alerts.push({ type: 'danger', message: 'التزاماتك تتجاوز رصيدك الحالي' });
+        if (dti > 0.5) alerts.push({ type: 'warning', message: 'عبء الديون مرتفع جداً (تجاوز 50%)' });
+        
+        // التحقق من القروض والديون القريبة
+        const upcomingItems = [
+            ...loans.filter(l => !l.isPaid).map(l => ({ name: `قسط قرض: ${l.loanName}`, amount: l.monthlyPayment, date: l.nextPaymentDate, category: 'loan' })),
+            ...cards.filter(c => c.currentBalance > 0).map(c => ({ name: `مستحق بطاقة: ${c.cardName}`, amount: c.currentBalance, date: new Date(now.getFullYear(), now.getMonth(), c.dueDay), category: 'card' })),
+            ...debts.filter(d => d.type === 'borrowed' && !d.isPaid).map(d => ({ name: `دين لـ: ${d.personName}`, amount: d.amount, date: d.dueDate, category: 'debt' }))
+        ].filter(item => item.date && new Date(item.date) >= now)
+         .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (upcomingItems.length > 0) {
+            const nearest = upcomingItems[0];
+            const daysLeft = Math.ceil((new Date(nearest.date) - now) / (1000 * 60 * 60 * 24));
+            if (daysLeft <= 3) alerts.push({ type: 'info', message: `لديك ${nearest.name} مستحق خلال ${daysLeft} أيام` });
+        }
+
+        // --- 📝 الملخص التنفيذي الذكي ---
+        let summaryText = "وضعك المالي مستقر بشكل عام.";
+        if (savingsRate < 0.1) summaryText = "تحذير: نسبة الادخار منخفضة جداً، حاول تقليل المصاريف الكمالية.";
+        if (availableBalance > currentBalance * 0.5) summaryText = "ممتاز! لديك سيولة جيدة جداً بعد تغطية الالتزامات.";
 
         res.json({
             topStats: {
-                currentBalance: totalReceivedThisMonth, // الرصيد الفعلي المتاح هذا الشهر
-                totalAssets,
-                totalObligations,
-                healthScore: Math.max(0, 100 - (totalObligations / (totalIncomeAllTime || 1) * 100)).toFixed(0),
-                
-                // المؤشرات الجديدة التي طلبتها (المحور الأول)
-                incomeThisMonth: totalReceivedThisMonth,
-                expectedIncome30Days,
-                avgMonthlyIncome: avgMonthlyIncome.toFixed(0),
-                incomeStabilityRatio: incomeStabilityRatio.toFixed(0),
-                cardUsageRatio: cards.length > 0 ? (cards.reduce((s, c) => s + (c.analytics?.usagePercent || 0), 0) / cards.length).toFixed(0) : 0
+                currentBalance,
+                availableBalance,
+                totalObligations: total30DayObligations,
+                expectedIncome,
+                expectedExpense,
+                healthScore,
+                savingsRate: (savingsRate * 100).toFixed(1)
             },
+            executiveSummary: {
+                text: summaryText,
+                mainInsight: `أعلى بند صرف: ${Object.entries(expenses.reduce((acc, e) => {
+                    acc[e.budgetCategory] = (acc[e.budgetCategory] || 0) + e.amount;
+                    return acc;
+                }, {})).sort((a, b) => b[1] - a[1])[0]?.[0] || 'لا يوجد'}`
+            },
+            alerts: alerts.slice(0, 3),
             healthFactors: {
-                savingsRate: totalReceivedThisMonth > 0 ? (((totalReceivedThisMonth - expenses.reduce((s, e) => s + e.amount, 0)) / totalReceivedThisMonth) * 100).toFixed(0) : 0,
-                debtRatio: totalIncomeAllTime > 0 ? (totalObligations / totalIncomeAllTime * 100).toFixed(0) : 0,
-                liquidityScore: 85 // قيمة تجريبية سيتم ربطها لاحقاً
+                savings: { label: 'الادخار', score: Math.min(100, (savingsRate / 0.2) * 100).toFixed(0) },
+                debt: { label: 'الالتزامات', score: Math.max(0, (1 - dti) * 100).toFixed(0) },
+                liquidity: { label: 'السيولة', score: availableBalance > 0 ? 100 : 0 }
             },
-            distribution
+            upcomingObligations: upcomingItems.slice(0, 5),
+            distribution: expenses.reduce((acc, e) => {
+                const cat = e.budgetCategory || e.category || 'أخرى';
+                acc[cat] = (acc[cat] || 0) + e.amount;
+                return acc;
+            }, {}),
+            recentActions: [...expenses, ...incomes]
+                .map(item => ({
+                    ...item._doc || item,
+                    type: item.amount > 0 && incomes.some(inc => inc._id.toString() === item._id.toString()) ? 'income' : 'expense'
+                }))
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 10)
         });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
     }
 };
