@@ -40,14 +40,16 @@ const Layout = ({ children }) => {
         <div className="min-h-screen bg-black text-slate-300 font-sans selection:bg-blue-500/30" dir="rtl">
             {/* Desktop Sidebar */}
             <aside className="fixed right-0 top-0 h-screen w-72 bg-slate-950 border-l border-slate-900 hidden lg:flex flex-col z-50">
-                <div className="p-8">
-                    <div className="flex items-center gap-3 mb-10 px-2">
+                <div className="p-8 pb-4">
+                    <div className="flex items-center gap-3 mb-2 px-2">
                         <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/40">
                             <Wallet className="text-white" size={24} />
                         </div>
                         <h1 className="text-2xl font-black text-white tracking-tight">جيبي <span className="text-blue-500">Geybi</span></h1>
                     </div>
-                    
+                </div>
+                
+                <div className="flex-1 overflow-y-auto px-8 py-4 no-scrollbar">
                     <nav className="space-y-1">
                         {menuItems.map((item) => (
                             <Link
