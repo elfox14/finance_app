@@ -20,7 +20,7 @@ const Reports = () => {
 
     const fetchReports = async () => {
         try {
-            const res = await api.get('/dashboard'); // Currently using dashboard data for reports
+            const res = await api.get('/dashboard'); 
             setReportData(res.data);
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
@@ -30,7 +30,7 @@ const Reports = () => {
 
     if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>;
 
-    // Charts Config Optimized for Mobile
+    // Charts Config Optimized for Mobile with Safe Access
     const expenseDistribution = {
         labels: Object.keys(reportData?.distribution || {}),
         datasets: [{
@@ -106,18 +106,22 @@ const Reports = () => {
                 </div>
             </header>
 
-            {/* Top Insights - Simplified for Mobile Cards */}
+            {/* Top Insights - Safe Access Applied */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-4 md:px-0">
                 <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl">
                     <p className="text-[10px] text-slate-500 font-bold mb-2 uppercase">معدل الانفاق اليومي</p>
-                    <p className="text-xl md:text-2xl font-black text-white">{(reportData?.topStats.expectedExpense / 30).toFixed(0)} <span className="text-xs">ج.م</span></p>
+                    <p className="text-xl md:text-2xl font-black text-white">
+                        {((reportData?.topStats?.expectedExpense || 0) / 30).toFixed(0)} <span className="text-xs">ج.م</span>
+                    </p>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-emerald-500 font-bold">
                         <ArrowDownLeft size={12} /> 4% أقل من المعتاد
                     </div>
                 </div>
                 <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl">
                     <p className="text-[10px] text-slate-500 font-bold mb-2 uppercase">نسبة السيولة المتاحة</p>
-                    <p className="text-xl md:text-2xl font-black text-blue-500">{((reportData?.topStats.availableBalance / reportData?.topStats.currentBalance) * 100).toFixed(0)}%</p>
+                    <p className="text-xl md:text-2xl font-black text-blue-500">
+                        {reportData?.topStats?.currentBalance ? ((reportData?.topStats?.availableBalance / reportData?.topStats?.currentBalance) * 100).toFixed(0) : 0}%
+                    </p>
                     <div className="mt-2 flex items-center gap-1 text-[10px] text-slate-500 font-bold underline cursor-pointer">
                         تحليل المخاطر
                     </div>
@@ -140,7 +144,7 @@ const Reports = () => {
                 </div>
             </div>
 
-            {/* Charts Section - Focused & Full Width on Mobile */}
+            {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-2 md:px-0">
                 <div className="bg-slate-900 border border-slate-800 p-6 md:p-10 rounded-[2.5rem] shadow-2xl">
                     <h3 className="text-lg font-bold text-white mb-8 flex items-center gap-2">
@@ -161,7 +165,7 @@ const Reports = () => {
                 </div>
             </div>
 
-            {/* Deep Analysis Card - Simplified for Mobile */}
+            {/* Deep Analysis Card */}
             <div className="mx-4 md:mx-0 p-8 bg-blue-600 rounded-[2.5rem] text-white shadow-2xl shadow-blue-900/30 relative overflow-hidden group">
                 <div className="absolute -bottom-10 -right-10 w-64 h-64 bg-white/10 blur-3xl rounded-full"></div>
                 <div className="relative z-10">
