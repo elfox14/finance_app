@@ -2,25 +2,29 @@ const Expense = require('../models/Expense');
 const Income = require('../models/Income');
 const Loan = require('../models/Loan');
 const Card = require('../models/Card');
-const { PeerDebt } = require('../models/PeerDebt'); // تصحيح الاستيراد هنا
+const { PeerDebt } = require('../models/PeerDebt');
 const Group = require('../models/Group');
+const Budget = require('../models/Budget');
+const Certificate = require('../models/Certificate');
 
 exports.getDashboardStats = async (req, res) => {
     try {
         const userId = req.user.id;
         const now = new Date();
 
-        // 1. جلب البيانات الخام
-        const [allExpenses, allIncomes, loans, cards, debts, groups] = await Promise.all([
-            Expense.find({ user: userId }),
-            Income.find({ user: userId }),
-            Loan.find({ user: userId }),
-            Card.find({ user: userId }),
-            PeerDebt.find({ user: userId, isPaid: false }),
-            Group.find({ user: userId, status: 'active' })
+        // 1. Fetch data with correct userId
+        const [allExpenses, allIncomes, loans, cards, debts, groups, budgets, certificates] = await Promise.all([
+            Expense.find({ userId }),
+            Income.find({ userId }),
+            Loan.find({ userId }),
+            Card.find({ userId }),
+            PeerDebt.find({ userId, isPaid: false }),
+            Group.find({ userId, isPaidOut: false }),
+            Budget.find({ userId, month: now.getMonth() + 1, year: now.getFullYear() }),
+            Certificate.find({ userId, status: 'نشطة' })
         ]);
 
-        // 2. فلترة بيانات الشهر الحالي
+        // 2. Filter current month data
         const currentMonthExpenses = allExpenses.filter(e => {
             const d = new Date(e.date);
             return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
@@ -34,89 +38,124 @@ exports.getDashboardStats = async (req, res) => {
         const totalExpenses = currentMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
         const expectedIncome = currentMonthIncomes.reduce((sum, i) => sum + i.amount, 0);
 
-        // 3. المحور الثاني: الالتزامات (30 يوم)
+        // 3. Next 30 Day Obligations (التزامات قريبة)
         const activeLoans = loans.filter(l => (l.status === 'نشط' || l.status === 'active') && (l.remainingAmount || 0) > 0);
         const upcomingLoans = activeLoans.reduce((sum, l) => sum + (l.monthlyInstallment || 0), 0);
         
-        const activeCards = cards.filter(c => (c.status === 'نشطة' || c.status === 'active') && (c.analytics?.currentBalance || 0) > 0);
-        const upcomingCards = activeCards.reduce((sum, c) => sum + (c.analytics?.currentBalance || 0), 0);
+        const activeCards = cards.filter(c => (c.status === 'نشطة' || c.status === 'active') && (c.currentBalance || 0) > 0);
+        const upcomingCards = activeCards.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
         
         const upcomingGroups = groups.reduce((sum, g) => sum + (g.monthlyAmount || 0), 0);
         const upcomingDebts = debts.filter(d => d.type === 'borrowed').reduce((sum, d) => sum + (d.amount || 0), 0);
 
-        const total30DayObligations = upcomingLoans + upcomingCards + upcomingGroups + upcomingDebts;
+        const next30DayObligations = upcomingLoans + upcomingCards + upcomingGroups + upcomingDebts;
 
-        // 4. المحور الثالث: الأصول والسيولة (تراكمي)
-        const totalReceived = allIncomes.filter(i => i.cashFlowType === 'received').reduce((sum, i) => sum + i.amount, 0);
+        // 4. Next 30 Day Receivables (حقوق)
+        const upcomingLent = debts.filter(d => d.type === 'lent').reduce((sum, d) => sum + (d.amount || 0), 0);
+        
+        let expectedGroupReturns = 0;
+        groups.forEach(g => {
+            if (g.startDate && g.userPayoutOrder) {
+                const payoutDate = new Date(g.startDate);
+                payoutDate.setMonth(payoutDate.getMonth() + g.userPayoutOrder - 1);
+                if (payoutDate.getMonth() === now.getMonth() && payoutDate.getFullYear() === now.getFullYear()) {
+                    expectedGroupReturns += g.totalAmount;
+                }
+            }
+        });
+
+        let expectedCertReturns = 0;
+        certificates.forEach(c => {
+             if (c.payoutFrequency === 'شهري') {
+                 expectedCertReturns += (c.principalAmount * (c.interestRate / 100)) / 12;
+             }
+        });
+
+        const next30DayReceivables = upcomingLent + expectedGroupReturns + expectedCertReturns;
+
+        // 5. Cash Flow & Balances
+        const totalReceived = allIncomes.filter(i => ['محصل', 'received'].includes(i.cashFlowType)).reduce((sum, i) => sum + i.amount, 0);
         const totalSpent = allExpenses.reduce((sum, e) => sum + e.amount, 0);
         
         const currentBalance = totalReceived - totalSpent;
-        const availableBalance = currentBalance - total30DayObligations;
+        const availableBalance = currentBalance - next30DayObligations;
+        const expectedNetFlow = expectedIncome - totalExpenses;
 
-        // 5. المحور الخامس: المؤشرات الموحدة
-        const savingsRateRaw = expectedIncome > 0 ? ((expectedIncome - totalExpenses) / expectedIncome) * 100 : 0;
-        const dtiRaw = expectedIncome > 0 ? (total30DayObligations / expectedIncome) * 100 : 0;
-        const cardUsageRaw = activeCards.length > 0 
-            ? (activeCards.reduce((sum, c) => sum + (c.analytics?.currentBalance || 0), 0) / activeCards.reduce((sum, c) => sum + (c.creditLimit || 1), 0)) * 100 
-            : 0;
+        // 6. Indicators
+        const savingsRateRaw = expectedIncome > 0 ? ((expectedIncome - totalExpenses - next30DayObligations) / expectedIncome) * 100 : 0;
+        const dtiRaw = expectedIncome > 0 ? (next30DayObligations / expectedIncome) * 100 : 0;
+        
+        const totalCardBalance = activeCards.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
+        const totalCardLimit = activeCards.reduce((sum, c) => sum + (c.creditLimit || 1), 0);
+        const cardUtilization = activeCards.length > 0 && totalCardLimit > 0 ? (totalCardBalance / totalCardLimit) * 100 : 0;
+        
+        const avgMonthlyExpense = totalExpenses > 0 ? totalExpenses : 1;
+        const liquidityCoverageMonths = availableBalance / avgMonthlyExpense;
 
-        const indicators = {
-            savingsRate: Number(savingsRateRaw.toFixed(1)),
-            debtToIncomeRatio: Number(dtiRaw.toFixed(1)),
-            cardUsageRatio: Number(cardUsageRaw.toFixed(1)),
-            hasOverdue: total30DayObligations > currentBalance
-        };
+        const healthScore = Math.max(0, Math.min(100, 100 - (dtiRaw * 0.5) - (availableBalance < 0 ? 40 : 0) - (cardUtilization > 80 ? 20 : 0) + (savingsRateRaw > 20 ? 10 : 0)));
 
-        // 6. التحليل التنفيذي (Executive Summary)
-        const distribution = {};
-        currentMonthExpenses.forEach(e => {
-            distribution[e.category] = (distribution[e.category] || 0) + e.amount;
+        // 7. Budgets Array
+        const budgetsResponse = budgets.map(b => {
+            const spent = currentMonthExpenses.filter(e => e.category === b.category).reduce((sum, e) => sum + e.amount, 0);
+            return {
+                category: b.category,
+                limit: b.limit,
+                spent: spent,
+                remaining: b.limit - spent,
+                percent: b.limit > 0 ? Math.round((spent / b.limit) * 100) : 0
+            };
         });
 
-        const topExpenseCategory = Object.keys(distribution).sort((a, b) => distribution[b] - distribution[a])[0] || 'لا يوجد';
-        
-        const executiveSummary = {
-            text: availableBalance >= 0 
-                ? "وضعك المالي مستقر حالياً، لديك سيولة تغطي التزاماتك القادمة." 
-                : "تنبيه: السيولة الحالية لا تغطي التزامات الشهر، يرجى إعادة ترتيب الأولويات.",
-            mainInsight: `أعلى بند صرف: ${topExpenseCategory}`
-        };
+        // 8. Upcoming Obligations List
+        const upcomingObligations = [
+            ...activeLoans.map(l => ({ type: 'loan', name: l.loanName, amount: l.monthlyInstallment || 0, dueDate: l.nextPaymentDate || l.firstDueDate || now })),
+            ...groups.map(g => ({ type: 'group', name: g.groupName, amount: g.monthlyAmount, dueDate: new Date(now.getFullYear(), now.getMonth(), 28) })),
+            ...activeCards.map(c => ({ type: 'card', name: c.cardName, amount: c.currentBalance || 0, dueDate: new Date(now.getFullYear(), now.getMonth(), c.dueDay || 25) })),
+            ...debts.filter(d => d.type === 'borrowed').map(d => ({ type: 'debt', name: `سلفة من ${d.personName}`, amount: d.amount, dueDate: d.dueDate || now }))
+        ].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
 
-        // 7. التنبيهات وسجل التحركات
-        const alerts = [];
-        if (indicators.hasOverdue) alerts.push({ type: 'danger', message: 'عجز في السيولة لتغطية الالتزامات' });
-        if (indicators.cardUsageRatio > 70) alerts.push({ type: 'warning', message: 'استهلاك مرتفع للبطاقة الائتمانية' });
-        if (activeLoans.length > 3) alerts.push({ type: 'info', message: 'تعدد القروض النشطة قد يؤثر على الادخار' });
+        // 9. Insights
+        const insights = [];
+        if (savingsRateRaw > 15) {
+            insights.push("أنت ضمن الحدود الآمنة للادخار هذا الشهر.");
+        } else if (savingsRateRaw < 0) {
+            insights.push("معدل الادخار سلبي، نفقاتك والتزاماتك تتجاوز دخلك.");
+        } else {
+             insights.push("يمكنك تحسين معدل ادخارك بتخفيض المصروفات غير الأساسية.");
+        }
 
-        const recentActions = [
-            ...allIncomes.map(i => ({ id: i._id, type: 'income', amount: i.amount, displayLabel: i.source, date: i.date })),
-            ...allExpenses.map(e => ({ id: e._id, type: 'expense', amount: e.amount, displayLabel: e.category, date: e.date }))
-        ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+        const overspentBudgets = budgetsResponse.filter(b => b.percent > 100);
+        if (overspentBudgets.length > 0) {
+            insights.push(`تجاوزت الميزانية في: ${overspentBudgets.map(b => b.category).join('، ')}.`);
+        }
 
-        // الاستجابة الموحدة النهائية (بناءً على اقتراحك)
+        if (cardUtilization > 80) insights.push("استخدام البطاقات الائتمانية مرتفع جداً ويشكل ضغطاً على السيولة.");
+        if (liquidityCoverageMonths > 0 && liquidityCoverageMonths < 1) insights.push(`رصيدك المتاح يغطي ${liquidityCoverageMonths.toFixed(1)} شهر فقط من المصروفات.`);
+        else if (liquidityCoverageMonths < 0) insights.push("رصيدك المتاح بالسالب، هناك ضغط كبير على السيولة.");
+
+        // Unified Response
         res.json({
             topStats: {
                 currentBalance: Math.max(0, currentBalance),
                 availableBalance,
-                total30DayObligations,
-                expectedIncome,
-                expectedExpense: totalExpenses,
-                healthScore: Math.max(0, 100 - (indicators.debtToIncomeRatio * 0.5) - (availableBalance < 0 ? 40 : 0))
+                next30DayObligations,
+                next30DayReceivables,
+                expectedNetFlow,
+                healthScore: Math.round(healthScore)
             },
-            indicators,
-            executiveSummary,
-            alerts: alerts.slice(0, 3),
-            upcomingObligations: [
-                ...activeLoans.map(l => ({ name: `قسط قرض: ${l.loanName}`, amount: l.monthlyInstallment || 0, date: l.nextPaymentDate || l.firstDueDate, category: 'loan' })),
-                ...groups.map(g => ({ name: `قسط جمعية: ${g.groupName}`, amount: g.monthlyAmount, date: now, category: 'group' })),
-                ...activeCards.map(c => ({ name: `سداد بطاقة: ${c.cardName}`, amount: c.analytics?.currentBalance || 0, date: now, category: 'card' }))
-            ].slice(0, 5),
-            distribution,
-            recentActions
+            budgets: budgetsResponse,
+            indicators: {
+                savingsRate: Number(savingsRateRaw.toFixed(1)),
+                debtToIncomeRatio: Number(dtiRaw.toFixed(1)),
+                cardUtilization: Number(cardUtilization.toFixed(1)),
+                liquidityCoverageMonths: Number(liquidityCoverageMonths.toFixed(1))
+            },
+            upcomingObligations,
+            insights
         });
 
     } catch (err) {
-        console.error('🔥 Dashboard Final Response Error:', err);
-        res.status(500).json({ message: 'خطأ في تجميع البيانات النهائية' });
+        console.error('🔥 Dashboard Summary Engine Error:', err);
+        res.status(500).json({ message: 'خطأ في تجميع البيانات النهائية للوحة التحكم' });
     }
 };
