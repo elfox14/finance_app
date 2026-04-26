@@ -40,25 +40,25 @@ const Reports = () => {
     if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div></div>;
 
     const summary = data?.summary || {};
-    const trends = data?.trends || [];
-    const budgetPerformance = data?.budgetPerformance || [];
-    const timeline = data?.timeline || {};
-    const recommendations = data?.recommendations || [];
+    const trends = Array.isArray(data?.trends) ? data.trends : [];
+    const budgetPerformance = Array.isArray(data?.budgetPerformance) ? data.budgetPerformance : [];
+    const timeline = data?.timeline || { next7Days: [], next30Days: [], totalUpcoming30: 0 };
+    const recommendations = Array.isArray(data?.recommendations) ? data.recommendations : [];
     const categoryAnalysis = data?.categoryAnalysis || {};
 
     // Chart Data Configurations
     const trendChartData = {
-        labels: trends.map(t => t.month),
+        labels: trends.length > 0 ? trends.map(t => t.month) : ['لا يوجد بيانات'],
         datasets: [
-            { label: 'الدخل', data: trends.map(t => t.income), borderColor: '#10b981', backgroundColor: '#10b98120', fill: true, tension: 0.4 },
-            { label: 'المصاريف', data: trends.map(t => t.expense), borderColor: '#ef4444', backgroundColor: '#ef444420', fill: true, tension: 0.4 }
+            { label: 'الدخل', data: trends.map(t => t.income || 0), borderColor: '#10b981', backgroundColor: '#10b98120', fill: true, tension: 0.4 },
+            { label: 'المصاريف', data: trends.map(t => t.expense || 0), borderColor: '#ef4444', backgroundColor: '#ef444420', fill: true, tension: 0.4 }
         ]
     };
 
     const categoryChartData = {
-        labels: Object.keys(categoryAnalysis),
+        labels: Object.keys(categoryAnalysis).length > 0 ? Object.keys(categoryAnalysis) : ['بدون فئة'],
         datasets: [{
-            data: Object.values(categoryAnalysis),
+            data: Object.values(categoryAnalysis).length > 0 ? Object.values(categoryAnalysis) : [0],
             backgroundColor: ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'],
             borderWidth: 0,
         }]
