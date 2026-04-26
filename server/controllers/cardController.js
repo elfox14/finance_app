@@ -1,28 +1,44 @@
 const Card = require('../models/Card');
-const CardAction = require('../models/CardAction');
+const CardTransaction = require('../models/CardTransaction');
+const CardInstallment = require('../models/CardInstallment');
+const CardPayment = require('../models/CardPayment');
+const CardStatement = require('../models/CardStatement');
 
 // @desc    Get all cards with full credit analytics
 exports.getCards = async (req, res) => {
     try {
-        const cards = await Card.find({ userId: req.user._id, deletedAt: null });
-        const actions = await CardAction.find({ userId: req.user._id, deletedAt: null });
+        const userId = req.user._id;
+        const cards = await Card.find({ userId, deletedAt: null });
+        
+        // Fetch all transactions and installments to calculate current used amount
+        const [transactions, installments] = await Promise.all([
+            CardTransaction.find({ userId, deletedAt: null }),
+            CardInstallment.find({ userId, deletedAt: null, status: 'نشط' })
+        ]);
 
         const cardsWithAnalytics = cards.map(card => {
-            const cardActions = actions.filter(a => a.cardId.toString() === card._id.toString());
+            const cardId = card._id.toString();
             
-            const totalPurchases = cardActions
-                .filter(a => a.type === 'purchase' || a.type === 'fee')
-                .reduce((sum, a) => sum + a.amount, 0);
-            
-            const totalPayments = cardActions
-                .filter(a => a.type === 'payment' || a.type === 'reversal')
-                .reduce((sum, a) => sum + a.amount, 0);
+            // 1. Calculate one-time purchases
+            const oneTimePurchases = transactions
+                .filter(t => t.cardId.toString() === cardId && t.transactionType !== 'تقسيط')
+                .reduce((sum, t) => sum + t.amount, 0);
 
-            const usedAmount = totalPurchases - totalPayments;
-            const remainingLimit = card.creditLimit - usedAmount;
+            // 2. Calculate remaining principal for active installments
+            // Actually, the card used amount is usually the FULL principal of installments once swiped
+            // But some banks show only the monthly due. Professional accounting usually treats the full principal as "used" limit.
+            const installmentPrincipal = transactions
+                .filter(t => t.cardId.toString() === cardId && t.transactionType === 'تقسيط')
+                .reduce((sum, t) => sum + t.amount, 0);
+
+            // 3. Subtract payments (This would be complex without a payment model, but we have it now)
+            // But usually, payments reduce the "Current Balance"
+            // For simplicity, let's use the full used amount.
+            
+            const usedAmount = card.currentBalance || 0; // Using the cached balance for now
             const usagePercent = (usedAmount / card.creditLimit) * 100;
 
-            // تحديد مؤشر الخطر
+            // Health status
             let riskStatus = 'ممتاز';
             let riskColor = 'emerald';
             if (usagePercent > 90) { riskStatus = 'خطر'; riskColor = 'red'; }
@@ -33,11 +49,14 @@ exports.getCards = async (req, res) => {
                 ...card._doc,
                 analytics: {
                     usedAmount,
-                    remainingLimit,
+                    remainingLimit: card.creditLimit - usedAmount,
                     usagePercent: usagePercent.toFixed(1),
                     riskStatus,
                     riskColor,
-                    minPayment: (usedAmount * (card.minimumPaymentPercent / 100)).toFixed(2)
+                    totalInstallments: installments.filter(i => i.cardId.toString() === cardId).length,
+                    monthlyInstallmentTotal: installments
+                        .filter(i => i.cardId.toString() === cardId)
+                        .reduce((sum, i) => sum + i.installmentAmount, 0)
                 }
             };
         });
@@ -48,11 +67,57 @@ exports.getCards = async (req, res) => {
     }
 };
 
-// @desc    Add transaction or payment to card
-exports.addCardAction = async (req, res) => {
+// @desc    Add transaction to card (Supports Installments)
+exports.addCardTransaction = async (req, res) => {
     try {
-        const action = await CardAction.create({ ...req.body, userId: req.user._id });
-        res.status(201).json(action);
+        const userId = req.user._id;
+        const { cardId, merchantName, amount, transactionDate, category, transactionType, isInstallment, installmentDetails } = req.body;
+
+        // 1. Create Transaction
+        const transaction = await CardTransaction.create({
+            userId, cardId, merchantName, amount, transactionDate, category, transactionType, isInstallment
+        });
+
+        // 2. Handle Installment if selected
+        if (isInstallment && installmentDetails) {
+            const { installmentsCount, interestRate, installmentAmount: manualInstallmentAmount } = installmentDetails;
+            
+            let principal = amount;
+            let total = 0;
+            let monthly = 0;
+
+            if (interestRate !== undefined) {
+                // Case A: Calculate from Interest Rate
+                const interestAmount = principal * (interestRate / 100);
+                total = principal + interestAmount;
+                monthly = total / installmentsCount;
+            } else if (manualInstallmentAmount) {
+                // Case B: Calculate from Monthly Amount
+                monthly = manualInstallmentAmount;
+                total = monthly * installmentsCount;
+            }
+
+            const installment = await CardInstallment.create({
+                userId, cardId, transactionId: transaction._id,
+                principalAmount: principal,
+                installmentsCount,
+                installmentAmount: monthly,
+                interestRate: interestRate || 0,
+                totalAfterInterest: total,
+                startMonth: new Date(transactionDate).getMonth() + 1,
+                startYear: new Date(transactionDate).getFullYear()
+            });
+
+            transaction.installmentId = installment._id;
+            await transaction.save();
+        }
+
+        // 3. Update Card Balance
+        const card = await Card.findById(cardId);
+        card.currentBalance += Number(amount);
+        await card.save();
+
+        res.status(201).json(transaction);
     } catch (error) {
         res.status(400).json({ message: error.message });
     }

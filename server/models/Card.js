@@ -7,6 +7,7 @@ const cardSchema = new mongoose.Schema({
     lastFourDigits: { type: String, maxLength: 4 },
     cardType: { type: String, enum: ['مشتريات', 'ائتمان', 'تقسيط'], default: 'مشتريات' },
     creditLimit: { type: Number, required: true },
+    currentBalance: { type: Number, default: 0 }, // المبلغ المستخدم حالياً
     statementDay: { type: Number, required: true, min: 1, max: 31 },
     dueDay: { type: Number, required: true, min: 1, max: 31 },
     interestRate: { type: Number, default: 0 },

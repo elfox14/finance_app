@@ -5,7 +5,7 @@ const {
     createCard, 
     updateCard, 
     deleteCard,
-    addCardAction 
+    addCardTransaction 
 } = require('../controllers/cardController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -15,7 +15,7 @@ router.route('/')
     .get(getCards)
     .post(createCard);
 
-router.post('/action', addCardAction);
+router.post('/action', addCardTransaction);
 
 router.route('/:id')
     .put(updateCard)
