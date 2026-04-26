@@ -10,15 +10,15 @@ exports.getIncomes = async (req, res) => {
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
         const receivedThisMonth = incomes
-            .filter(i => i.cashFlowType === 'محصل' && new Date(i.date) >= startOfMonth)
+            .filter(i => ['محصل', 'received'].includes(i.cashFlowType) && new Date(i.date) >= startOfMonth)
             .reduce((sum, i) => sum + i.amount, 0);
 
         const accruedThisMonth = incomes
-            .filter(i => i.cashFlowType === 'مستحق' && new Date(i.date) >= startOfMonth)
+            .filter(i => ['مستحق', 'accrued'].includes(i.cashFlowType) && new Date(i.date) >= startOfMonth)
             .reduce((sum, i) => sum + i.amount, 0);
 
         const fixedIncomeTotal = incomes
-            .filter(i => i.incomeType === 'ثابت')
+            .filter(i => ['ثابت', 'fixed'].includes(i.incomeType))
             .reduce((sum, i) => sum + i.amount, 0);
 
         res.json({

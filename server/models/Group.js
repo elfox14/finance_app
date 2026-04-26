@@ -7,7 +7,7 @@ const groupSchema = new mongoose.Schema({
     monthlyAmount: { type: Number, required: true }, // القسط الشهري
     durationMonths: { type: Number, required: true }, // عدد الشهور
     userPayoutOrder: { type: Number, required: true }, // ترتيب القبض (مثلاً: 5)
-    startDate: { type: Date, required: true }, // تاريخ بداية الجمعية
+    startDate: { type: Date, default: Date.now }, // تاريخ بداية الجمعية
     isPaidOut: { type: Boolean, default: false }, // هل قبض المبلغ أم لا
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });

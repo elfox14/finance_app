@@ -76,7 +76,8 @@ exports.getDashboardStats = async (req, res) => {
                 hasOverdue
             },
             distribution: expenses.reduce((acc, e) => {
-                acc[e.budgetCategory] = (acc[e.budgetCategory] || 0) + e.amount;
+                const cat = e.budgetCategory || e.category || 'أخرى';
+                acc[cat] = (acc[cat] || 0) + e.amount;
                 return acc;
             }, {}),
             recentActions: [...expenses, ...incomes].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5)

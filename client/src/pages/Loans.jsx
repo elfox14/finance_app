@@ -129,6 +129,80 @@ const Loans = () => {
                     );
                 })}
             </div>
+
+            {/* Modal إضافة قرض */}
+            {showAddModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[2.5rem] p-8 relative shadow-2xl">
+                        <button onClick={() => setShowAddModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors">
+                            <X size={24} />
+                        </button>
+                        <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3">
+                            <Landmark className="text-blue-500" /> تسجيل قرض جديد
+                        </h2>
+                        <form onSubmit={handleCreateLoan} className="space-y-4 text-right" dir="rtl">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">اسم القرض</label>
+                                    <input required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newLoanForm.loanName} onChange={e => setNewLoanForm({...newLoanForm, loanName: e.target.value})} placeholder="مثلاً: قرض شخصي" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">جهة القرض</label>
+                                    <input required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newLoanForm.lenderName} onChange={e => setNewLoanForm({...newLoanForm, lenderName: e.target.value})} placeholder="مثلاً: بنك مصر" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">أصل المبلغ</label>
+                                    <input type="number" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newLoanForm.principalAmount} onChange={e => setNewLoanForm({...newLoanForm, principalAmount: e.target.value})} placeholder="0" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">إجمالي الرد</label>
+                                    <input type="number" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newLoanForm.totalPayable} onChange={e => setNewLoanForm({...newLoanForm, totalPayable: e.target.value})} placeholder="0" />
+                                </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">القسط الشهري</label>
+                                    <input type="number" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newLoanForm.monthlyInstallment} onChange={e => setNewLoanForm({...newLoanForm, monthlyInstallment: e.target.value})} placeholder="0" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">المدة (شهور)</label>
+                                    <input type="number" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newLoanForm.durationMonths} onChange={e => setNewLoanForm({...newLoanForm, durationMonths: e.target.value})} placeholder="12" />
+                                </div>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase px-2">تاريخ أول قسط</label>
+                                <input type="date" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newLoanForm.startPaymentDate} onChange={e => setNewLoanForm({...newLoanForm, startPaymentDate: e.target.value})} />
+                            </div>
+                            <button type="submit" className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 transition-all mt-4">
+                                حفظ القرض
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal تسجيل قسط */}
+            {showPaymentModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+                    <div className="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-[2.5rem] p-8 relative shadow-2xl">
+                        <button onClick={() => setShowPaymentModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors">
+                            <X size={24} />
+                        </button>
+                        <h2 className="text-xl font-black text-white mb-6">تسجيل قسط القرض</h2>
+                        <form onSubmit={handleRecordPayment} className="space-y-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-bold text-slate-500 uppercase px-2">مبلغ القسط</label>
+                                <input type="number" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all text-center text-xl font-black" value={paymentForm.amount} onChange={e => setPaymentForm({...paymentForm, amount: e.target.value})} />
+                            </div>
+                            <button type="submit" className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black transition-all">
+                                تأكيد السداد
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

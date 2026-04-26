@@ -34,17 +34,21 @@ app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 
 // API Routes
-app.use('/api/auth', require('./routes/authRoutes'));
-app.use('/api/dashboard', require('./routes/dashboardRoutes'));
-app.use('/api/expenses', require('./routes/expenseRoutes'));
-app.use('/api/incomes', require('./routes/incomeRoutes'));
-app.use('/api/cards', require('./routes/cardRoutes'));
-app.use('/api/loans', require('./routes/loanRoutes'));
-app.use('/api/groups', require('./routes/groupRoutes'));
-app.use('/api/certificates', require('./routes/certificateRoutes'));
-app.use('/api/budgets', require('./routes/budgetRoutes'));
-app.use('/api/notifications', require('./routes/notificationRoutes'));
-app.use('/api/peer-debts', require('./routes/peerDebtRoutes'));
+const apiRouter = express.Router();
+apiRouter.use('/auth', require('./routes/authRoutes'));
+apiRouter.use('/dashboard', require('./routes/dashboardRoutes'));
+apiRouter.use('/expenses', require('./routes/expenseRoutes'));
+apiRouter.use('/incomes', require('./routes/incomeRoutes'));
+apiRouter.use('/cards', require('./routes/cardRoutes'));
+apiRouter.use('/loans', require('./routes/loanRoutes'));
+apiRouter.use('/groups', require('./routes/groupRoutes'));
+apiRouter.use('/certificates', require('./routes/certificateRoutes'));
+apiRouter.use('/budgets', require('./routes/budgetRoutes'));
+apiRouter.use('/notifications', require('./routes/notificationRoutes'));
+apiRouter.use('/peer-debts', require('./routes/peerDebtRoutes'));
+
+app.use('/api', apiRouter);
+app.use('/fin/api', apiRouter);
 
 // 🚀 دعم المسار الفرعي /fin للملفات الثابتة
 const clientDistPath = path.join(__dirname, '../client/dist');

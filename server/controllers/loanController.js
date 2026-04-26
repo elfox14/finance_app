@@ -56,7 +56,14 @@ exports.recordPayment = async (req, res) => {
 // @desc    Create loan
 exports.createLoan = async (req, res) => {
     try {
-        const loan = await Loan.create({ ...req.body, userId: req.user._id });
+        const data = { ...req.body, userId: req.user._id };
+        
+        // حساب القيم الناقصة إذا لم يرسلها الفرونت إند
+        if (!data.totalPayable) data.totalPayable = data.principalAmount;
+        if (!data.remainingAmount) data.remainingAmount = data.totalPayable;
+        if (data.startPaymentDate) data.startDate = data.startPaymentDate;
+        
+        const loan = await Loan.create(data);
         res.status(201).json(loan);
     } catch (error) {
         res.status(400).json({ message: error.message });

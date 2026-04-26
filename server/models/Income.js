@@ -6,27 +6,27 @@ const incomeSchema = new mongoose.Schema({
     source: { type: String, required: true },
     incomeType: { 
         type: String, 
-        enum: ['ثابت', 'متغير', 'موسمي', 'استثنائي'], 
+        enum: ['ثابت', 'متغير', 'موسمي', 'استثنائي', 'fixed', 'variable', 'seasonal', 'exceptional'], 
         default: 'ثابت' 
     },
     cashFlowType: { 
         type: String, 
-        enum: ['محصل', 'مستحق'], 
+        enum: ['محصل', 'مستحق', 'received', 'accrued'], 
         default: 'محصل' 
     },
     isRecurring: { type: Boolean, default: false },
     recurringPeriod: { 
         type: String, 
-        enum: ['شهري', 'أسبوعي', 'سنوي', 'لا يوجد'], 
+        enum: ['شهري', 'أسبوعي', 'سنوي', 'لا يوجد', 'monthly', 'weekly', 'yearly', 'none'], 
         default: 'لا يوجد' 
     },
     account: { 
         type: String, 
-        enum: ['نقدي', 'بنك', 'محفظة'], 
+        enum: ['نقدي', 'بنك', 'محفظة', 'cash', 'bank', 'wallet'], 
         default: 'نقدي' 
     },
     date: { type: Date, default: Date.now },
-    note: String,
+    note: { type: String, default: '' },
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
 

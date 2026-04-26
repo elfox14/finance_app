@@ -18,8 +18,8 @@ exports.getExpenses = async (req, res) => {
         }, {});
 
         // تحليل الضروريات (Basic vs Luxury)
-        const basicTotal = thisMonthExpenses.filter(e => e.necessityLevel === 'أساسي').reduce((s, e) => s + e.amount, 0);
-        const luxuryTotal = thisMonthExpenses.filter(e => e.necessityLevel === 'كمالي').reduce((s, e) => s + e.amount, 0);
+        const basicTotal = thisMonthExpenses.filter(e => ['أساسي', 'basic'].includes(e.necessityLevel)).reduce((s, e) => s + e.amount, 0);
+        const luxuryTotal = thisMonthExpenses.filter(e => ['كمالي', 'luxury'].includes(e.necessityLevel)).reduce((s, e) => s + e.amount, 0);
 
         res.json({
             expenses,
@@ -42,7 +42,12 @@ exports.getExpenses = async (req, res) => {
 // @desc    Create expense
 exports.createExpense = async (req, res) => {
     try {
-        const expense = await Expense.create({ ...req.body, userId: req.user._id });
+        const data = { ...req.body, userId: req.user._id };
+        // Mapping frontend fields to backend schema
+        if (data.category && !data.budgetCategory) data.budgetCategory = data.category;
+        if (data.account && !data.paymentSource) data.paymentSource = data.account;
+        
+        const expense = await Expense.create(data);
         res.status(201).json(expense);
     } catch (error) {
         res.status(400).json({ message: error.message });
