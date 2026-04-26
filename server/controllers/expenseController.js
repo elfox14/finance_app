@@ -1,21 +1,43 @@
 const Expense = require('../models/Expense');
 
+const Budget = require('../models/Budget');
+
 // @desc    Get all expenses with professional analytics
 exports.getExpenses = async (req, res) => {
     try {
-        const expenses = await Expense.find({ userId: req.user._id, deletedAt: null }).sort({ date: -1 });
+        const userId = req.user._id;
+        const expenses = await Expense.find({ userId, deletedAt: null }).sort({ date: -1 });
         
         const now = new Date();
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const currentMonth = now.getMonth() + 1;
+        const currentYear = now.getFullYear();
+        const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
+        const daysPassed = now.getDate();
 
         const thisMonthExpenses = expenses.filter(e => new Date(e.date) >= startOfMonth);
         const totalSpentThisMonth = thisMonthExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-        // تحليل الفئات (Budget Categories)
+        // جلب الميزانيات المحددة لهذا الشهر
+        const budgets = await Budget.find({ userId, month: currentMonth, year: currentYear });
+
+        // تحليل الفئات (Budget Categories) مع مقارنتها بالميزانية
         const categoryAnalysis = thisMonthExpenses.reduce((acc, e) => {
-            acc[e.budgetCategory] = (acc[e.budgetCategory] || 0) + e.amount;
+            const cat = e.budgetCategory || 'أخرى';
+            acc[cat] = (acc[cat] || 0) + e.amount;
             return acc;
         }, {});
+
+        const budgetStatus = budgets.map(b => {
+            const actual = categoryAnalysis[b.category] || 0;
+            return {
+                category: b.category,
+                limit: b.limit,
+                actual,
+                remaining: b.limit - actual,
+                percent: ((actual / b.limit) * 100).toFixed(0),
+                status: actual > b.limit ? 'over' : actual > b.limit * 0.8 ? 'warning' : 'safe'
+            };
+        });
 
         // تحليل الضروريات (Basic vs Luxury)
         const basicTotal = thisMonthExpenses.filter(e => ['أساسي', 'basic'].includes(e.necessityLevel)).reduce((s, e) => s + e.amount, 0);
@@ -25,7 +47,8 @@ exports.getExpenses = async (req, res) => {
             expenses,
             stats: {
                 totalSpentThisMonth,
-                categoryAnalysis,
+                dailyAverage: (totalSpentThisMonth / daysPassed).toFixed(0),
+                budgetStatus,
                 basicVsLuxury: {
                     basic: basicTotal,
                     luxury: luxuryTotal,
