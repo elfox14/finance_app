@@ -13,7 +13,6 @@ const Layout = ({ children }) => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // تأمين الـ Layout ليعمل حتى لو تأخرت بيانات المستخدم
     const userName = user?.name || 'مستخدم جيبي';
 
     const menuItems = [
@@ -87,9 +86,9 @@ const Layout = ({ children }) => {
             </aside>
 
             {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 right-0 left-0 h-16 bg-black/80 backdrop-blur-xl border-b border-slate-900 flex items-center justify-between px-6 z-40">
+            <header className="lg:hidden fixed top-0 right-0 left-0 h-16 bg-black border-b border-slate-900 flex items-center justify-between px-6 z-[60]">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20">
+                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                         <Wallet className="text-white" size={18} />
                     </div>
                     <span className="font-black text-white text-lg">جيبي</span>
@@ -135,24 +134,24 @@ const Layout = ({ children }) => {
             )}
 
             {/* Main Content Area */}
-            <main className="lg:pr-72 pt-20 lg:pt-8 p-4 md:p-8 min-h-screen">
-                <div className="max-w-6xl mx-auto pb-20 lg:pb-0">
+            <main className="lg:pr-72 pt-20 lg:pt-8 p-4 md:p-8 min-h-screen pb-32 lg:pb-8">
+                <div className="max-w-6xl mx-auto">
                     {children}
                 </div>
             </main>
 
-            {/* Bottom Navigation for Mobile */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-950/80 backdrop-blur-2xl border-t border-slate-900 flex items-center justify-around px-2 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
+            {/* Bottom Navigation for Mobile - FIXED VISIBILITY */}
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 flex items-center justify-around px-2 z-[70] shadow-[0_-10px_40px_rgba(0,0,0,0.8)] pb-safe h-20">
                 {bottomNavItems.map((item) => (
                     <Link
                         key={item.path}
                         to={item.path}
-                        className={`flex flex-col items-center gap-1 transition-all duration-300 ${
-                            location.pathname === item.path ? 'text-blue-500' : 'text-slate-500'
+                        className={`flex flex-col items-center gap-1.5 py-2 px-3 transition-all duration-300 rounded-xl ${
+                            location.pathname === item.path ? 'text-blue-500 bg-blue-500/5' : 'text-slate-500'
                         }`}
                     >
-                        <item.icon size={20} className={location.pathname === item.path ? 'scale-110' : ''} />
-                        <span className="text-[10px] font-bold">{item.label}</span>
+                        <item.icon size={22} className={location.pathname === item.path ? 'scale-110' : 'opacity-70'} />
+                        <span className="text-[10px] font-black">{item.label}</span>
                     </Link>
                 ))}
             </nav>
