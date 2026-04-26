@@ -11,7 +11,7 @@ const incomeSchema = new mongoose.Schema({
     },
     cashFlowType: { 
         type: String, 
-        enum: ['محصل', 'مستحق', 'received', 'accrued'], 
+        enum: ['محصل', 'مستحق', 'متوقع', 'received', 'accrued', 'expected'], 
         default: 'محصل' 
     },
     isRecurring: { type: Boolean, default: false },
