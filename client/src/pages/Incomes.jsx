@@ -26,10 +26,17 @@ const Incomes = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/incomes', form);
-            setForm({ amount: '', source: '', date: new Date().toISOString().split('T')[0], note: '', incomeType: 'fixed', cashFlowType: 'received', account: 'cash' });
-            fetchData();
-        } catch (err) { alert('خطأ في الحفظ'); }
+            const dataToSend = { ...form, amount: Number(form.amount) };
+            const res = await api.post('/incomes', dataToSend);
+            if (res.status === 201 || res.status === 200) {
+                setForm({ amount: '', source: '', date: new Date().toISOString().split('T')[0], note: '', incomeType: 'fixed', cashFlowType: 'received', account: 'cash' });
+                fetchData();
+                alert('تم تسجيل الدخل بنجاح');
+            }
+        } catch (err) { 
+            console.error('Save Error:', err);
+            alert('خطأ في الحفظ: ' + (err.response?.data?.message || err.message)); 
+        }
     };
 
     const handleDelete = async (id) => {

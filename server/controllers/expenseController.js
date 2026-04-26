@@ -23,7 +23,7 @@ exports.getExpenses = async (req, res) => {
 
         res.json({
             expenses,
-            analytics: {
+            stats: {
                 totalSpentThisMonth,
                 categoryAnalysis,
                 basicVsLuxury: {

@@ -40,10 +40,17 @@ const Lending = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/peer-debts', form);
-            setForm({ personName: '', amount: '', dueDate: '', note: '', type: 'lent' });
-            fetchData();
-        } catch (err) { alert('خطأ في الحفظ'); }
+            const dataToSend = { ...form, amount: Number(form.amount) };
+            const res = await api.post('/peer-debts', dataToSend);
+            if (res.status === 201 || res.status === 200) {
+                setForm({ personName: '', amount: '', dueDate: '', note: '', type: 'lent' });
+                fetchData();
+                alert('تم حفظ المديونية بنجاح');
+            }
+        } catch (err) { 
+            console.error('Save Error:', err);
+            alert('خطأ في الحفظ: ' + (err.response?.data?.message || err.message)); 
+        }
     };
 
     const handleDelete = async (id) => {

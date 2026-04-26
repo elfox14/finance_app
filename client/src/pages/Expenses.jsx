@@ -26,10 +26,17 @@ const Expenses = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/expenses', form);
-            setForm({ amount: '', category: 'عام', date: new Date().toISOString().split('T')[0], note: '', account: 'cash' });
-            fetchData();
-        } catch (err) { alert('خطأ في الحفظ'); }
+            const dataToSend = { ...form, amount: Number(form.amount) };
+            const res = await api.post('/expenses', dataToSend);
+            if (res.status === 201 || res.status === 200) {
+                setForm({ amount: '', category: 'عام', date: new Date().toISOString().split('T')[0], note: '', account: 'cash' });
+                fetchData();
+                alert('تم حفظ المصروف بنجاح');
+            }
+        } catch (err) { 
+            console.error('Save Error:', err);
+            alert('خطأ في الحفظ: ' + (err.response?.data?.message || err.message)); 
+        }
     };
 
     const handleDelete = async (id) => {

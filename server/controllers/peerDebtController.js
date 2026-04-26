@@ -72,7 +72,9 @@ exports.recordPayment = async (req, res) => {
 // @desc    Create peer debt
 exports.createPeerDebt = async (req, res) => {
     try {
-        const debt = await PeerDebt.create({ ...req.body, userId: req.user._id });
+        const data = { ...req.body, userId: req.user._id };
+        if (data.dueDate === '') data.dueDate = null;
+        const debt = await PeerDebt.create(data);
         res.status(201).json(debt);
     } catch (error) {
         res.status(400).json({ message: error.message });
@@ -82,9 +84,11 @@ exports.createPeerDebt = async (req, res) => {
 // @desc    Update peer debt
 exports.updatePeerDebt = async (req, res) => {
     try {
+        const data = { ...req.body };
+        if (data.dueDate === '') data.dueDate = null;
         const debt = await PeerDebt.findOneAndUpdate(
             { _id: req.params.id, userId: req.user._id },
-            req.body,
+            data,
             { new: true, runValidators: true }
         );
         if (!debt) return res.status(404).json({ message: 'السلفة غير موجودة' });
