@@ -7,21 +7,31 @@ const Group = require('../models/Group');
 const Budget = require('../models/Budget');
 const Certificate = require('../models/Certificate');
 
+// Payment Models for precise cash flow
+const LoanPayment = require('../models/LoanPayment');
+const CardPayment = require('../models/CardPayment');
+const GroupPayment = require('../models/GroupPayment');
+const { PeerDebtPayment } = require('../models/PeerDebt');
+
 exports.getDashboardStats = async (req, res) => {
     try {
         const userId = req.user.id;
         const now = new Date();
 
         // 1. Fetch data with correct userId
-        const [allExpenses, allIncomes, loans, cards, debts, groups, budgets, certificates] = await Promise.all([
+        const [allExpenses, allIncomes, loans, cards, debts, groups, budgets, certificates, loanPayments, cardPayments, groupPayments, peerPayments] = await Promise.all([
             Expense.find({ userId }),
             Income.find({ userId }),
             Loan.find({ userId }),
             Card.find({ userId }),
-            PeerDebt.find({ userId, isPaid: false }),
-            Group.find({ userId, isPaidOut: false }),
+            PeerDebt.find({ userId }), // Fetch all to account for cash received/sent
+            Group.find({ userId }), // Fetch all to account for payouts
             Budget.find({ userId, month: now.getMonth() + 1, year: now.getFullYear() }),
-            Certificate.find({ userId, status: 'نشطة' })
+            Certificate.find({ userId, status: 'نشطة' }),
+            LoanPayment.find({ userId }),
+            CardPayment.find({ userId }),
+            GroupPayment.find({ userId }),
+            PeerDebtPayment.find({ userId })
         ]);
 
         // 2. Filter current month data
@@ -45,16 +55,20 @@ exports.getDashboardStats = async (req, res) => {
         const activeCards = cards.filter(c => (c.status === 'نشطة' || c.status === 'active') && (c.currentBalance || 0) > 0);
         const upcomingCards = activeCards.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
         
-        const upcomingGroups = groups.reduce((sum, g) => sum + (g.monthlyAmount || 0), 0);
-        const upcomingDebts = debts.filter(d => d.type === 'borrowed').reduce((sum, d) => sum + (d.amount || 0), 0);
+        const activeGroups = groups.filter(g => !g.isPaidOut || (g.analytics?.monthsPaid < g.durationMonths));
+        const upcomingGroups = activeGroups.reduce((sum, g) => sum + (g.monthlyAmount || 0), 0);
+        
+        const activeBorrowedDebts = debts.filter(d => d.type === 'borrowed' && !d.isPaid);
+        const upcomingDebts = activeBorrowedDebts.reduce((sum, d) => sum + (d.amount || 0), 0);
 
         const next30DayObligations = upcomingLoans + upcomingCards + upcomingGroups + upcomingDebts;
 
         // 4. Next 30 Day Receivables (حقوق)
-        const upcomingLent = debts.filter(d => d.type === 'lent').reduce((sum, d) => sum + (d.amount || 0), 0);
+        const activeLentDebts = debts.filter(d => d.type === 'lent' && !d.isPaid);
+        const upcomingLent = activeLentDebts.reduce((sum, d) => sum + (d.amount || 0), 0);
         
         let expectedGroupReturns = 0;
-        groups.forEach(g => {
+        groups.filter(g => !g.isPaidOut).forEach(g => {
             if (g.startDate && g.userPayoutOrder) {
                 const payoutDate = new Date(g.startDate);
                 payoutDate.setMonth(payoutDate.getMonth() + g.userPayoutOrder - 1);
@@ -73,9 +87,32 @@ exports.getDashboardStats = async (req, res) => {
 
         const next30DayReceivables = upcomingLent + expectedGroupReturns + expectedCertReturns;
 
-        // 5. Cash Flow & Balances
-        const totalReceived = allIncomes.filter(i => ['محصل', 'received'].includes(i.cashFlowType)).reduce((sum, i) => sum + i.amount, 0);
-        const totalSpent = allExpenses.reduce((sum, e) => sum + e.amount, 0);
+        // 5. Cash Flow & Balances (True Accounting Logic)
+        const totalIncomeReceived = allIncomes.filter(i => ['محصل', 'received'].includes(i.cashFlowType)).reduce((sum, i) => sum + i.amount, 0);
+        
+        // Add money received from lent debts and borrowed debts principal
+        const lentDebtsIds = debts.filter(d => d.type === 'lent').map(d => d._id.toString());
+        const totalLentRecovered = peerPayments.filter(p => lentDebtsIds.includes(p.debtId.toString())).reduce((sum, p) => sum + p.amount, 0);
+        const totalBorrowedReceived = debts.filter(d => d.type === 'borrowed').reduce((sum, d) => sum + d.amount, 0);
+        
+        // Add Loan Principals received and Group Payouts
+        const totalLoanReceived = loans.reduce((sum, l) => sum + l.principalAmount, 0);
+        const totalGroupPayoutsReceived = groups.filter(g => g.isPaidOut).reduce((sum, g) => sum + g.totalAmount, 0);
+        
+        const totalReceived = totalIncomeReceived + totalLentRecovered + totalBorrowedReceived + totalLoanReceived + totalGroupPayoutsReceived;
+
+        // Calculate all money out
+        const totalExpensesPaid = allExpenses.reduce((sum, e) => sum + e.amount, 0);
+        const totalLoanPaid = loanPayments.reduce((sum, p) => sum + p.amount, 0);
+        const totalCardPaid = cardPayments.reduce((sum, p) => sum + p.amount, 0);
+        const totalGroupPaid = groupPayments.reduce((sum, p) => sum + p.amount, 0);
+        
+        // Add money paid for borrowed debts and lent principal sent
+        const borrowedDebtsIds = debts.filter(d => d.type === 'borrowed').map(d => d._id.toString());
+        const totalBorrowedPaid = peerPayments.filter(p => borrowedDebtsIds.includes(p.debtId.toString())).reduce((sum, p) => sum + p.amount, 0);
+        const totalLentSent = debts.filter(d => d.type === 'lent').reduce((sum, d) => sum + d.amount, 0);
+
+        const totalSpent = totalExpensesPaid + totalLoanPaid + totalCardPaid + totalGroupPaid + totalBorrowedPaid + totalLentSent;
         
         const currentBalance = totalReceived - totalSpent;
         const availableBalance = currentBalance - next30DayObligations;
@@ -109,9 +146,9 @@ exports.getDashboardStats = async (req, res) => {
         // 8. Upcoming Obligations List
         const upcomingObligations = [
             ...activeLoans.map(l => ({ type: 'loan', name: l.loanName, amount: l.monthlyInstallment || 0, dueDate: l.nextPaymentDate || l.firstDueDate || now })),
-            ...groups.map(g => ({ type: 'group', name: g.groupName, amount: g.monthlyAmount, dueDate: new Date(now.getFullYear(), now.getMonth(), 28) })),
+            ...activeGroups.map(g => ({ type: 'group', name: g.groupName, amount: g.monthlyAmount, dueDate: new Date(now.getFullYear(), now.getMonth(), 28) })),
             ...activeCards.map(c => ({ type: 'card', name: c.cardName, amount: c.currentBalance || 0, dueDate: new Date(now.getFullYear(), now.getMonth(), c.dueDay || 25) })),
-            ...debts.filter(d => d.type === 'borrowed').map(d => ({ type: 'debt', name: `سلفة من ${d.personName}`, amount: d.amount, dueDate: d.dueDate || now }))
+            ...activeBorrowedDebts.map(d => ({ type: 'debt', name: `سلفة من ${d.personName}`, amount: d.amount, dueDate: d.dueDate || now }))
         ].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
 
         // 9. Insights
