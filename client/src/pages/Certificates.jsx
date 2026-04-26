@@ -99,63 +99,6 @@ const Certificates = () => {
                     );
                 })}
             </div>
-
-            {/* Add Modal */}
-            {showAddModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-                    <div className="bg-slate-900 border border-slate-800 w-full max-w-lg rounded-[2.5rem] p-8 relative shadow-2xl">
-                        <button onClick={() => setShowAddModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors">
-                            <X size={24} />
-                        </button>
-                        <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3">
-                            <Landmark className="text-blue-500" /> تسجيل شهادة استثمار
-                        </h2>
-                        <form onSubmit={handleCreateCert} className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">اسم الشهادة</label>
-                                    <input required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newCertForm.certificateName} onChange={e => setNewCertForm({...newCertForm, certificateName: e.target.value})} placeholder="الشهادة البلاتينية" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">البنك</label>
-                                    <input required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newCertForm.bankName} onChange={e => setNewCertForm({...newCertForm, bankName: e.target.value})} placeholder="البنك الأهلي" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">مبلغ الشهادة (الأصل)</label>
-                                    <input type="number" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all text-lg font-black" value={newCertForm.principalAmount} onChange={e => setNewCertForm({...newCertForm, principalAmount: e.target.value})} placeholder="100,000" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">العائد السنوي %</label>
-                                    <input type="number" step="0.1" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all text-lg font-black" value={newCertForm.interestRate} onChange={e => setNewCertForm({...newCertForm, interestRate: e.target.value})} placeholder="23.5" />
-                                </div>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">مدة الشهادة (بالشهور)</label>
-                                    <input type="number" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newCertForm.durationMonths} onChange={e => setNewCertForm({...newCertForm, durationMonths: e.target.value})} placeholder="12" />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="text-[10px] font-bold text-slate-500 uppercase px-2">دورية صرف العائد</label>
-                                    <select className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newCertForm.payoutFrequency} onChange={e => setNewCertForm({...newCertForm, payoutFrequency: e.target.value})}>
-                                        <option value="شهري">شهري</option>
-                                        <option value="ربع سنوي">ربع سنوي</option>
-                                        <option value="سنوي">سنوي</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div className="space-y-2">
-                                <label className="text-[10px] font-bold text-slate-500 uppercase px-2">تاريخ الشراء / الإصدار</label>
-                                <input type="date" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newCertForm.startDate} onChange={e => setNewCertForm({...newCertForm, startDate: e.target.value})} />
-                            </div>
-                            <button type="submit" className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/20 transition-all mt-4">
-                                حفظ بيانات الشهادة
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

@@ -107,13 +107,12 @@ exports.getDashboardStats = async (req, res) => {
         const totalCardPaid = cardPayments.reduce((sum, p) => sum + p.amount, 0);
         const totalGroupPaid = groupPayments.reduce((sum, p) => sum + p.amount, 0);
         
-        // Add money paid for borrowed debts, lent principal sent, and certificate investments
+        // Add money paid for borrowed debts and lent principal sent
         const borrowedDebtsIds = debts.filter(d => d.type === 'borrowed').map(d => d._id.toString());
         const totalBorrowedPaid = peerPayments.filter(p => borrowedDebtsIds.includes(p.debtId.toString())).reduce((sum, p) => sum + p.amount, 0);
         const totalLentSent = debts.filter(d => d.type === 'lent').reduce((sum, d) => sum + d.amount, 0);
-        const totalCertificatesInvested = certificates.reduce((sum, c) => sum + c.principalAmount, 0);
 
-        const totalSpent = totalExpensesPaid + totalLoanPaid + totalCardPaid + totalGroupPaid + totalBorrowedPaid + totalLentSent + totalCertificatesInvested;
+        const totalSpent = totalExpensesPaid + totalLoanPaid + totalCardPaid + totalGroupPaid + totalBorrowedPaid + totalLentSent;
         
         const currentBalance = totalReceived - totalSpent;
         const availableBalance = currentBalance - next30DayObligations;
