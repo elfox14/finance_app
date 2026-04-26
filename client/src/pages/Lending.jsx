@@ -18,7 +18,8 @@ const Lending = () => {
     const fetchData = async () => {
         try {
             const res = await api.get('/peer-debts');
-            setDebts(res.data.debts.filter(d => d.type === 'lent'));
+            const allDebts = Array.isArray(res.data.debts) ? res.data.debts : [];
+            setDebts(allDebts.filter(d => d.type === 'lent'));
             setStats(res.data.stats);
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
@@ -57,120 +58,65 @@ const Lending = () => {
 
     return (
         <div className="space-y-8 fade-in text-right pb-20" dir="rtl">
-            <h1 className="text-3xl font-bold text-white">إدارة التحصيلات (لي طرف الآخرين)</h1>
+            <h1 className="text-3xl font-bold text-white">إدارة التحصيلات</h1>
 
-            {/* Collection Summary */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="bg-emerald-600 p-8 rounded-[2.5rem] text-white shadow-xl shadow-emerald-900/20">
-                    <p className="text-emerald-100 text-xs mb-1">إجمالي المبالغ المتبقية في الخارج</p>
-                    <p className="text-3xl font-black">{stats?.totalLentRemaining.toLocaleString()} ج.م</p>
-                </div>
-                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl flex items-center justify-between">
-                    <div>
-                        <p className="text-slate-500 text-xs mb-1">حالات التأخير القائمة</p>
-                        <p className="text-2xl font-black text-orange-500">{debts.filter(d => d.analytics.delayDays > 0).length} شخص</p>
-                    </div>
-                    <div className="w-12 h-12 bg-orange-500/10 text-orange-500 rounded-full flex items-center justify-center">
-                        <AlertTriangle />
-                    </div>
+                    <p className="text-emerald-100 text-xs mb-1 font-bold">إجمالي المبالغ في الخارج</p>
+                    <p className="text-3xl font-black">{stats?.totalLentRemaining?.toLocaleString() || 0} ج.م</p>
                 </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Entry Form */}
                 <div className="p-8 bg-slate-900 border border-slate-800 rounded-3xl shadow-xl h-fit">
-                    <h3 className="text-xl font-bold text-white mb-6">فتح كشف حساب جديد</h3>
+                    <h3 className="text-xl font-bold text-white mb-6">فتح كشف حساب</h3>
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <input placeholder="اسم المدين" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-xl outline-none" value={form.personName} onChange={e => setForm({...form, personName: e.target.value})} required />
-                        <input type="number" placeholder="أصل الدين (المبلغ الكلي)" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-xl outline-none" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required />
-                        <input type="date" className="w-full bg-slate-800 border border-slate-700 text-white p-3 rounded-xl outline-none text-sm" value={form.dueDate} onChange={e => setForm({...form, dueDate: e.target.value})} />
+                        <input type="number" placeholder="أصل الدين" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-xl outline-none" value={form.amount} onChange={e => setForm({...form, amount: e.target.value})} required />
                         <button type="submit" className="w-full py-4 bg-emerald-600 rounded-xl font-black text-white shadow-lg">حفظ المديونية</button>
                     </form>
                 </div>
 
-                {/* Ledger Cards - FIXING ACTIONS FOR MOBILE */}
                 <div className="lg:col-span-2 space-y-6">
-                    {debts.map((debt) => (
-                        <div key={debt._id} className={`group p-8 rounded-[2.5rem] border transition-all relative overflow-hidden ${debt.isPaid ? 'bg-slate-900/50 border-slate-800 opacity-60' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
-                            {debt.analytics.delayDays > 0 && !debt.isPaid && (
-                                <div className="absolute top-0 left-0 bg-red-600 text-white text-[10px] font-black px-4 py-1 rounded-br-2xl">
-                                    متأخر {debt.analytics.delayDays} يوم
+                    {(Array.isArray(debts) ? debts : []).map((debt) => {
+                        const analytics = debt.analytics || {};
+                        return (
+                            <div key={debt._id} className={`group p-8 rounded-[2.5rem] border transition-all relative overflow-hidden ${debt.isPaid ? 'bg-slate-900/50 border-slate-800 opacity-60' : 'bg-slate-900 border-slate-800 shadow-xl'}`}>
+                                <div className="absolute top-6 left-6 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-20">
+                                    <button onClick={() => handleDelete(debt._id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors"><Trash2 size={18} /></button>
                                 </div>
-                            )}
-                            
-                            {/* Action Buttons: Always visible on Mobile, hover on Desktop */}
-                            <div className="absolute top-6 left-6 flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all z-20">
-                                <button onClick={() => handleDelete(debt._id)} className="p-2 text-slate-500 hover:text-red-500 transition-colors">
-                                    <Trash2 size={18} />
-                                </button>
-                            </div>
-                            
-                            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
-                                <div className="flex items-center gap-5">
-                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${debt.isPaid ? 'bg-emerald-500/20 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
-                                        {debt.isPaid ? <CheckCircle2 size={28} /> : <User size={28} />}
-                                    </div>
-                                    <div>
+                                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative z-10">
+                                    <div className="flex items-center gap-5">
+                                        <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${debt.isPaid ? 'bg-emerald-500/20 text-emerald-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                                            {debt.isPaid ? <CheckCircle2 size={28} /> : <User size={28} />}
+                                        </div>
                                         <h4 className="text-xl font-black text-white">{debt.personName}</h4>
-                                        <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                                            <Calendar size={12} /> استحقاق: {new Date(debt.dueDate).toLocaleDateString('ar-EG')}
-                                        </p>
                                     </div>
+                                    <div className="grid grid-cols-3 gap-6 flex-1 md:flex-none">
+                                        <div className="text-center">
+                                            <p className="text-[10px] text-slate-500 mb-1 font-bold">أصل الدين</p>
+                                            <p className="font-bold text-white text-sm">{debt.amount?.toLocaleString() || 0}</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-[10px] text-emerald-500 mb-1 font-bold">المسدد</p>
+                                            <p className="font-bold text-emerald-400 text-sm">{analytics.paidAmount?.toLocaleString() || 0}</p>
+                                        </div>
+                                        <div className="text-center">
+                                            <p className="text-[10px] text-orange-500 mb-1 font-bold">المتبقي</p>
+                                            <p className="font-black text-white text-sm">{analytics.remainingAmount?.toLocaleString() || 0}</p>
+                                        </div>
+                                    </div>
+                                    {!debt.isPaid && (
+                                        <button onClick={() => { setSelectedDebt(debt); setShowPaymentModal(true); }} className="p-3 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-lg">
+                                            <Receipt size={20} />
+                                        </button>
+                                    )}
                                 </div>
-
-                                <div className="grid grid-cols-3 gap-6 flex-1 md:flex-none">
-                                    <div className="text-center">
-                                        <p className="text-[10px] text-slate-500 mb-1">أصل الدين</p>
-                                        <p className="font-bold text-white text-sm">{debt.amount.toLocaleString()}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-[10px] text-emerald-500 mb-1">المسدد</p>
-                                        <p className="font-bold text-emerald-400 text-sm">{debt.analytics.paidAmount.toLocaleString()}</p>
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-[10px] text-orange-500 mb-1">المتبقي</p>
-                                        <p className="font-black text-white text-sm">{debt.analytics.remainingAmount.toLocaleString()}</p>
-                                    </div>
-                                </div>
-
-                                {!debt.isPaid && (
-                                    <button 
-                                        onClick={() => { setSelectedDebt(debt); setShowPaymentModal(true); }}
-                                        className="p-3 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-900/20"
-                                    >
-                                        <Receipt size={20} />
-                                    </button>
-                                )}
                             </div>
-                            
-                            {!debt.isPaid && (
-                                <div className="mt-6 w-full bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                                    <div className="bg-emerald-500 h-full transition-all duration-1000" style={{ width: `${(debt.analytics.paidAmount / debt.amount) * 100}%` }}></div>
-                                </div>
-                            )}
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             </div>
-
-            {/* Modal for Partial Payment */}
-            {showPaymentModal && (
-                <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-                    <div className="bg-slate-900 border border-slate-800 w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl scale-in">
-                        <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                            <Receipt className="text-emerald-500" /> تحصيل دفعة من {selectedDebt?.personName}
-                        </h3>
-                        <form onSubmit={handleRecordPayment} className="space-y-6 text-right">
-                            <p className="text-xs text-slate-500">المبلغ المتبقي حالياً: <span className="text-white font-bold">{selectedDebt?.analytics.remainingAmount.toLocaleString()} ج.م</span></p>
-                            <input type="number" placeholder="ادخل المبلغ المحصل" className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-xl outline-none" value={paymentAmount} onChange={e => setPaymentAmount(e.target.value)} required />
-                            <div className="flex gap-4">
-                                <button type="button" onClick={() => setShowPaymentModal(false)} className="flex-1 py-4 text-slate-500 font-bold">إلغاء</button>
-                                <button type="submit" className="flex-1 py-4 bg-emerald-600 rounded-xl font-black text-white shadow-lg shadow-emerald-900/20">تأكيد التحصيل</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
         </div>
     );
 };

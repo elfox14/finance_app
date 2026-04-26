@@ -22,10 +22,14 @@ const Dashboard = () => {
                 api.get('/expenses/latest')
             ]);
             setStats(statsRes.data || {});
-            setTransactions(transRes.data || []);
+            
+            // التأكد من أن البيانات هي مصفوفة فعلاً
+            const transData = transRes.data;
+            setTransactions(Array.isArray(transData) ? transData : (transData?.expenses || []));
         } catch (err) {
             console.error('Error fetching dashboard:', err);
-            setStats({}); // ضمان وجود كائن حتى في حالة الخطأ
+            setStats({});
+            setTransactions([]);
         } finally {
             setLoading(false);
         }
@@ -51,7 +55,6 @@ const Dashboard = () => {
         );
     }
 
-    // استخراج البيانات بأمان تام
     const topStats = stats?.topStats || {};
     const healthFactors = stats?.healthFactors || {};
 
@@ -66,7 +69,7 @@ const Dashboard = () => {
 
             <div className="grid grid-cols-1 gap-6 px-4 md:px-0">
                 <div className="flex overflow-x-auto no-scrollbar gap-4 pb-4 -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-4 md:overflow-visible">
-                    <TopStatItem label="الرصيد الحالي" val={topStats.currentBalance || 0} icon={<Wallet />} color="bg-blue-600" trend="+2.4%" />
+                    <TopStatItem label="الرصيد الحالي" val={topStats.currentBalance || 0} icon={<Wallet />} color="bg-blue-600" />
                     <TopStatItem label="السيولة المتاحة" val={topStats.availableBalance || 0} icon={<TrendingUp />} color="bg-emerald-600" />
                     <TopStatItem label="إجمالي الالتزامات" val={topStats.totalObligations || 0} icon={<Clock />} color="bg-orange-600" />
                     <div className="flex-shrink-0 w-72 md:w-auto bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl flex items-center justify-between group">
@@ -129,7 +132,7 @@ const Dashboard = () => {
                 <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col">
                     <h3 className="text-xl font-black text-white mb-8">آخر العمليات</h3>
                     <div className="space-y-6 flex-1 overflow-y-auto max-h-[400px] no-scrollbar">
-                        {transactions.map((t, i) => (
+                        {(Array.isArray(transactions) ? transactions : []).map((t, i) => (
                             <div key={i} className="flex items-center justify-between group cursor-pointer hover:bg-slate-800/30 p-2 rounded-2xl transition-all">
                                 <div className="flex items-center gap-4">
                                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${t.type === 'income' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
@@ -152,7 +155,7 @@ const Dashboard = () => {
     );
 };
 
-const TopStatItem = ({ label, val, icon, color, trend }) => (
+const TopStatItem = ({ label, val, icon, color }) => (
     <div className="flex-shrink-0 w-72 md:w-auto bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl group">
         <div className="flex justify-between items-start mb-4">
             <div className={`p-3 rounded-2xl ${color} text-white shadow-lg`}>{icon}</div>

@@ -16,7 +16,7 @@ const Cards = () => {
     const fetchCards = async () => {
         try {
             const res = await api.get('/cards');
-            setCards(res.data || []);
+            setCards(Array.isArray(res.data) ? res.data : []);
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
     };
@@ -52,8 +52,7 @@ const Cards = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 px-4 md:px-0">
-                {cards.map((card) => {
-                    // استخراج التحليلات بأمان فائق
+                {(Array.isArray(cards) ? cards : []).map((card) => {
                     const analytics = card.analytics || {};
                     const usagePercent = analytics.usagePercent || 0;
 
