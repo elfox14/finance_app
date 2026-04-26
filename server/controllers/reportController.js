@@ -1,7 +1,7 @@
 const Expense = require('../models/Expense');
 const Income = require('../models/Income');
 const Loan = require('../models/Loan');
-const { Card } = require('../models/Card');
+const Card = require('../models/Card');
 const Group = require('../models/Group');
 const { PeerDebt } = require('../models/PeerDebt');
 const Budget = require('../models/Budget');

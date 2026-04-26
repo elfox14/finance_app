@@ -86,10 +86,10 @@ const Reports = () => {
 
             {/* 1) Executive Summary (Decision Bar) */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-4 md:px-0">
-                <SummaryCard label="نسبة الادخار" val={`${summary.savingsRate}%`} icon={<TrendingUp size={18} />} color="emerald" />
-                <SummaryCard label="عبء الديون" val={`${summary.debtRatio}%`} icon={<Clock size={18} />} color="orange" />
-                <SummaryCard label="الصافي المتوقع" val={summary.totalAssets} icon={<Wallet size={18} />} color="blue" />
-                <SummaryCard label="إجمالي الالتزامات" val={summary.totalDebt} icon={<AlertCircle size={18} />} color="red" />
+                <SummaryCard label="نسبة الادخار" val={`${summary.savingsRate || 0}%`} icon={<TrendingUp size={18} />} color="emerald" noUnit />
+                <SummaryCard label="عبء الديون" val={`${summary.debtRatio || 0}%`} icon={<Clock size={18} />} color="orange" noUnit />
+                <SummaryCard label="الصافي المتوقع" val={summary.totalAssets || 0} icon={<Wallet size={18} />} color="blue" />
+                <SummaryCard label="إجمالي الالتزامات" val={summary.totalDebt || 0} icon={<AlertCircle size={18} />} color="red" />
             </div>
 
             {/* Tabs Navigation */}
@@ -223,11 +223,14 @@ const Reports = () => {
     );
 };
 
-const SummaryCard = ({ label, val, icon, color }) => (
+const SummaryCard = ({ label, val, icon, color, noUnit }) => (
     <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl group hover:border-slate-700 transition-all">
         <div className={`w-8 h-8 rounded-lg bg-${color}-500/10 text-${color}-500 flex items-center justify-center mb-3`}>{icon}</div>
         <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">{label}</p>
-        <p className="text-lg md:text-xl font-black text-white">{typeof val === 'number' ? val.toLocaleString() : val} <span className="text-[10px] opacity-50">ج.م</span></p>
+        <p className="text-lg md:text-xl font-black text-white">
+            {typeof val === 'number' ? val.toLocaleString() : val} 
+            {!noUnit && <span className="text-[10px] opacity-50 mr-1">ج.م</span>}
+        </p>
     </div>
 );
 
