@@ -67,7 +67,7 @@ const Dashboard = () => {
                 <div>
                     <div className="flex items-center gap-3">
                         <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">قمرة القيادة</h1>
-                        <span className="bg-blue-600/10 text-blue-500 text-[10px] px-2 py-1 rounded-md font-bold border border-blue-500/20">Executive v3.5</span>
+                        <span className="bg-blue-600/10 text-blue-500 text-[10px] px-2 py-1 rounded-md font-bold border border-blue-500/20">Executive v3.6</span>
                     </div>
                     <p className="text-slate-500 text-xs md:text-sm mt-2">نظام التحليل المالي الذكي (جيبي الذكاء الاصطناعي)</p>
                 </div>
@@ -78,7 +78,7 @@ const Dashboard = () => {
                 </div>
             </header>
 
-            {/* Alerts Section (New Axis 6) */}
+            {/* Alerts Section (Axis 6) */}
             {alerts.length > 0 && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 px-4 md:px-0">
                     {alerts.map((alert, i) => (
@@ -108,7 +108,7 @@ const Dashboard = () => {
                 </div>
             </div>
 
-            {/* Executive Summary (New Axis 6) */}
+            {/* Executive Summary (Axis 6) */}
             <div className="mx-4 md:mx-0 p-8 bg-blue-600/10 border border-blue-500/20 rounded-[3rem] relative overflow-hidden group">
                 <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform">
                     <Sparkles size={120} className="text-blue-500" />
@@ -206,7 +206,5 @@ const IndicatorMini = ({ label, val }) => (
         <p className="text-sm font-black text-white">{val || 0}%</p>
     </div>
 );
-
-const AlertCircle = ({ size, className }) => <Clock size={size} className={className} />;
 
 export default Dashboard;
