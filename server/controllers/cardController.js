@@ -148,6 +148,47 @@ exports.updateCard = async (req, res) => {
     }
 };
 
+// @desc    Get detailed info for a single card (Transactions, Installments, Payments)
+exports.getCardDetails = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { id } = req.params;
+
+        const [transactions, installments, payments] = await Promise.all([
+            CardTransaction.find({ userId, cardId: id, deletedAt: null }).sort({ transactionDate: -1 }),
+            CardInstallment.find({ userId, cardId: id, deletedAt: null }).sort({ createdAt: -1 }),
+            CardPayment.find({ userId, cardId: id, deletedAt: null }).sort({ paymentDate: -1 })
+        ]);
+
+        res.json({ transactions, installments, payments });
+    } catch (error) {
+        res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Record a payment to a card
+exports.addCardPayment = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { cardId, amount, paymentDate, paymentType, sourceAccount, notes } = req.body;
+
+        // 1. Create Payment record
+        const payment = await CardPayment.create({
+            userId, cardId, amount, paymentDate, paymentType, sourceAccount, notes
+        });
+
+        // 2. Update Card Balance (Subtracting payment)
+        const card = await Card.findById(cardId);
+        card.currentBalance -= Number(amount);
+        if (card.currentBalance < 0) card.currentBalance = 0;
+        await card.save();
+
+        res.status(201).json(payment);
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 // @desc    Delete card
 exports.deleteCard = async (req, res) => {
     try {
