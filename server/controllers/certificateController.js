@@ -4,7 +4,31 @@ const Certificate = require('../models/Certificate');
 exports.getCertificates = async (req, res) => {
     try {
         const certs = await Certificate.find({ userId: req.user._id }).sort({ createdAt: -1 });
-        res.json(certs);
+        
+        const certsWithAnalytics = certs.map(cert => {
+            let monthlyYield = 0;
+            if (cert.payoutFrequency === 'شهري' || cert.payoutFrequency === 'monthly') {
+                monthlyYield = (cert.principalAmount * (cert.interestRate / 100)) / 12;
+            } else if (cert.payoutFrequency === 'ربع سنوي' || cert.payoutFrequency === 'quarterly') {
+                monthlyYield = (cert.principalAmount * (cert.interestRate / 100)) / 4;
+            } else if (cert.payoutFrequency === 'سنوي' || cert.payoutFrequency === 'yearly') {
+                monthlyYield = (cert.principalAmount * (cert.interestRate / 100));
+            }
+            
+            const maturityDate = new Date(cert.startDate);
+            maturityDate.setMonth(maturityDate.getMonth() + cert.durationMonths);
+
+            return {
+                ...cert._doc,
+                analytics: {
+                    monthlyYield,
+                    maturityDate,
+                    totalYield: (cert.principalAmount * (cert.interestRate / 100)) * (cert.durationMonths / 12)
+                }
+            };
+        });
+
+        res.json(certsWithAnalytics);
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
