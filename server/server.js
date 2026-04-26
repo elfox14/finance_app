@@ -46,6 +46,7 @@ apiRouter.use('/certificates', require('./routes/certificateRoutes'));
 apiRouter.use('/budgets', require('./routes/budgetRoutes'));
 apiRouter.use('/notifications', require('./routes/notificationRoutes'));
 apiRouter.use('/peer-debts', require('./routes/peerDebtRoutes'));
+apiRouter.use('/reports-data', require('./routes/reportRoutes'));
 
 app.use('/api', apiRouter);
 app.use('/fin/api', apiRouter);
