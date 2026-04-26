@@ -61,6 +61,30 @@ exports.getDashboardStats = async (req, res) => {
 
         healthScore = Math.max(0, Math.min(100, healthScore));
 
+        // --- 🧠 ذكاء مالي: التنبيهات وما يحتاج انتباه ---
+        const alerts = [];
+        if (availableBalance < 0) alerts.push({ type: 'danger', message: 'التزاماتك تتجاوز رصيدك الحالي' });
+        if (dti > 0.5) alerts.push({ type: 'warning', message: 'عبء الديون مرتفع جداً (تجاوز 50%)' });
+        
+        // التحقق من القروض والديون القريبة
+        const upcomingItems = [
+            ...loans.filter(l => !l.isPaid).map(l => ({ name: `قسط قرض: ${l.loanName}`, amount: l.monthlyPayment, date: l.nextPaymentDate, category: 'loan' })),
+            ...cards.filter(c => c.currentBalance > 0).map(c => ({ name: `مستحق بطاقة: ${c.cardName}`, amount: l.currentBalance, date: new Date(now.getFullYear(), now.getMonth(), c.dueDay), category: 'card' })),
+            ...debts.filter(d => d.type === 'borrowed' && !d.isPaid).map(d => ({ name: `دين لـ: ${d.personName}`, amount: d.amount, date: d.dueDate, category: 'debt' }))
+        ].filter(item => item.date && new Date(item.date) >= now)
+         .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        if (upcomingItems.length > 0) {
+            const nearest = upcomingItems[0];
+            const daysLeft = Math.ceil((new Date(nearest.date) - now) / (1000 * 60 * 60 * 24));
+            if (daysLeft <= 3) alerts.push({ type: 'info', message: `لديك ${nearest.name} مستحق خلال ${daysLeft} أيام` });
+        }
+
+        // --- 📝 الملخص التنفيذي الذكي ---
+        let summaryText = "وضعك المالي مستقر بشكل عام.";
+        if (savingsRate < 0.1) summaryText = "تحذير: نسبة الادخار منخفضة جداً، حاول تقليل المصاريف الكمالية.";
+        if (availableBalance > currentBalance * 0.5) summaryText = "ممتاز! لديك سيولة جيدة جداً بعد تغطية الالتزامات.";
+
         res.json({
             topStats: {
                 currentBalance,
@@ -68,13 +92,23 @@ exports.getDashboardStats = async (req, res) => {
                 totalObligations: total30DayObligations,
                 expectedIncome,
                 expectedExpense,
-                healthScore
+                healthScore,
+                savingsRate: (savingsRate * 100).toFixed(1)
             },
+            executiveSummary: {
+                text: summaryText,
+                mainInsight: `أعلى بند صرف: ${Object.entries(expenses.reduce((acc, e) => {
+                    acc[e.budgetCategory] = (acc[e.budgetCategory] || 0) + e.amount;
+                    return acc;
+                }, {})).sort((a, b) => b[1] - a[1])[0]?.[0] || 'لا يوجد'}`
+            },
+            alerts: alerts.slice(0, 3),
             healthFactors: {
-                savingsRate: (savingsRate * 100).toFixed(1),
-                debtRatio: (dti * 100).toFixed(1),
-                liquidityScore: Math.min(100, (availableBalance / (total30DayObligations || 1)) * 100).toFixed(1)
+                savings: { label: 'الادخار', score: Math.min(100, (savingsRate / 0.2) * 100).toFixed(0) },
+                debt: { label: 'الالتزامات', score: Math.max(0, (1 - dti) * 100).toFixed(0) },
+                liquidity: { label: 'السيولة', score: availableBalance > 0 ? 100 : 0 }
             },
+            upcomingObligations: upcomingItems.slice(0, 5),
             distribution: expenses.reduce((acc, e) => {
                 const cat = e.budgetCategory || e.category || 'أخرى';
                 acc[cat] = (acc[cat] || 0) + e.amount;
@@ -83,7 +117,7 @@ exports.getDashboardStats = async (req, res) => {
             recentActions: [...expenses, ...incomes]
                 .map(item => ({
                     ...item._doc || item,
-                    type: item.amount > 0 && incomes.includes(item) ? 'income' : 'expense'
+                    type: item.amount > 0 && incomes.some(inc => inc._id.toString() === item._id.toString()) ? 'income' : 'expense'
                 }))
                 .sort((a, b) => new Date(b.date) - new Date(a.date))
                 .slice(0, 10)
