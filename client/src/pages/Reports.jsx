@@ -116,7 +116,11 @@ const Reports = () => {
                              <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl">
                                 <h3 className="text-lg font-black text-white mb-6">توقعات ذكية</h3>
                                 <div className="space-y-4">
-                                    <PredictionItem label="الرصيد المتوقع نهاية الشهر" val={summary.totalAssets + (trends[trends.length-1].net || 0)} color="blue" />
+                                    <PredictionItem 
+                                        label="الرصيد المتوقع نهاية الشهر" 
+                                        val={(summary.totalAssets || 0) + (trends.length > 0 ? (trends[trends.length - 1].net || 0) : 0)} 
+                                        color="blue" 
+                                    />
                                     <p className="text-xs text-slate-500 leading-relaxed italic">
                                         * تعتمد التوقعات على معدل الإنفاق الحالي والالتزامات المجدولة خلال الـ 30 يوماً القادمة.
                                     </p>

@@ -69,7 +69,7 @@ exports.getDashboardStats = async (req, res) => {
         // التحقق من القروض والديون القريبة
         const upcomingItems = [
             ...loans.filter(l => !l.isPaid).map(l => ({ name: `قسط قرض: ${l.loanName}`, amount: l.monthlyPayment, date: l.nextPaymentDate, category: 'loan' })),
-            ...cards.filter(c => c.currentBalance > 0).map(c => ({ name: `مستحق بطاقة: ${c.cardName}`, amount: l.currentBalance, date: new Date(now.getFullYear(), now.getMonth(), c.dueDay), category: 'card' })),
+            ...cards.filter(c => c.currentBalance > 0).map(c => ({ name: `مستحق بطاقة: ${c.cardName}`, amount: c.currentBalance, date: new Date(now.getFullYear(), now.getMonth(), c.dueDay), category: 'card' })),
             ...debts.filter(d => d.type === 'borrowed' && !d.isPaid).map(d => ({ name: `دين لـ: ${d.personName}`, amount: d.amount, date: d.dueDate, category: 'debt' }))
         ].filter(item => item.date && new Date(item.date) >= now)
          .sort((a, b) => new Date(a.date) - new Date(b.date));
