@@ -4,15 +4,11 @@ import { useAuth } from '../context/AuthContext';
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
 
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center h-screen bg-black">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            </div>
-        );
-    }
+    // بما أن AuthProvider يتعامل مع حالة التحميل العالمية، هنا نتعامل فقط مع التوجيه
+    if (loading) return null; // تجنب الرندر المزدوج
 
     if (!user) {
+        // العودة لصفحة الدخول إذا لم يكن المستخدم مسجلاً
         return <Navigate to="/login" replace />;
     }
 

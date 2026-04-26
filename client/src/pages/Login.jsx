@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { Wallet, LogIn, UserPlus, Eye, EyeOff, HelpCircle } from 'lucide-react';
@@ -9,8 +9,13 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
-    const { login } = useAuth();
+    const { login, user } = useAuth();
     const navigate = useNavigate();
+
+    // إذا كان المستخدم مسجلاً بالفعل، يتم تحويله للرئيسية فوراً
+    useEffect(() => {
+        if (user) navigate('/');
+    }, [user, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();

@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 
 const AuthContext = createContext();
@@ -7,65 +7,60 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    const checkAuth = async () => {
+    const checkAuth = useCallback(async () => {
         const token = localStorage.getItem('token');
         if (!token) {
-            setUser(null);
             setLoading(false);
+            setUser(null);
             return;
         }
 
         try {
-            const res = await api.get('/auth/me');
+            // إضافة timeout للطلب لضمان عدم تعليق الواجهة في حالة بطء السيرفر
+            const res = await api.get('/auth/me', { timeout: 5000 });
             setUser(res.data);
         } catch (err) {
-            console.error("Auth check failed", err);
+            console.error('Auth Check Failed:', err.message);
             localStorage.removeItem('token');
             setUser(null);
         } finally {
-            setLoading(false);
+            // تأخير بسيط لضمان استقرار الحالة قبل الرندر
+            setTimeout(() => setLoading(false), 50);
         }
-    };
+    }, []);
 
     useEffect(() => {
         checkAuth();
-    }, []);
+    }, [checkAuth]);
 
     const login = async (credentials) => {
-        setLoading(true);
         try {
             const res = await api.post('/auth/login', credentials);
-            const token = res.data.token;
-            
-            // تخزين التوكن
-            localStorage.setItem('token', token);
-            
-            // التأكد من أن التوكن تم حفظه فعلياً قبل جلب البيانات
-            await new Promise(resolve => setTimeout(resolve, 100)); 
-
-            const userRes = await api.get('/auth/me');
-            setUser(userRes.data);
-            
+            localStorage.setItem('token', res.data.token);
+            setUser(res.data);
             return { success: true };
         } catch (err) {
-            localStorage.removeItem('token');
-            setUser(null);
-            return { success: false, message: err.response?.data?.message || 'بيانات الدخول غير صحيحة' };
-        } finally {
-            setLoading(false);
+            return { 
+                success: false, 
+                message: err.response?.data?.message || 'البريد أو كلمة السر غير صحيحة' 
+            };
         }
     };
 
     const logout = () => {
         localStorage.removeItem('token');
         setUser(null);
-        // استخدام الانتقال الكامل للصفحة لتنظيف الذاكرة
-        window.location.replace('/fin/login'); 
+        window.location.replace('/fin/login'); // استخدام إعادة تحميل كاملة لتنظيف الذاكرة
     };
 
     return (
         <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
-            {children}
+            {/* عرض المحتوى فقط بعد انتهاء التحميل الأولي لمنع الوميض والاختفاء */}
+            {!loading ? children : (
+                <div className="flex items-center justify-center h-screen bg-black">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
+                </div>
+            )}
         </AuthContext.Provider>
     );
 };
