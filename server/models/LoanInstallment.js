@@ -6,18 +6,12 @@ const loanInstallmentSchema = new mongoose.Schema({
     installmentNumber: { type: Number, required: true },
     dueDate: { type: Date, required: true },
     amount: { type: Number, required: true },
-    principalPart: { type: Number, default: 0 },
-    interestPart: { type: Number, default: 0 },
-    paidAmount: { type: Number, default: 0 },
-    remainingAmount: { type: Number, required: true },
-    status: { type: String, enum: ['unpaid', 'paid', 'partial', 'late'], default: 'unpaid' },
-    paidAt: { type: Date },
-    notes: String,
+    principalPart: { type: Number }, // جزء الأصل
+    interestPart: { type: Number }, // جزء الفائدة
+    status: { type: String, enum: ['غير مدفوع', 'مدفوع', 'متأخر', 'unpaid', 'paid', 'late'], default: 'unpaid' },
+    paymentDate: { type: Date },
+    remainingBalanceAfter: { type: Number }, // المتبقي بعد هذا القسط
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
-
-loanInstallmentSchema.pre(/^find/, function() {
-    this.where({ deletedAt: null });
-});
 
 module.exports = mongoose.model('LoanInstallment', loanInstallmentSchema);

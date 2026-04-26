@@ -5,7 +5,8 @@ const {
     createLoan, 
     updateLoan, 
     deleteLoan,
-    recordPayment 
+    recordPayment,
+    getLoanDetails
 } = require('../controllers/loanController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -16,6 +17,7 @@ router.route('/')
     .post(createLoan);
 
 router.post('/payment', recordPayment);
+router.get('/details/:id', getLoanDetails);
 
 router.route('/:id')
     .put(updateLoan)

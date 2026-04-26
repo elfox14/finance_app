@@ -13,6 +13,7 @@ const loanSchema = new mongoose.Schema({
     firstDueDate: { type: Date },
     monthlyInstallment: { type: Number, required: true },
     dueDay: { type: Number, default: 1 },
+    nextPaymentDate: { type: Date },
     lateFee: { type: Number, default: 0 },
     totalPayable: { type: Number },
     paidAmount: { type: Number, default: 0 },
