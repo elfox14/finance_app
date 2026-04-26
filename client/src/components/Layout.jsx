@@ -1,146 +1,161 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
-    LayoutDashboard, ArrowUpCircle, ArrowDownCircle, 
-    CreditCard, Banknote, Users, FileBadge, 
-    Handshake, UserMinus, Bell, LogOut, 
-    Menu, X, PieChart, Settings, Home
+    LayoutDashboard, Wallet, ArrowUpRight, 
+    ArrowDownLeft, CreditCard, Landmark, 
+    Users, Bell, LogOut, Menu, X, PieChart, Receipt
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
-    const { logout, user } = useAuth();
+    const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+    const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // تأمين الـ Layout ليعمل حتى لو تأخرت بيانات المستخدم
+    const userName = user?.name || 'مستخدم جيبي';
 
     const menuItems = [
-        { path: '/', label: 'لوحة التحكم', icon: <LayoutDashboard size={20}/> },
-        { path: '/reports', label: 'التقارير المالية', icon: <PieChart size={20}/>, highlight: true },
-        { path: '/incomes', label: 'المدخولات', icon: <ArrowUpCircle size={20}/> },
-        { path: '/expenses', label: 'المصروفات', icon: <ArrowDownCircle size={20}/> },
-        { path: '/cards', label: 'البطاقات', icon: <CreditCard size={20}/> },
-        { path: '/loans', label: 'القروض', icon: <Banknote size={20}/> },
-        { path: '/groups', label: 'الجمعيات', icon: <Users size={20}/> },
-        { path: '/certificates', label: 'الشهادات', icon: <FileBadge size={20}/> },
-        { path: '/lending', label: 'لي طرف الآخرين', icon: <Handshake size={20}/> },
-        { path: '/borrowed', label: 'عليّ للآخرين', icon: <UserMinus size={20}/> },
-        { path: '/notifications', label: 'التنبيهات', icon: <Bell size={20}/> },
+        { path: '/', icon: LayoutDashboard, label: 'الرئيسية' },
+        { path: '/reports', icon: PieChart, label: 'التحليلات' },
+        { path: '/expenses', icon: ArrowUpRight, label: 'المصروفات' },
+        { path: '/incomes', icon: ArrowDownLeft, label: 'المدخولات' },
+        { path: '/cards', icon: CreditCard, label: 'البطاقات' },
+        { path: '/loans', icon: Landmark, label: 'القروض' },
+        { path: '/groups', icon: Users, label: 'الجمعيات' },
+        { path: '/certificates', icon: Receipt, label: 'الشهادات' },
+        { path: '/lending', icon: Wallet, label: 'لي طرف الآخرين' },
+        { path: '/borrowed', icon: Wallet, label: 'عليّ للآخرين' },
     ];
 
     const bottomNavItems = [
-        { path: '/', label: 'الرئيسية', icon: <Home size={22}/> },
-        { path: '/expenses', label: 'المصروفات', icon: <ArrowDownCircle size={22}/> },
-        { path: '/incomes', label: 'المدخولات', icon: <ArrowUpCircle size={22}/> },
-        { path: '/reports', label: 'التقارير', icon: <PieChart size={22}/> },
-        { path: '/notifications', label: 'التنبيهات', icon: <Bell size={22}/> },
+        { path: '/', icon: LayoutDashboard, label: 'الرئيسية' },
+        { path: '/expenses', icon: ArrowUpRight, label: 'المصاريف' },
+        { path: '/incomes', icon: ArrowDownLeft, label: 'المدخولات' },
+        { path: '/reports', icon: PieChart, label: 'التقارير' },
+        { path: '/notifications', icon: Bell, label: 'تنبيهات' },
     ];
 
-    const NavLink = ({ item }) => (
-        <Link 
-            to={item.path} 
-            onClick={() => setIsMobileMenuOpen(false)}
-            className={`flex items-center gap-3 p-4 rounded-2xl transition-all font-bold text-sm ${
-                location.pathname === item.path 
-                ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' 
-                : item.highlight ? 'text-blue-400 hover:bg-slate-800' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-            }`}
-        >
-            {item.icon}
-            <span>{item.label}</span>
-        </Link>
-    );
-
     return (
-        <div className="min-h-screen bg-black text-white flex flex-col md:flex-row font-sans" dir="rtl">
-            {/* 📱 Mobile Header */}
-            <div className="md:hidden flex items-center justify-between p-4 bg-slate-900/80 border-b border-slate-800 sticky top-0 z-[60] backdrop-blur-xl">
-                <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center font-black text-xs italic">ج</div>
-                    <span className="font-black text-lg tracking-tighter italic">جيبي</span>
-                </div>
-                <div className="flex items-center gap-3">
-                    <button 
-                        onClick={() => navigate('/notifications')}
-                        className="p-2 text-slate-400 relative"
-                    >
-                        <Bell size={20} />
-                        <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                    </button>
-                    <button 
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                        className="p-2 bg-slate-800 rounded-xl text-blue-500"
-                    >
-                        {isMobileMenuOpen ? <X /> : <Menu />}
-                    </button>
-                </div>
-            </div>
-
-            {/* 🖥️ Sidebar (Desktop & Mobile Overlay) */}
-            <aside className={`
-                fixed md:sticky top-0 right-0 h-full md:h-screen w-72 bg-slate-900 border-l border-slate-800 
-                z-[100] transition-transform duration-300 ease-in-out flex flex-col
-                ${isMobileMenuOpen ? 'translate-x-0' : 'translate-x-full md:translate-x-0'}
-            `}>
+        <div className="min-h-screen bg-black text-slate-300 font-sans selection:bg-blue-500/30" dir="rtl">
+            {/* Desktop Sidebar */}
+            <aside className="fixed right-0 top-0 h-screen w-72 bg-slate-950 border-l border-slate-900 hidden lg:flex flex-col z-50">
                 <div className="p-8">
-                    <div className="hidden md:block mb-10">
-                        <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center font-black text-xl shadow-lg shadow-blue-900/40 italic">ج</div>
-                            <div>
-                                <h1 className="text-2xl font-black tracking-tighter italic">جيبي</h1>
-                                <p className="text-[10px] text-blue-500 font-bold uppercase tracking-widest">Geybi Pro</p>
-                            </div>
+                    <div className="flex items-center gap-3 mb-10 px-2">
+                        <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-900/40">
+                            <Wallet className="text-white" size={24} />
                         </div>
+                        <h1 className="text-2xl font-black text-white tracking-tight">جيبي <span className="text-blue-500">Geybi</span></h1>
                     </div>
-
-                    <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-250px)] custom-scrollbar">
+                    
+                    <nav className="space-y-1">
                         {menuItems.map((item) => (
-                            <NavLink key={item.path} item={item} />
+                            <Link
+                                key={item.path}
+                                to={item.path}
+                                className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-300 group ${
+                                    location.pathname === item.path 
+                                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
+                                    : 'hover:bg-slate-900 hover:text-white'
+                                }`}
+                            >
+                                <item.icon size={20} className={location.pathname === item.path ? 'text-white' : 'text-slate-500 group-hover:text-blue-400'} />
+                                <span className="font-bold text-sm">{item.label}</span>
+                            </Link>
                         ))}
                     </nav>
                 </div>
 
-                <div className="mt-auto p-8 border-t border-slate-800 bg-slate-900/50">
+                <div className="mt-auto p-6 border-t border-slate-900 bg-slate-950/50 backdrop-blur-md">
+                    <div className="flex items-center gap-3 px-2 mb-6">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white font-black shadow-inner">
+                            {userName.charAt(0)}
+                        </div>
+                        <div className="overflow-hidden">
+                            <p className="text-sm font-bold text-white truncate">{userName}</p>
+                            <p className="text-[10px] text-slate-500 font-medium">الخطة الاحترافية</p>
+                        </div>
+                    </div>
                     <button 
                         onClick={logout}
-                        className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold text-sm"
+                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all duration-300 font-bold text-sm"
                     >
-                        <LogOut size={20}/>
-                        <span>تسجيل الخروج</span>
+                        <LogOut size={20} /> تسجيل الخروج
                     </button>
                 </div>
             </aside>
 
-            {/* 📱 Bottom Navigation (Mobile Only) */}
-            <div className="md:hidden fixed bottom-0 left-0 right-0 bg-slate-900/90 border-t border-slate-800 backdrop-blur-xl z-[60] px-4 py-2 flex justify-between items-center pb-safe">
+            {/* Mobile Header */}
+            <header className="lg:hidden fixed top-0 right-0 left-0 h-16 bg-black/80 backdrop-blur-xl border-b border-slate-900 flex items-center justify-between px-6 z-40">
+                <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/20">
+                        <Wallet className="text-white" size={18} />
+                    </div>
+                    <span className="font-black text-white text-lg">جيبي</span>
+                </div>
+                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white transition-colors">
+                    <Menu size={24} />
+                </button>
+            </header>
+
+            {/* Mobile Sidebar Overlay */}
+            {isSidebarOpen && (
+                <div className="fixed inset-0 bg-black/90 backdrop-blur-sm z-[100] lg:hidden animate-in fade-in duration-300">
+                    <div className="h-full w-80 bg-slate-950 border-l border-slate-900 float-right flex flex-col p-8 slide-in-right">
+                        <div className="flex justify-between items-center mb-10">
+                            <h2 className="font-black text-white text-xl">القائمة</h2>
+                            <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-slate-500 hover:text-white">
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <nav className="flex-1 space-y-2 overflow-y-auto no-scrollbar">
+                            {menuItems.map((item) => (
+                                <Link
+                                    key={item.path}
+                                    to={item.path}
+                                    onClick={() => setIsSidebarOpen(false)}
+                                    className={`flex items-center gap-4 px-5 py-4 rounded-2xl transition-all ${
+                                        location.pathname === item.path ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 'text-slate-400'
+                                    }`}
+                                >
+                                    <item.icon size={22} />
+                                    <span className="font-bold">{item.label}</span>
+                                </Link>
+                            ))}
+                        </nav>
+                        <button 
+                            onClick={logout}
+                            className="mt-6 flex items-center gap-4 px-5 py-4 text-red-400 font-bold rounded-2xl bg-red-500/5"
+                        >
+                            <LogOut size={22} /> تسجيل الخروج
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Main Content Area */}
+            <main className="lg:pr-72 pt-20 lg:pt-8 p-4 md:p-8 min-h-screen">
+                <div className="max-w-6xl mx-auto pb-20 lg:pb-0">
+                    {children}
+                </div>
+            </main>
+
+            {/* Bottom Navigation for Mobile */}
+            <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-slate-950/80 backdrop-blur-2xl border-t border-slate-900 flex items-center justify-around px-2 z-40 shadow-[0_-10px_30px_rgba(0,0,0,0.5)]">
                 {bottomNavItems.map((item) => (
-                    <Link 
+                    <Link
                         key={item.path}
                         to={item.path}
-                        className={`flex flex-col items-center gap-1 p-2 transition-all ${
+                        className={`flex flex-col items-center gap-1 transition-all duration-300 ${
                             location.pathname === item.path ? 'text-blue-500' : 'text-slate-500'
                         }`}
                     >
-                        <div className={`p-2 rounded-xl transition-all ${location.pathname === item.path ? 'bg-blue-600/10' : ''}`}>
-                            {item.icon}
-                        </div>
+                        <item.icon size={20} className={location.pathname === item.path ? 'scale-110' : ''} />
                         <span className="text-[10px] font-bold">{item.label}</span>
                     </Link>
                 ))}
-            </div>
-
-            {/* 🌑 Mobile Overlay Backdrop */}
-            {isMobileMenuOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] md:hidden"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                ></div>
-            )}
-
-            {/* 🚀 Main Content */}
-            <main className="flex-1 p-4 md:p-10 relative mb-16 md:mb-0">
-                {children}
-            </main>
+            </nav>
         </div>
     );
 };
