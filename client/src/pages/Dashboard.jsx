@@ -17,15 +17,10 @@ const Dashboard = () => {
 
     const fetchDashboardData = async () => {
         try {
-            const [statsRes, transRes] = await Promise.all([
-                api.get('/dashboard'),
-                api.get('/expenses/latest')
-            ]);
-            setStats(statsRes.data || {});
-            
-            // التأكد من أن البيانات هي مصفوفة فعلاً
-            const transData = transRes.data;
-            setTransactions(Array.isArray(transData) ? transData : (transData?.expenses || []));
+            const res = await api.get('/dashboard');
+            const data = res.data || {};
+            setStats(data);
+            setTransactions(Array.isArray(data.recentActions) ? data.recentActions : []);
         } catch (err) {
             console.error('Error fetching dashboard:', err);
             setStats({});

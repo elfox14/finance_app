@@ -65,22 +65,28 @@ exports.getDashboardStats = async (req, res) => {
             topStats: {
                 currentBalance,
                 availableBalance,
-                total30DayObligations,
+                totalObligations: total30DayObligations,
                 expectedIncome,
                 expectedExpense,
                 healthScore
             },
-            indicators: {
+            healthFactors: {
                 savingsRate: (savingsRate * 100).toFixed(1),
-                debtToIncomeRatio: (dti * 100).toFixed(1),
-                hasOverdue
+                debtRatio: (dti * 100).toFixed(1),
+                liquidityScore: Math.min(100, (availableBalance / (total30DayObligations || 1)) * 100).toFixed(1)
             },
             distribution: expenses.reduce((acc, e) => {
                 const cat = e.budgetCategory || e.category || 'أخرى';
                 acc[cat] = (acc[cat] || 0) + e.amount;
                 return acc;
             }, {}),
-            recentActions: [...expenses, ...incomes].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5)
+            recentActions: [...expenses, ...incomes]
+                .map(item => ({
+                    ...item._doc || item,
+                    type: item.amount > 0 && incomes.includes(item) ? 'income' : 'expense'
+                }))
+                .sort((a, b) => new Date(b.date) - new Date(a.date))
+                .slice(0, 10)
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
