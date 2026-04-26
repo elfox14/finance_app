@@ -56,9 +56,11 @@ app.use('/fin', express.static(clientDistPath));
 app.use(express.static(clientDistPath)); // دعم المسار الرئيسي أيضاً للاحتياط
 
 // أي طلب لا يخص الـ API يتم توجيهه لـ index.html لدعم React Router
-app.get('*', (req, res) => {
-    if (req.url.startsWith('/api') || req.url.startsWith('/fin/api')) return;
-    res.sendFile(path.join(clientDistPath, 'index.html'));
+app.use((req, res, next) => {
+    if (req.url.startsWith('/api') || req.url.startsWith('/fin/api')) {
+        return next();
+    }
+    return res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 const PORT = process.env.PORT || 10000;

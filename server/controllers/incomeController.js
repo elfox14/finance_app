@@ -38,9 +38,11 @@ exports.getIncomes = async (req, res) => {
 // @desc    Create income
 exports.createIncome = async (req, res) => {
     try {
+        console.log('📥 Received Income Data:', req.body);
         const income = await Income.create({ ...req.body, userId: req.user._id });
         res.status(201).json(income);
     } catch (error) {
+        console.error('❌ Income Create Error:', error.message);
         res.status(400).json({ message: error.message });
     }
 };

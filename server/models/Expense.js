@@ -16,7 +16,7 @@ const expenseSchema = new mongoose.Schema({
     },
     budgetCategory: { 
         type: String, 
-        enum: ['طعام', 'مواصلات', 'فواتير', 'تسوق', 'صحة', 'تعليم', 'ترفيه', 'أخرى', 'عام', 'طعام', 'مواصلات', 'سكن'], 
+        enum: ['طعام', 'مواصلات', 'فواتير', 'تسوق', 'صحة', 'تعليم', 'ترفيه', 'أخرى', 'عام', 'سكن', 'fixed', 'variable', 'essential', 'luxury'], 
         default: 'أخرى' 
     },
     category: String, // Compatibility with frontend

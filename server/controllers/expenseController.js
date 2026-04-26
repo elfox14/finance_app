@@ -42,14 +42,17 @@ exports.getExpenses = async (req, res) => {
 // @desc    Create expense
 exports.createExpense = async (req, res) => {
     try {
+        console.log('📥 Received Expense Data:', req.body);
         const data = { ...req.body, userId: req.user._id };
         // Mapping frontend fields to backend schema
         if (data.category && !data.budgetCategory) data.budgetCategory = data.category;
         if (data.account && !data.paymentSource) data.paymentSource = data.account;
         
+        console.log('💾 Saving Expense to DB:', data);
         const expense = await Expense.create(data);
         res.status(201).json(expense);
     } catch (error) {
+        console.error('❌ Expense Create Error:', error.message);
         res.status(400).json({ message: error.message });
     }
 };
