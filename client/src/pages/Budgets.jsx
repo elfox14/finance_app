@@ -73,7 +73,7 @@ const Budgets = () => {
                     </div>
                 ) : (
                     budgets.map((budget) => {
-                        const spent = budget.currentSpending || 0;
+                        const spent = budget.spent || 0;
                         const limit = budget.limit || 1;
                         const percent = Math.min((spent / limit) * 100, 100);
                         const isOver = spent > limit;
