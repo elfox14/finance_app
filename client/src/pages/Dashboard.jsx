@@ -6,7 +6,8 @@ import {
     TrendingUp, TrendingDown, Clock, 
     ChevronRight, AlertCircle, ShieldCheck,
     Plus, PieChart as PieIcon, Target, 
-    ArrowRightCircle, CheckCircle2, Bell
+    ArrowRightCircle, CheckCircle2, Bell,
+    Activity, Zap
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { 
@@ -19,7 +20,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [transactions, setTransactions] = useState([]);
-    const [notifications, setNotifications] = useState([]); // أضفنا حالة للتنبيهات الحقيقية
+    const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
@@ -27,11 +28,11 @@ const Dashboard = () => {
             const [statsRes, transRes, notifRes] = await Promise.all([
                 api.get('/dashboard'),
                 api.get('/expenses/latest'),
-                api.get('/notifications') // جلب التنبيهات الحقيقية من السيرفر
+                api.get('/notifications')
             ]);
             setStats(statsRes.data || {});
             setTransactions(Array.isArray(transRes.data) ? transRes.data : []);
-            setNotifications(Array.isArray(notifRes.data) ? notifRes.data.slice(0, 3) : []); // عرض آخر 3 تنبيهات
+            setNotifications(Array.isArray(notifRes.data) ? notifRes.data.slice(0, 3) : []);
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
     };
@@ -51,33 +52,52 @@ const Dashboard = () => {
         { label: "كفاية السيولة", value: `${healthFactors.liquidityScore || 0}%`, color: "text-emerald-400", desc: "قدرتك على تغطية الطوارئ" }
     ];
 
+    // المحور الأول: تحليل التدفقات الداخلة (المدخولات)
+    const incomeAnalysis = [
+        { label: "دخل هذا الشهر", value: topStats.incomeThisMonth || 0, icon: <Wallet size={16}/>, color: "text-emerald-500" },
+        { label: "متوقع (30 يوم)", value: topStats.expectedIncome30Days || 0, icon: <Activity size={16}/>, color: "text-blue-500" },
+        { label: "متوسط الدخل", value: topStats.avgMonthlyIncome || 0, icon: <TrendingUp size={16}/>, color: "text-slate-400" },
+        { label: "ثبات الدخل", value: `${topStats.incomeStabilityRatio || 0}%`, icon: <Zap size={16}/>, color: "text-orange-500" }
+    ];
+
     return (
         <div className="space-y-10 fade-in pb-24 md:pb-10" dir="rtl">
             <header className="flex flex-col md:flex-row justify-between gap-6 px-4 md:px-0">
                 <div>
-                    <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">قمرة القيادة <span className="text-blue-500 text-xs not-italic bg-blue-500/10 px-3 py-1 rounded-full mr-2 uppercase">v2.6</span></h1>
-                    <p className="text-slate-500 text-xs md:text-sm mt-2">نظامك المالي الشامل (بيانات حقيقية لحظية)</p>
+                    <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter uppercase">المركز المالي <span className="text-blue-500 text-xs not-italic bg-blue-500/10 px-3 py-1 rounded-full mr-2">v2.7</span></h1>
+                    <p className="text-slate-500 text-xs md:text-sm mt-2 font-bold tracking-widest uppercase">نظام التحليل المحاسبي المتكامل</p>
                 </div>
                 <div className="flex gap-3">
                     <Link to="/notifications" className="p-4 bg-slate-900 border border-slate-800 rounded-2xl relative group hover:border-blue-500 transition-all">
                         <Bell className="text-slate-400 group-hover:text-blue-500" size={24} />
-                        {notifications.filter(n => !n.isRead).length > 0 && (
-                            <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full border-2 border-slate-900"></span>
-                        )}
-                    </Link>
-                    <Link to="/expenses" className="p-4 bg-blue-600 text-white rounded-2xl shadow-xl shadow-blue-900/40 hover:scale-105 transition-all">
-                        <Plus size={24} />
+                        {notifications.filter(n => !n.isRead).length > 0 && <span className="absolute top-3 right-3 w-3 h-3 bg-red-500 rounded-full border-2 border-slate-900"></span>}
                     </Link>
                 </div>
             </header>
 
+            {/* الربط المحاسبي للمدخولات - المحور الأول */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 px-4 md:px-0">
+                {incomeAnalysis.map((item, idx) => (
+                    <div key={idx} className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] shadow-xl hover:border-blue-500/20 transition-all group">
+                        <div className={`mb-4 flex items-center gap-2 ${item.color} font-black text-[10px] uppercase tracking-tighter`}>
+                            {item.icon} {item.label}
+                        </div>
+                        <p className="text-xl md:text-2xl font-black text-white italic">
+                            {typeof item.value === 'number' ? item.value.toLocaleString() : item.value}
+                            {typeof item.value === 'number' && <span className="text-[10px] mr-1 font-normal opacity-40 italic">ج.م</span>}
+                        </p>
+                    </div>
+                ))}
+            </div>
+
+            {/* الملخص الرئيسي */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 px-4 md:px-0">
-                <SummaryCard label="التدفق النقدي الحالي" val={topStats.currentBalance} icon={<Wallet />} color="bg-blue-600" />
+                <SummaryCard label="السيولة المتاحة" val={topStats.currentBalance} icon={<Wallet />} color="bg-blue-600" />
                 <SummaryCard label="إجمالي الأصول" val={topStats.totalAssets} icon={<TrendingUp />} color="bg-emerald-600" />
                 <SummaryCard label="إجمالي الالتزامات" val={topStats.totalObligations} icon={<Clock />} color="bg-red-600" />
-                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-blue-500/30 transition-all">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-[2.5rem] flex items-center justify-between group hover:border-blue-500/30 transition-all shadow-2xl">
                     <div>
-                        <p className="text-[10px] text-slate-500 font-black uppercase mb-1">نقاط القوة المالية</p>
+                        <p className="text-[10px] text-slate-500 font-black uppercase mb-1">التقييم الائتماني</p>
                         <p className="text-3xl font-black text-blue-500">{topStats.healthScore || 0}</p>
                     </div>
                     <ShieldCheck className="text-blue-600" size={32} />
@@ -85,9 +105,8 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
-                {/* التحليل المالي المتقدم */}
                 <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-10 rounded-[3rem] shadow-2xl relative overflow-hidden group">
-                    <h3 className="text-xl font-black text-white mb-10 flex items-center gap-3"><PieIcon className="text-blue-500" /> المحور الخامس: التحليل المالي</h3>
+                    <h3 className="text-xl font-black text-white mb-10 flex items-center gap-3"><PieIcon className="text-blue-500" /> التحليل المالي المتقدم</h3>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
                         {analysisMetrics.map((m, i) => (
                             <div key={i} className="space-y-2">
@@ -97,58 +116,32 @@ const Dashboard = () => {
                             </div>
                         ))}
                     </div>
-                    
                     <div className="mt-12 p-6 bg-blue-600/5 border border-blue-500/10 rounded-3xl">
-                        <p className="text-xs text-blue-400 font-bold flex items-center gap-2 mb-2">
-                            <Target size={14} /> نصيحة "جيبي" الذكية
-                        </p>
+                        <p className="text-xs text-blue-400 font-bold flex items-center gap-2 mb-2"><Target size={14} /> الاستشاري المالي الذكي</p>
                         <p className="text-sm text-slate-400 leading-relaxed italic">
-                            {healthFactors.savingsRate < 20 
-                                ? "معدل ادخارك منخفض حالياً. حاول تقليل فئات الرفاهية بنسبة 10% لرفع السيولة المتاحة." 
-                                : "وضعك الادخاري ممتاز! يمكنك البدء في التفكير بفتح شهادة استثمار جديدة لزيادة العائد السلبي."}
+                            {topStats.incomeStabilityRatio < 60 
+                                ? "اعتمادك على الدخل المتغير مرتفع (أكثر من 40%). ننصح بزيادة 'صندوق الطوارئ' ليغطي 6 أشهر من مصروفاتك بدلاً من 3." 
+                                : "استقرار دخلك ممتاز. هذه هي اللحظة المناسبة للالتزام بقسط 'جمعية استثمارية' طويلة الأمد."}
                         </p>
                     </div>
                 </div>
 
-                {/* استحقاقات فعلية (المحور السادس) - DYNAMIC DATA */}
-                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] flex flex-col shadow-2xl">
-                    <h3 className="text-xl font-black text-white mb-8 flex items-center gap-2"><AlertCircle className="text-red-500" /> تنبيهات المحور السادس</h3>
-                    <div className="space-y-4 flex-1 overflow-y-auto max-h-[300px] no-scrollbar">
+                <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] flex flex-col shadow-2xl overflow-hidden relative">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-red-500/5 blur-3xl rounded-full"></div>
+                    <h3 className="text-xl font-black text-white mb-8 flex items-center gap-2"><AlertCircle className="text-red-500" /> استحقاقات عاجلة</h3>
+                    <div className="space-y-4 flex-1">
                         {notifications.length > 0 ? (
                             notifications.map((n, i) => (
-                                <div key={i} className={`p-4 rounded-2xl border transition-all ${n.isRead ? 'bg-slate-800/30 border-slate-800' : 'bg-blue-600/5 border-blue-500/20 shadow-lg'}`}>
-                                    <div className="flex justify-between items-start mb-1">
-                                        <p className="text-xs font-black text-white">{n.title}</p>
-                                        <span className="text-[8px] text-slate-500 font-bold uppercase">{new Date(n.createdAt).toLocaleDateString('ar-EG')}</span>
-                                    </div>
-                                    <p className="text-[10px] text-slate-400 leading-relaxed">{n.message}</p>
+                                <div key={i} className={`p-4 rounded-2xl border ${n.isRead ? 'bg-slate-800/30 border-slate-800 opacity-50' : 'bg-red-500/5 border-red-500/10 shadow-lg'}`}>
+                                    <p className="text-xs font-black text-white mb-1">{n.title}</p>
+                                    <p className="text-[10px] text-slate-500">{n.message}</p>
                                 </div>
                             ))
                         ) : (
-                            <div className="flex flex-col items-center justify-center py-10 opacity-20 italic text-xs">
-                                <CheckCircle2 size={32} className="mb-2" />
-                                لا توجد تنبيهات عاجلة حالياً
-                            </div>
+                            <div className="flex flex-col items-center justify-center py-10 opacity-20 italic text-xs">لا توجد تنبيهات عاجلة</div>
                         )}
                     </div>
-                    <Link to="/notifications" className="mt-8 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black text-xs text-center transition-all">دخول مركز القرار الكامل</Link>
-                </div>
-            </div>
-
-            <div className="mx-4 md:mx-0 p-10 bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl flex flex-col md:flex-row items-center justify-between gap-8 relative overflow-hidden group hover:border-emerald-500/20 transition-all">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 blur-3xl rounded-full"></div>
-                <div className="space-y-4 relative z-10">
-                    <h3 className="text-2xl font-black text-white italic">تحليل السيولة (الفائض الحقيقي)</h3>
-                    <p className="text-slate-500 text-sm max-w-md italic">هذا الرقم يحسب لك المبلغ المتبقي بعد طرح كافة الالتزامات والمدخرات المخطط لها.</p>
-                </div>
-                <div className="text-center md:text-left relative z-10">
-                    <p className={`text-5xl font-black ${ (topStats.currentBalance - topStats.totalObligations) >= 0 ? 'text-emerald-500' : 'text-red-500' }`}>
-                        {(topStats.currentBalance - topStats.totalObligations)?.toLocaleString() || 0} <span className="text-sm font-normal">ج.م</span>
-                    </p>
-                    <div className={`mt-3 inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-[10px] font-black uppercase ${ (topStats.currentBalance - topStats.totalObligations) >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500' }`}>
-                        {(topStats.currentBalance - topStats.totalObligations) >= 0 ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                        {(topStats.currentBalance - topStats.totalObligations) >= 0 ? 'وضع مالي آمن' : 'تنبيه: عجز مالي متوقع'}
-                    </div>
+                    <Link to="/notifications" className="mt-8 py-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl font-black text-xs text-center transition-all border border-slate-700">مركز القرار</Link>
                 </div>
             </div>
         </div>
@@ -157,11 +150,11 @@ const Dashboard = () => {
 
 const SummaryCard = ({ label, val, icon, color }) => (
     <div className="bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] shadow-xl group hover:border-blue-500/30 transition-all">
-        <div className={`w-12 h-12 rounded-2xl ${color} flex items-center justify-center text-white mb-6 shadow-lg group-hover:scale-110 transition-transform`}>
+        <div className={`w-12 h-12 rounded-2xl ${color} flex items-center justify-center text-white mb-6 shadow-lg`}>
             {icon}
         </div>
         <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">{label}</p>
-        <p className="text-2xl font-black text-white">{(val || 0).toLocaleString()} <span className="text-xs opacity-50">ج.م</span></p>
+        <p className="text-2xl font-black text-white">{(val || 0).toLocaleString()} <span className="text-xs opacity-50 font-sans">ج.م</span></p>
     </div>
 );
 
