@@ -53,16 +53,36 @@ exports.createLoan = async (req, res) => {
         const userId = req.user._id;
         const data = { ...req.body, userId };
         
-        // 1. Calculate Financials
-        // If interest rate is provided, calculate total payable
-        if (data.interestRate && !data.totalPayable) {
-            const interestAmount = data.principalAmount * (data.interestRate / 100);
-            data.totalPayable = data.principalAmount + interestAmount;
-            data.monthlyInstallment = data.totalPayable / data.durationMonths;
+        const principal = Number(data.principalAmount);
+        const rate = Number(data.interestRate || 0);
+        const months = Number(data.durationMonths);
+
+        // 1. Calculate Financials (Case A: Interest Rate)
+        if (rate > 0 && !data.totalPayable) {
+            const interestAmount = principal * (rate / 100);
+            data.totalPayable = principal + interestAmount;
         }
 
-        if (!data.totalPayable) data.totalPayable = data.principalAmount;
+        // Default totalPayable to principal if still missing
+        if (!data.totalPayable) data.totalPayable = principal;
+        
+        // Ensure totalPayable is a Number
+        data.totalPayable = Number(data.totalPayable);
+
+        // 2. Calculate Monthly Installment if missing
+        if (!data.monthlyInstallment || data.monthlyInstallment === 0) {
+            data.monthlyInstallment = data.totalPayable / months;
+        } else {
+            data.monthlyInstallment = Number(data.monthlyInstallment);
+        }
+
         if (!data.remainingAmount) data.remainingAmount = data.totalPayable;
+        data.remainingAmount = Number(data.remainingAmount);
+        
+        // Re-assign casted values back to data object for DB save
+        data.principalAmount = principal;
+        data.interestRate = rate;
+        data.durationMonths = months;
         
         // Set firstDueDate if not provided
         if (!data.firstDueDate) {

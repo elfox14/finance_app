@@ -131,7 +131,7 @@ const Loans = () => {
                                     <div className="relative w-32 h-32 flex items-center justify-center">
                                         <svg className="w-full h-full -rotate-90">
                                             <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-slate-800" />
-                                            <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-blue-500" strokeDasharray={364} strokeDashoffset={364 - (364 * (analytics.progressPercent || 0)) / 100} strokeLinecap="round" />
+                                            <circle cx="64" cy="64" r="58" stroke="currentColor" strokeWidth="10" fill="transparent" className="text-blue-500" strokeDasharray={364} strokeDashoffset={364 - (364 * Math.min(Math.max(Number(analytics.progressPercent) || 0, 0), 100)) / 100} strokeLinecap="round" />
                                         </svg>
                                         <div className="absolute text-center">
                                             <p className="text-2xl font-black text-white">{analytics.progressPercent || 0}%</p>
@@ -156,11 +156,11 @@ const Loans = () => {
                                         </div>
                                         <div className="bg-slate-800/30 p-4 rounded-2xl border border-slate-800">
                                             <p className="text-[8px] text-slate-500 font-black uppercase mb-1">القسط الشهري</p>
-                                            <p className="text-sm font-black text-blue-500">{loan.monthlyInstallment?.toLocaleString()}</p>
+                                            <p className="text-sm font-black text-blue-500">{(Number(loan.monthlyInstallment) || 0).toLocaleString(undefined, {minimumFractionDigits: 0, maximumFractionDigits: 0})}</p>
                                         </div>
                                         <div className="bg-slate-800/30 p-4 rounded-2xl border border-slate-800">
                                             <p className="text-[8px] text-slate-500 font-black uppercase mb-1">المتبقي</p>
-                                            <p className="text-sm font-black text-emerald-500">{analytics.remainingTotal?.toLocaleString()}</p>
+                                            <p className="text-sm font-black text-emerald-500">{(Number(analytics.remainingTotal) || 0).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </div>
