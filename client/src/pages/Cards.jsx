@@ -314,18 +314,18 @@ const Cards = () => {
                                             <p className="text-xl font-black text-white">قسط شهري: {i.installmentAmount?.toLocaleString()} <span className="text-sm opacity-50">ج.م</span></p>
                                             <span className="text-xs font-black px-4 py-1.5 bg-emerald-900/30 border border-emerald-500/20 text-emerald-400 rounded-xl">{i.status}</span>
                                         </div>
-                                        <div className="grid grid-cols-3 gap-6 text-center border-t border-slate-800 pt-6">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-center border-t border-slate-800 pt-6">
                                             <div className="p-4 bg-slate-800/50 rounded-2xl">
-                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-2">الأصل</p>
-                                                <p className="text-xl font-black text-white">{i.principalAmount}</p>
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 md:mb-2">الأصل</p>
+                                                <p className="text-lg md:text-xl font-black text-white">{i.principalAmount}</p>
                                             </div>
                                             <div className="p-4 bg-slate-800/50 rounded-2xl">
-                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-2">الفائدة</p>
-                                                <p className="text-xl font-black text-orange-500">{i.totalAfterInterest - i.principalAmount}</p>
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 md:mb-2">الفائدة</p>
+                                                <p className="text-lg md:text-xl font-black text-orange-500">{i.totalAfterInterest - i.principalAmount}</p>
                                             </div>
                                             <div className="p-4 bg-slate-800/50 rounded-2xl">
-                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-2">الشهور</p>
-                                                <p className="text-xl font-black text-blue-500">{i.installmentsCount}</p>
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 md:mb-2">الشهور</p>
+                                                <p className="text-lg md:text-xl font-black text-blue-500">{i.installmentsCount}</p>
                                             </div>
                                         </div>
                                     </div>

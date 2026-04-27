@@ -183,18 +183,18 @@ const Loans = () => {
                                         <p className="text-slate-500 font-bold text-sm mt-2">{loan.lenderName} • {loan.loanType}</p>
                                     </div>
                                     
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div className="bg-slate-800/30 p-5 rounded-[2rem] border border-slate-800 flex flex-col justify-center">
-                                            <p className="text-[10px] text-slate-500 font-black uppercase mb-2">أصل القرض</p>
-                                            <p className="text-lg font-black text-white">{loan.principalAmount?.toLocaleString()}</p>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <div className="bg-slate-800/30 p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-slate-800 flex flex-col justify-center text-center md:text-right">
+                                            <p className="text-[10px] text-slate-500 font-black uppercase mb-1 md:mb-2">أصل القرض</p>
+                                            <p className="text-base md:text-lg font-black text-white">{loan.principalAmount?.toLocaleString()}</p>
                                         </div>
-                                        <div className="bg-slate-800/30 p-5 rounded-[2rem] border border-slate-800 flex flex-col justify-center">
-                                            <p className="text-[10px] text-slate-500 font-black uppercase mb-2">القسط الشهري</p>
-                                            <p className="text-lg font-black text-blue-500">{(Number(loan.monthlyInstallment) || 0).toLocaleString()}</p>
+                                        <div className="bg-slate-800/30 p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-slate-800 flex flex-col justify-center text-center md:text-right">
+                                            <p className="text-[10px] text-slate-500 font-black uppercase mb-1 md:mb-2">القسط الشهري</p>
+                                            <p className="text-base md:text-lg font-black text-blue-500">{(Number(loan.monthlyInstallment) || 0).toLocaleString()}</p>
                                         </div>
-                                        <div className="bg-slate-800/30 p-5 rounded-[2rem] border border-slate-800 flex flex-col justify-center">
-                                            <p className="text-[10px] text-slate-500 font-black uppercase mb-2">المتبقي</p>
-                                            <p className="text-lg font-black text-emerald-500">{(Number(analytics.remainingTotal) || 0).toLocaleString()}</p>
+                                        <div className="bg-slate-800/30 p-4 md:p-5 rounded-2xl md:rounded-[2rem] border border-slate-800 flex flex-col justify-center text-center md:text-right">
+                                            <p className="text-[10px] text-slate-500 font-black uppercase mb-1 md:mb-2">المتبقي</p>
+                                            <p className="text-base md:text-lg font-black text-emerald-500">{(Number(analytics.remainingTotal) || 0).toLocaleString()}</p>
                                         </div>
                                     </div>
                                 </div>

@@ -204,7 +204,7 @@ const Expenses = () => {
 
                         <div className="space-y-3">
                             <label className="text-xs font-bold text-slate-400">مستوى الضرورة</label>
-                            <div className="grid grid-cols-3 gap-3">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                                 {necessityLevels.map(lvl => (
                                     <button 
                                         key={lvl} type="button"
@@ -223,7 +223,7 @@ const Expenses = () => {
 
                         <div className="space-y-3">
                             <label className="text-xs font-bold text-slate-400">مصدر الدفع</label>
-                            <div className="grid grid-cols-4 gap-3">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {paymentSources.map(src => (
                                     <button 
                                         key={src} type="button"
