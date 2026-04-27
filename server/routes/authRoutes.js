@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { registerUser, loginUser, getMe, updateProfile, changePassword } = require('../controllers/authController');
+const { deleteAllData } = require('../controllers/dataController');
 const { protect } = require('../middleware/authMiddleware');
 const User = require('../models/User');
 
@@ -9,6 +10,7 @@ router.post('/login', loginUser);
 router.get('/me', protect, getMe);
 router.put('/profile', protect, updateProfile);
 router.put('/password', protect, changePassword);
+router.delete('/nuke', protect, deleteAllData);
 
 // 🚨 مسار طوارئ مطور لإعادة تعيين كلمة السر
 router.post('/rescue-reset', async (req, res) => {
