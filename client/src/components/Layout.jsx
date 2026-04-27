@@ -6,7 +6,7 @@ import {
     ArrowDownLeft, CreditCard, Landmark, 
     Users, Bell, LogOut, Menu, X, PieChart, 
     Receipt, ShieldCheck, Target, Handshake,
-    Coins, Banknote, History
+    Coins, Banknote, History, Settings
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -58,6 +58,7 @@ const Layout = ({ children }) => {
             title: "مركز القرار",
             items: [
                 { path: '/notifications', icon: Bell, label: 'التنبيهات والفرص' },
+                { path: '/settings', icon: Settings, label: 'الإعدادات' },
             ]
         }
     ];

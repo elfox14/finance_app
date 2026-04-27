@@ -53,8 +53,13 @@ export const AuthProvider = ({ children }) => {
         window.location.replace('/fin/login'); // استخدام إعادة تحميل كاملة لتنظيف الذاكرة
     };
 
+    // تحديث بيانات المستخدم في الـ state بعد أي تعديل
+    const updateUser = (updatedData) => {
+        setUser(prev => ({ ...prev, ...updatedData }));
+    };
+
     return (
-        <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+        <AuthContext.Provider value={{ user, loading, login, logout, checkAuth, updateUser }}>
             {/* عرض المحتوى فقط بعد انتهاء التحميل الأولي لمنع الوميض والاختفاء */}
             {!loading ? children : (
                 <div className="flex items-center justify-center h-screen bg-black">

@@ -17,6 +17,8 @@ import Borrowed from './pages/Borrowed';
 import Notifications from './pages/Notifications';
 import ResetPassword from './pages/ResetPassword';
 import Budgets from './pages/Budgets'; // استيراد صفحة الموازنات الجديدة
+import Accounts from './pages/Accounts'; // صفحة الحسابات
+import Settings from './pages/Settings'; // صفحة الإعدادات
 
 function AppRoutes() {
     return (
@@ -94,6 +96,18 @@ function AppRoutes() {
             <Route path="/notifications" element={
                 <ProtectedRoute>
                     <Layout><Notifications /></Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/accounts" element={
+                <ProtectedRoute>
+                    <Layout><Accounts /></Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/settings" element={
+                <ProtectedRoute>
+                    <Layout><Settings /></Layout>
                 </ProtectedRoute>
             } />
 

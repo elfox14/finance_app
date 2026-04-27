@@ -50,3 +50,42 @@ exports.loginUser = async (req, res) => {
 exports.getMe = async (req, res) => {
     res.json(req.user);
 };
+
+// تحديث اسم المستخدم
+exports.updateProfile = async (req, res) => {
+    try {
+        const { name } = req.body;
+        if (!name || name.trim().length < 2) {
+            return res.status(400).json({ message: 'الاسم يجب أن يكون حرفين على الأقل' });
+        }
+        const user = await User.findByIdAndUpdate(
+            req.user._id,
+            { name: name.trim() },
+            { new: true }
+        );
+        res.json({ _id: user._id, name: user.name, email: user.email });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+
+// تغيير كلمة المرور
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.user._id).select('+password');
+        
+        if (!await user.matchPassword(currentPassword)) {
+            return res.status(401).json({ message: 'كلمة المرور الحالية غير صحيحة' });
+        }
+        if (!newPassword || newPassword.length < 8) {
+            return res.status(400).json({ message: 'كلمة المرور الجديدة يجب أن تكون 8 أحرف على الأقل' });
+        }
+        user.password = newPassword;
+        await user.save();
+        res.json({ message: 'تم تغيير كلمة المرور بنجاح' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+};
+

@@ -6,6 +6,7 @@ const certificateSchema = new mongoose.Schema({
     bankName: { type: String, required: true },
     principalAmount: { type: Number, required: true },
     interestRate: { type: Number, required: true },
+    durationMonths: { type: Number, required: true, default: 12 },
     startDate: { type: Date, required: true },
     endDate: { type: Date, required: true },
     payoutFrequency: { type: String, enum: ['شهري', 'ربع سنوي', 'نصف سنوي', 'سنوي', 'نهاية المدة'], default: 'شهري' },
