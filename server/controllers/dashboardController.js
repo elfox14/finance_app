@@ -12,6 +12,7 @@ const LoanPayment = require('../models/LoanPayment');
 const CardPayment = require('../models/CardPayment');
 const GroupPayment = require('../models/GroupPayment');
 const { PeerDebtPayment } = require('../models/PeerDebt');
+const Account = require('../models/Account');
 
 exports.getDashboardStats = async (req, res) => {
     try {
@@ -19,19 +20,20 @@ exports.getDashboardStats = async (req, res) => {
         const now = new Date();
 
         // 1. Fetch data with correct userId
-        const [allExpenses, allIncomes, loans, cards, debts, groups, budgets, certificates, loanPayments, cardPayments, groupPayments, peerPayments] = await Promise.all([
+        const [allExpenses, allIncomes, loans, cards, debts, groups, budgets, certificates, loanPayments, cardPayments, groupPayments, peerPayments, accounts] = await Promise.all([
             Expense.find({ userId }),
             Income.find({ userId }),
             Loan.find({ userId }),
             Card.find({ userId }),
-            PeerDebt.find({ userId }), // Fetch all to account for cash received/sent
-            Group.find({ userId }), // Fetch all to account for payouts
+            PeerDebt.find({ userId }), 
+            Group.find({ userId }), 
             Budget.find({ userId, month: now.getMonth() + 1, year: now.getFullYear() }),
             Certificate.find({ userId, status: 'نشطة' }),
             LoanPayment.find({ userId }),
             CardPayment.find({ userId }),
             GroupPayment.find({ userId }),
-            PeerDebtPayment.find({ userId })
+            PeerDebtPayment.find({ userId }),
+            Account.find({ userId })
         ]);
 
         // 2. Filter current month data
@@ -170,6 +172,47 @@ exports.getDashboardStats = async (req, res) => {
         if (liquidityCoverageMonths > 0 && liquidityCoverageMonths < 1) insights.push(`رصيدك المتاح يغطي ${liquidityCoverageMonths.toFixed(1)} شهر فقط من المصروفات.`);
         else if (liquidityCoverageMonths < 0) insights.push("رصيدك المتاح بالسالب، هناك ضغط كبير على السيولة.");
 
+        // 10. Chart Data Generators
+        
+        // A. 12-Month Cashflow
+        const cashflowData = [];
+        for (let i = 11; i >= 0; i--) {
+            const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+            const monthLabel = d.toLocaleDateString('ar-EG', { month: 'short' });
+            
+            const monthIncomes = allIncomes.filter(inc => {
+                const incD = new Date(inc.date);
+                return incD.getMonth() === d.getMonth() && incD.getFullYear() === d.getFullYear();
+            }).reduce((sum, inc) => sum + inc.amount, 0);
+
+            const monthExpenses = allExpenses.filter(exp => {
+                const expD = new Date(exp.date);
+                return expD.getMonth() === d.getMonth() && expD.getFullYear() === d.getFullYear();
+            }).reduce((sum, exp) => sum + exp.amount, 0);
+
+            cashflowData.push({ month: monthLabel, income: monthIncomes, expense: monthExpenses });
+        }
+
+        // B. Expense Distribution by Category (Current Month)
+        const categoryMap = {};
+        currentMonthExpenses.forEach(e => {
+            categoryMap[e.category] = (categoryMap[e.category] || 0) + e.amount;
+        });
+        const categoryData = Object.keys(categoryMap).map(k => ({ name: k, value: categoryMap[k] })).sort((a,b) => b.value - a.value);
+
+        // C. Asset Distribution
+        const totalCash = accounts.filter(a => a.type === 'نقدي' || a.type === 'cash').reduce((sum, a) => sum + a.balance, 0);
+        const totalBank = accounts.filter(a => a.type === 'بنكي' || a.type === 'bank').reduce((sum, a) => sum + a.balance, 0);
+        const totalWallets = accounts.filter(a => a.type === 'محفظة' || a.type === 'wallet').reduce((sum, a) => sum + a.balance, 0);
+        const totalInvestments = certificates.reduce((sum, c) => sum + c.principalAmount, 0);
+        
+        const assetDistribution = [
+            { name: 'نقدي', value: totalCash },
+            { name: 'حسابات بنكية', value: totalBank },
+            { name: 'محافظ إلكترونية', value: totalWallets },
+            { name: 'شهادات استثمار', value: totalInvestments },
+        ].filter(a => a.value > 0);
+
         // Unified Response
         res.json({
             topStats: {
@@ -188,7 +231,12 @@ exports.getDashboardStats = async (req, res) => {
                 liquidityCoverageMonths: Number(liquidityCoverageMonths.toFixed(1))
             },
             upcomingObligations,
-            insights
+            insights,
+            charts: {
+                cashflow: cashflowData,
+                categories: categoryData,
+                assets: assetDistribution
+            }
         });
 
     } catch (err) {
