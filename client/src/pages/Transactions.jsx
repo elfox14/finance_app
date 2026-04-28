@@ -18,7 +18,7 @@ const Transactions = () => {
             const res = await api.get('/transactions');
             setTransactions(res.data);
             const accRes = await api.get('/accounts');
-            setAccounts(accRes.data);
+            setAccounts(Array.isArray(accRes.data) ? accRes.data : accRes.data.accounts || []);
         } catch (err) {
             console.error(err);
         } finally {
