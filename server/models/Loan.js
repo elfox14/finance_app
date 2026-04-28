@@ -4,6 +4,7 @@ const loanSchema = new mongoose.Schema({
     userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     loanName: { type: String, required: true },
     lenderName: { type: String, required: true },
+    receivingAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // الحساب الذي استلم الأموال
     loanType: { type: String, enum: ['شخصي', 'سيارة', 'عقاري', 'أخرى'], default: 'شخصي' },
     principalAmount: { type: Number, required: true },
     interestRate: { type: Number, default: 0 },

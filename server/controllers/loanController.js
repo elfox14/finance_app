@@ -1,47 +1,75 @@
 const Loan = require('../models/Loan');
 const LoanInstallment = require('../models/LoanInstallment');
 const LoanPayment = require('../models/LoanPayment');
-const Income = require('../models/Income');
+const Transaction = require('../models/Transaction');
 
 // @desc    Get all loans with deep debt analysis
 exports.getLoans = async (req, res) => {
     try {
         const userId = req.user._id;
-        const [loans, incomes] = await Promise.all([
-            Loan.find({ userId, deletedAt: null }),
-            Income.find({ userId, deletedAt: null })
-        ]);
+        const loans = await Loan.find({ userId, deletedAt: null }).populate('receivingAccountId', 'name');
+        
+        let totalPrincipal = 0;
+        let totalRemaining = 0;
+        let totalMonthlyInstallments = 0;
+        let totalInterestPaid = 0;
+        let totalArrears = 0;
 
-        const totalIncome = incomes.reduce((sum, i) => sum + i.amount, 0);
+        // Populate upcoming installments for the dashboard timeline
+        const now = new Date();
+        const nextMonth = new Date(now);
+        nextMonth.setMonth(now.getMonth() + 2);
 
-        const loansWithAnalytics = loans.map(loan => {
-            const paidAmount = loan.paidAmount || 0;
-            const remainingTotal = loan.totalPayable - paidAmount;
-            const progressPercent = ((paidAmount / loan.totalPayable) * 100).toFixed(1);
+        const allUpcomingInstallments = await LoanInstallment.find({
+            userId,
+            status: { $in: ['unpaid', 'late'] },
+            dueDate: { $lte: nextMonth }
+        }).populate('loanId', 'loanName lenderName').sort({ dueDate: 1 }).limit(10);
 
-            // حساب عبء الدين (DTI)
-            const debtBurden = totalIncome > 0 ? ((loan.monthlyInstallment / totalIncome) * 100).toFixed(1) : 0;
+        const loansWithAnalytics = await Promise.all(loans.map(async (loan) => {
+            const payments = await LoanPayment.find({ loanId: loan._id });
+            const interestPaidThisLoan = payments.reduce((sum, p) => sum + (p.interestPaid || 0), 0);
+            const principalPaidThisLoan = payments.reduce((sum, p) => sum + (p.principalPaid || 0), 0);
+
+            const remainingPrincipal = loan.principalAmount - principalPaidThisLoan;
+            
+            // Check arrears (متأخرات)
+            const lateInstallments = await LoanInstallment.find({
+                loanId: loan._id,
+                status: 'unpaid',
+                dueDate: { $lt: now }
+            });
+            const arrearsAmount = lateInstallments.reduce((sum, inst) => sum + inst.amount, 0);
+
+            totalPrincipal += loan.principalAmount;
+            totalRemaining += remainingPrincipal;
+            totalMonthlyInstallments += loan.monthlyInstallment;
+            totalInterestPaid += interestPaidThisLoan;
+            totalArrears += arrearsAmount;
 
             return {
                 ...loan._doc,
                 analytics: {
-                    paidAmount,
-                    remainingTotal,
-                    progressPercent,
-                    debtBurden
+                    principalPaid: principalPaidThisLoan,
+                    interestPaid: interestPaidThisLoan,
+                    remainingPrincipal,
+                    arrearsAmount,
+                    progressPercent: loan.principalAmount > 0 ? ((principalPaidThisLoan / loan.principalAmount) * 100).toFixed(1) : 0
                 }
             };
+        }));
+
+        res.json({
+            loans: loansWithAnalytics,
+            upcomingInstallments: allUpcomingInstallments,
+            stats: {
+                totalPrincipal,
+                totalRemaining,
+                totalMonthlyInstallments,
+                totalInterestPaid,
+                totalArrears
+            }
         });
-
-        const stats = {
-            totalPrincipal: loans.reduce((s, l) => s + l.principalAmount, 0),
-            totalRemaining: loans.reduce((s, l) => s + (l.totalPayable - l.paidAmount), 0),
-            totalPaid: loans.reduce((s, l) => s + l.paidAmount, 0),
-            monthlyTotal: loans.reduce((s, l) => s + l.monthlyInstallment, 0),
-            overallDTI: totalIncome > 0 ? ((loans.reduce((s, l) => s + l.monthlyInstallment, 0) / totalIncome) * 100).toFixed(1) : 0
-        };
-
-        res.json({ loans: loansWithAnalytics, stats });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
@@ -57,34 +85,22 @@ exports.createLoan = async (req, res) => {
         const rate = Number(data.interestRate || 0);
         const months = Number(data.durationMonths);
 
-        // 1. Calculate Financials (Case A: Interest Rate)
         if (rate > 0 && !data.totalPayable) {
             const interestAmount = principal * (rate / 100);
             data.totalPayable = principal + interestAmount;
         }
 
-        // Default totalPayable to principal if still missing
         if (!data.totalPayable) data.totalPayable = principal;
-        
-        // Ensure totalPayable is a Number
         data.totalPayable = Number(data.totalPayable);
 
-        // 2. Calculate Monthly Installment if missing
         if (!data.monthlyInstallment || data.monthlyInstallment === 0) {
             data.monthlyInstallment = data.totalPayable / months;
         } else {
             data.monthlyInstallment = Number(data.monthlyInstallment);
         }
 
-        if (!data.remainingAmount) data.remainingAmount = data.totalPayable;
-        data.remainingAmount = Number(data.remainingAmount);
+        data.remainingAmount = data.totalPayable;
         
-        // Re-assign casted values back to data object for DB save
-        data.principalAmount = principal;
-        data.interestRate = rate;
-        data.durationMonths = months;
-        
-        // Set firstDueDate if not provided
         if (!data.firstDueDate) {
             const d = new Date();
             d.setMonth(d.getMonth() + 1);
@@ -93,12 +109,15 @@ exports.createLoan = async (req, res) => {
         }
         data.nextPaymentDate = data.firstDueDate;
 
-        // 2. Create Loan
+        // 1. Create Loan Liability
         const loan = await Loan.create(data);
 
-        // 3. Generate Installment Schedule
+        // 2. Generate Installments Schedule
         const installments = [];
-        for (let i = 1; i <= data.durationMonths; i++) {
+        const principalPerMonth = principal / months;
+        const interestPerMonth = (data.totalPayable - principal) / months;
+
+        for (let i = 1; i <= months; i++) {
             const dueDate = new Date(data.firstDueDate);
             dueDate.setMonth(dueDate.getMonth() + (i - 1));
             
@@ -108,10 +127,28 @@ exports.createLoan = async (req, res) => {
                 installmentNumber: i,
                 dueDate,
                 amount: data.monthlyInstallment,
+                principalPart: principalPerMonth,
+                interestPart: interestPerMonth,
                 status: 'unpaid'
             });
         }
         await LoanInstallment.insertMany(installments);
+
+        // 3. Register Transaction (Increase Account Balance + Record Liability)
+        if (data.receivingAccountId) {
+            await Transaction.create({
+                userId,
+                date: data.startDate || new Date(),
+                type: 'التزام', // Liability received (acts like cash inflow)
+                amount: principal,
+                accountId: data.receivingAccountId,
+                category: 'قروض مستلمة',
+                counterparty: data.lenderName,
+                status: 'مُسوّى',
+                notes: `استلام قرض: ${data.loanName}`,
+                linkedEntity: { entityType: 'Loan', entityId: loan._id }
+            });
+        }
 
         res.status(201).json(loan);
     } catch (error) {
@@ -127,7 +164,7 @@ exports.getLoanDetails = async (req, res) => {
 
         const [installments, payments] = await Promise.all([
             LoanInstallment.find({ userId, loanId: id, deletedAt: null }).sort({ installmentNumber: 1 }),
-            LoanPayment.find({ userId, loanId: id, deletedAt: null }).sort({ paymentDate: -1 })
+            LoanPayment.find({ userId, loanId: id, deletedAt: null }).populate('sourceAccountId', 'name').sort({ paymentDate: -1 })
         ]);
 
         res.json({ installments, payments });
@@ -140,14 +177,18 @@ exports.getLoanDetails = async (req, res) => {
 exports.recordPayment = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { loanId, installmentId, amount, paymentDate, paymentType, sourceAccount, note } = req.body;
+        const { loanId, installmentId, amount, principalPaid, interestPaid, paymentDate, sourceAccountId, note } = req.body;
 
-        // 1. Create Payment
+        // 1. Create Payment Record
         const payment = await LoanPayment.create({
-            userId, loanId, installmentId, amount, paymentDate, paymentType, sourceAccount, note
+            userId, loanId, installmentId, 
+            amount: Number(amount), 
+            principalPaid: Number(principalPaid || 0), 
+            interestPaid: Number(interestPaid || 0), 
+            paymentDate, sourceAccountId, note
         });
 
-        // 2. Update Installment if specific ID provided
+        // 2. Update Installment
         if (installmentId) {
             await LoanInstallment.findByIdAndUpdate(installmentId, {
                 status: 'paid',
@@ -160,19 +201,50 @@ exports.recordPayment = async (req, res) => {
         loan.paidAmount += Number(amount);
         loan.remainingAmount -= Number(amount);
 
-        // Update nextPaymentDate to the next unpaid installment
-        const nextUnpaid = await LoanInstallment.findOne({ 
-            loanId, 
-            status: 'unpaid' 
-        }).sort({ installmentNumber: 1 });
-        
+        const nextUnpaid = await LoanInstallment.findOne({ loanId, status: 'unpaid' }).sort({ installmentNumber: 1 });
         if (nextUnpaid) {
             loan.nextPaymentDate = nextUnpaid.dueDate;
         } else {
             loan.status = 'منتهٍ';
         }
-
         await loan.save();
+
+        // 4. Create Accounting Transactions (Principal as Liability Reduction, Interest as Expense)
+        if (sourceAccountId) {
+            const txDate = paymentDate || new Date();
+            const counterparty = loan.lenderName;
+
+            // Principal Reduction (سداد التزام)
+            if (Number(principalPaid) > 0) {
+                await Transaction.create({
+                    userId, date: txDate, type: 'سداد', amount: Number(principalPaid),
+                    accountId: sourceAccountId, category: 'سداد قروض', counterparty,
+                    status: 'مُسوّى', notes: `سداد أصل قرض: ${loan.loanName} ${note ? '- '+note : ''}`,
+                    linkedEntity: { entityType: 'Loan', entityId: loan._id }
+                });
+            }
+
+            // Interest Paid (مصروف فوائد)
+            if (Number(interestPaid) > 0) {
+                await Transaction.create({
+                    userId, date: txDate, type: 'مصروف', amount: Number(interestPaid),
+                    accountId: sourceAccountId, category: 'فوائد قروض', counterparty,
+                    status: 'مُسوّى', notes: `سداد فوائد قرض: ${loan.loanName}`,
+                    linkedEntity: { entityType: 'Loan', entityId: loan._id }
+                });
+            }
+
+            // If no explicit split was provided, just record as a single payment transaction
+            if (!principalPaid && !interestPaid) {
+                await Transaction.create({
+                    userId, date: txDate, type: 'سداد', amount: Number(amount),
+                    accountId: sourceAccountId, category: 'سداد قروض', counterparty,
+                    status: 'مُسوّى', notes: `سداد قسط قرض: ${loan.loanName}`,
+                    linkedEntity: { entityType: 'Loan', entityId: loan._id }
+                });
+            }
+        }
+
         res.status(201).json(payment);
     } catch (error) {
         res.status(400).json({ message: error.message });
