@@ -11,7 +11,9 @@ const certificateSchema = new mongoose.Schema({
     endDate: { type: Date, required: true },
     payoutFrequency: { type: String, enum: ['شهري', 'ربع سنوي', 'نصف سنوي', 'سنوي', 'نهاية المدة'], default: 'شهري' },
     returnType: { type: String, enum: ['ثابت', 'متغير'], default: 'ثابت' },
-    status: { type: String, enum: ['نشطة', 'مستردة', 'منتهية'], default: 'نشطة' },
+    maturityAction: { type: String, enum: ['تجديد تلقائي', 'إضافة للحساب'], default: 'إضافة للحساب' },
+    linkedAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true },
+    status: { type: String, enum: ['active', 'maturing_soon', 'matured', 'redeemed', 'renewed', 'نشطة', 'مستردة', 'منتهية'], default: 'active' },
     notes: String,
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
