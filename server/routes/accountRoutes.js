@@ -5,7 +5,6 @@ const {
     createAccount, 
     updateAccount, 
     deleteAccount,
-    adjustBalance,
     reconcileAccount
 } = require('../controllers/accountController');
 const { protect } = require('../middleware/authMiddleware');
@@ -15,8 +14,6 @@ router.use(protect);
 router.route('/')
     .get(getAccounts)
     .post(createAccount);
-
-router.post('/:id/adjust', adjustBalance);
 router.put('/:id/reconcile', reconcileAccount);
 
 router.route('/:id')

@@ -1,253 +1,262 @@
 import { useState, useEffect } from 'react';
 import api from '../api/axios';
 import { 
-    Target, Plus, Trash2, AlertCircle, 
-    CheckCircle2, TrendingUp, Utensils, 
-    Car, Zap, ShoppingBag, Coffee, ShieldCheck,
-    PieChart as PieIcon, Crosshair
+    Target, AlertTriangle, CheckCircle2,
+    TrendingUp, ArrowRight, ArrowLeft, RefreshCw, Plus, Edit2, Trash2, PieChart, Info
 } from 'lucide-react';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
 
-ChartJS.register(ArcElement, Tooltip, Legend);
+const CATEGORIES = ['طعام', 'مواصلات', 'فواتير', 'تسوق', 'صحة', 'تعليم', 'ترفيه', 'صيانة', 'أخرى'];
 
 const Budgets = () => {
+    const [month, setMonth] = useState(new Date().getMonth() + 1);
+    const [year, setYear] = useState(new Date().getFullYear());
+    
     const [budgets, setBudgets] = useState([]);
+    const [kpis, setKpis] = useState({ totalBudget: 0, totalActual: 0, totalRemaining: 0, exceededCount: 0, overallSpent: 0, unbudgetedSpent: 0 });
     const [loading, setLoading] = useState(true);
-    const [showAddModal, setShowAddModal] = useState(false);
-    const [newBudget, setNewBudget] = useState({ category: 'طعام', limit: '', period: 'monthly' });
+    
+    const [showModal, setShowModal] = useState(false);
+    const [form, setForm] = useState({ category: CATEGORIES[0], plannedAmount: '', status: 'approved' });
 
     const fetchBudgets = async () => {
+        setLoading(true);
         try {
-            const res = await api.get('/budgets');
-            setBudgets(Array.isArray(res.data) ? res.data : []);
-        } catch (err) { console.error(err); }
-        finally { setLoading(false); }
-    };
-
-    useEffect(() => { fetchBudgets(); }, []);
-
-    const handleCreate = async (e) => {
-        e.preventDefault();
-        try {
-            await api.post('/budgets', newBudget);
-            setShowAddModal(false);
-            setNewBudget({ category: 'طعام', limit: '', period: 'monthly' });
-            fetchBudgets();
-        } catch (err) { alert('خطأ في إنشاء الموازنة'); }
-    };
-
-    const handleDelete = async (id) => {
-        if (!confirm('هل تريد حذف هذه الموازنة؟')) return;
-        try {
-            await api.delete(`/budgets/${id}`);
-            fetchBudgets();
-        } catch (err) { console.error(err); }
-    };
-
-    const getCategoryIcon = (cat) => {
-        switch(cat) {
-            case 'طعام': return <Utensils size={24} />;
-            case 'مواصلات': return <Car size={24} />;
-            case 'فواتير': return <Zap size={24} />;
-            case 'تسوق': return <ShoppingBag size={24} />;
-            case 'صحة': return <ShieldCheck size={24} />;
-            case 'ترفيه': return <Coffee size={24} />;
-            default: return <Target size={24} />;
+            const res = await api.get(`/budgets?month=${month}&year=${year}`);
+            setBudgets(res.data.budgets || []);
+            setKpis(res.data.kpis || {});
+        } catch (err) {
+            console.error(err);
+        } finally {
+            setLoading(false);
         }
     };
 
-    if (loading) return (
-        <div className="flex items-center justify-center h-[60vh]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-    );
+    useEffect(() => { fetchBudgets(); }, [month, year]);
 
-    // Global Stats Calculation
-    const totalLimit = budgets.reduce((acc, b) => acc + (b.limit || 0), 0);
-    const totalSpent = budgets.reduce((acc, b) => acc + (b.spent || 0), 0);
-    const globalPercent = totalLimit > 0 ? Math.min((totalSpent / totalLimit) * 100, 100) : 0;
-    
-    // Chart Data
-    const chartData = {
-        labels: budgets.map(b => b.category),
-        datasets: [{
-            data: budgets.map(b => b.limit),
-            backgroundColor: ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6'],
-            borderWidth: 0,
-            hoverOffset: 4
-        }]
+    const handleSave = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/budgets', { ...form, month, year });
+            setShowModal(false);
+            setForm({ category: CATEGORIES[0], plannedAmount: '', status: 'approved' });
+            fetchBudgets();
+        } catch (err) { alert('خطأ في حفظ الموازنة'); }
     };
 
-    const doughnutOptions = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { position: 'left', labels: { color: '#94a3b8', font: { family: 'Tajawal' } } } },
-        cutout: '75%'
+    const handleDuplicate = async () => {
+        if (!window.confirm('هل أنت متأكد من نسخ موازنة الشهر السابق لتكون مسودة هذا الشهر؟')) return;
+        try {
+            await api.post('/budgets/duplicate', { targetMonth: month, targetYear: year });
+            fetchBudgets();
+        } catch (err) { alert(err.response?.data?.message || 'خطأ في النسخ'); }
+    };
+
+    const handleDelete = async (id) => {
+        if (!window.confirm('هل أنت متأكد من حذف هذه الموازنة؟')) return;
+        try {
+            await api.delete(`/budgets/${id}`);
+            fetchBudgets();
+        } catch (err) { alert('خطأ في الحذف'); }
+    };
+
+    const changeMonth = (offset) => {
+        let newMonth = month + offset;
+        let newYear = year;
+        if (newMonth > 12) { newMonth = 1; newYear += 1; }
+        else if (newMonth < 1) { newMonth = 12; newYear -= 1; }
+        setMonth(newMonth);
+        setYear(newYear);
     };
 
     return (
-        <div className="space-y-10 fade-in pb-24 md:pb-10" dir="rtl">
-            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4 md:px-0">
+        <div className="space-y-8 fade-in text-right pb-24 md:pb-10" dir="rtl">
+            {/* ===== Header & Time Navigation ===== */}
+            <header className="flex flex-col md:flex-row justify-between items-center gap-6 bg-slate-900 border border-slate-800 p-6 rounded-[2rem] shadow-xl">
                 <div>
-                    <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">إدارة الميزانيات</h1>
-                    <p className="text-slate-500 text-xs md:text-sm mt-2">السيطرة الذكية على أسقف الإنفاق الشهري</p>
+                    <h1 className="text-2xl md:text-4xl font-black text-white flex items-center gap-3">
+                        <Target className="text-blue-500" size={32} /> تخطيط الموازنات
+                    </h1>
+                    <p className="text-slate-500 text-sm mt-1">قارن الإنفاق المخطط بالإنفاق الفعلي (Budget vs Actual)</p>
                 </div>
-                <button 
-                    onClick={() => setShowAddModal(true)} 
-                    className="flex items-center gap-2 px-6 py-4 bg-blue-600 text-white rounded-[1.5rem] font-bold shadow-xl shadow-blue-900/40 hover:scale-105 transition-all"
-                >
-                    <Plus size={20} /> تخصيص ميزانية جديدة
-                </button>
+                
+                <div className="flex items-center gap-4 bg-slate-950 p-2 rounded-2xl border border-slate-800">
+                    <button onClick={() => changeMonth(1)} className="p-3 bg-slate-900 text-slate-400 hover:text-white rounded-xl transition-all hover:bg-blue-600/20">
+                        <ArrowRight size={20} />
+                    </button>
+                    <div className="text-center min-w-[120px]">
+                        <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">فترة الموازنة</p>
+                        <p className="text-xl font-black text-white">{month} / {year}</p>
+                    </div>
+                    <button onClick={() => changeMonth(-1)} className="p-3 bg-slate-900 text-slate-400 hover:text-white rounded-xl transition-all hover:bg-blue-600/20">
+                        <ArrowLeft size={20} />
+                    </button>
+                </div>
+
+                <div className="flex gap-3">
+                    <button onClick={handleDuplicate} className="p-4 bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700 rounded-2xl font-bold transition-all shadow-lg flex items-center gap-2" title="نسخ موازنة الشهر السابق">
+                        <RefreshCw size={20} />
+                    </button>
+                    <button onClick={() => { setForm({ category: CATEGORIES[0], plannedAmount: '', status: 'approved' }); setShowModal(true); }} className="px-6 py-4 bg-blue-600 text-white rounded-2xl font-black shadow-xl shadow-blue-900/30 hover:scale-105 transition-all flex items-center gap-2">
+                        <Plus size={20} /> اعتماد موازنة للفئة
+                    </button>
+                </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
-                {/* Global Overview Section */}
-                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-8">
-                    
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 left-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
-                            <Crosshair size={120} className="text-blue-500" />
-                        </div>
-                        <h3 className="text-xl font-black text-white flex items-center gap-2 mb-8 relative z-10">
-                            <Target className="text-blue-500" /> الميزانية الإجمالية للشهر
-                        </h3>
-                        <div className="relative z-10">
-                            <div className="flex justify-between items-end mb-4">
-                                <div>
-                                    <p className="text-sm text-slate-400 font-bold mb-1">المنفق من الميزانيات المحددة</p>
-                                    <p className="text-4xl font-black text-white">{totalSpent.toLocaleString()} <span className="text-sm opacity-50">ج.م</span></p>
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-sm text-slate-400 font-bold mb-1">إجمالي الأسقف</p>
-                                    <p className="text-2xl font-black text-blue-400">{totalLimit.toLocaleString()}</p>
-                                </div>
-                            </div>
-                            <div className="space-y-3 mt-8">
-                                <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
-                                    <div 
-                                        className={`h-full transition-all duration-1000 ${globalPercent > 90 ? 'bg-red-500' : globalPercent > 70 ? 'bg-orange-500' : 'bg-blue-500'}`} 
-                                        style={{ width: `${globalPercent}%` }}
-                                    ></div>
-                                </div>
-                                <div className="flex justify-between text-sm font-bold text-slate-500">
-                                    <span>الاستهلاك الكلي</span>
-                                    <span>{globalPercent.toFixed(1)}%</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Budget Distribution Chart */}
-                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col">
-                        <h3 className="text-xl font-black text-white flex items-center gap-2 mb-6">
-                            <PieIcon className="text-purple-500" /> توزيع الميزانيات المخططة
-                        </h3>
-                        <div className="flex-1 min-h-[180px] relative">
-                            {budgets.length > 0 ? (
-                                <Doughnut data={chartData} options={doughnutOptions} />
-                            ) : (
-                                <div className="h-full flex items-center justify-center text-slate-500">قم بتحديد الميزانيات أولاً لرؤية التحليل</div>
-                            )}
-                        </div>
-                    </div>
+            {/* ===== KPIs Dashboard ===== */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 px-4 md:px-0">
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col justify-center transition-all hover:border-blue-500/30">
+                    <p className="text-[10px] text-blue-500 font-bold uppercase mb-2">إجمالي الموازنة المعتمدة</p>
+                    <p className="text-3xl font-black text-white">{kpis.totalBudget?.toLocaleString()} <span className="text-xs opacity-50">ج.م</span></p>
                 </div>
-
-                {/* Individual Budgets */}
-                <div className="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {budgets.length === 0 ? (
-                        <div className="col-span-full py-24 flex flex-col items-center justify-center bg-slate-900 border-2 border-slate-800 border-dashed rounded-[3rem]">
-                            <Target size={64} className="mb-4 text-slate-700" />
-                            <p className="font-bold text-white text-lg">لم تقم بتحديد أي ميزانية بعد</p>
-                            <p className="text-sm text-slate-500 mt-2">حدد أسقفاً للإنفاق للسيطرة على مصاريفك بذكاء</p>
-                        </div>
-                    ) : (
-                        budgets.map((budget) => {
-                            const spent = budget.spent || 0;
-                            const limit = budget.limit || 1;
-                            const percent = Math.min((spent / limit) * 100, 100);
-                            const isOver = spent > limit;
-
-                            return (
-                                <div key={budget._id} className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group hover:border-slate-700 transition-colors">
-                                    <div className="flex justify-between items-start mb-8">
-                                        <div className={`p-5 rounded-3xl ${isOver ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-blue-600/10 text-blue-500 border border-blue-500/20'} shadow-inner`}>
-                                            {getCategoryIcon(budget.category)}
-                                        </div>
-                                        <button onClick={() => handleDelete(budget._id)} className="p-3 text-red-500 bg-red-500/10 border border-red-500/20 rounded-2xl opacity-0 group-hover:opacity-100 transition-all hover:bg-red-500 hover:text-white">
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-
-                                    <h3 className="text-2xl font-black text-white mb-6">{budget.category}</h3>
-                                    
-                                    <div className="space-y-6">
-                                        <div className="flex justify-between items-end">
-                                            <div>
-                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">المنفق</p>
-                                                <p className="text-xl font-black text-white">{spent.toLocaleString()}</p>
-                                            </div>
-                                            <div className="text-left">
-                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1">السقف</p>
-                                                <p className="text-xl font-black text-slate-400">{limit.toLocaleString()}</p>
-                                            </div>
-                                        </div>
-
-                                        <div className="space-y-3">
-                                            <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
-                                                <div 
-                                                    className={`h-full transition-all duration-1000 ${isOver ? 'bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : percent > 80 ? 'bg-orange-500' : 'bg-blue-500'}`} 
-                                                    style={{ width: `${percent}%` }}
-                                                ></div>
-                                            </div>
-                                            <div className="flex justify-between items-center">
-                                                <span className={`text-[10px] font-black uppercase ${isOver ? 'text-red-500 animate-pulse' : percent > 80 ? 'text-orange-500' : 'text-slate-500'}`}>
-                                                    {isOver ? 'تم تجاوز الميزانية ⚠️' : percent > 80 ? 'تحذير: اقتربت من السقف' : 'ضمن النطاق الآمن'}
-                                                </span>
-                                                <span className="text-xs font-black text-white">{percent.toFixed(0)}%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            );
-                        })
-                    )}
+                <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl shadow-xl flex flex-col justify-center transition-all hover:border-slate-500/30">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mb-2">إجمالي الإنفاق الفعلي (لكل الفئات)</p>
+                    <p className="text-3xl font-black text-slate-300">{kpis.overallSpent?.toLocaleString()} <span className="text-xs opacity-50">ج.م</span></p>
+                </div>
+                <div className={`p-6 rounded-3xl shadow-xl flex flex-col justify-center transition-all border ${kpis.totalRemaining < 0 ? 'bg-red-900/20 border-red-500/30' : 'bg-emerald-900/20 border-emerald-500/30'}`}>
+                    <p className={`text-[10px] font-bold uppercase mb-2 ${kpis.totalRemaining < 0 ? 'text-red-400' : 'text-emerald-500'}`}>الانحراف العام (المتبقي من الموازنة)</p>
+                    <p className={`text-3xl font-black ${kpis.totalRemaining < 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                        {Math.abs(kpis.totalRemaining || 0).toLocaleString()} <span className="text-xs opacity-50">ج.م</span>
+                        {kpis.totalRemaining < 0 && <span className="text-xs mr-2 font-bold">(عجز)</span>}
+                    </p>
+                </div>
+                <div className="bg-orange-900/10 border border-orange-500/20 p-6 rounded-3xl shadow-xl flex flex-col justify-center transition-all">
+                    <p className="text-[10px] text-orange-400 font-bold uppercase mb-2">تجاوزات الفئات</p>
+                    <p className="text-3xl font-black text-orange-400">{kpis.exceededCount} <span className="text-sm opacity-50">فئة</span></p>
                 </div>
             </div>
 
-            {/* Add Modal */}
-            {showAddModal && (
-                <div className="fixed inset-0 bg-black/95 backdrop-blur-md z-[200] flex items-center justify-center p-4">
-                    <div className="bg-slate-950 border-2 border-blue-500/30 w-full max-w-md rounded-[3rem] p-10 scale-in shadow-2xl">
-                        <h2 className="text-2xl font-black text-white mb-8 text-center flex justify-center items-center gap-3">
-                            <Target className="text-blue-500" /> تحديد سقف إنفاق
+            {/* Unbudgeted Spent Alert */}
+            {kpis.unbudgetedSpent > 0 && (
+                <div className="mx-4 md:mx-0 p-4 bg-slate-800/80 border border-slate-700 rounded-2xl flex items-center gap-4">
+                    <div className="p-3 bg-slate-700 rounded-xl text-slate-400"><Info size={20} /></div>
+                    <div>
+                        <p className="text-sm font-bold text-white">توجد مصروفات خارج الموازنة بقيمة {kpis.unbudgetedSpent.toLocaleString()} ج.م</p>
+                        <p className="text-xs text-slate-400">هذه مصروفات مسجلة في الدفتر لكن ليس لها موازنة معتمدة هذا الشهر.</p>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== Budget vs Actual Table ===== */}
+            {loading ? (
+                <div className="text-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500 mx-auto"></div></div>
+            ) : budgets.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-24 bg-slate-900/30 border border-slate-800/50 border-dashed rounded-[3rem] mx-4 md:mx-0">
+                    <Target size={64} className="text-slate-700 mb-4" />
+                    <p className="text-white font-black text-xl mb-2">لا توجد موازنات معتمدة لهذا الشهر</p>
+                    <p className="text-slate-500 text-sm">قم بنسخ موازنة الشهر الماضي أو إدخال الموازنات الجديدة يدوياً.</p>
+                </div>
+            ) : (
+                <div className="bg-slate-900 border border-slate-800 rounded-[2.5rem] shadow-2xl overflow-hidden mx-4 md:mx-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-right">
+                            <thead className="bg-slate-950 text-slate-500 text-xs border-b border-slate-800">
+                                <tr>
+                                    <th className="p-6 font-black uppercase tracking-widest">الفئة (النشاط)</th>
+                                    <th className="p-6 font-black uppercase tracking-widest text-blue-400">Budget (المخطط)</th>
+                                    <th className="p-6 font-black uppercase tracking-widest text-emerald-400">Actual (الفعلي)</th>
+                                    <th className="p-6 font-black uppercase tracking-widest">Variance (الانحراف)</th>
+                                    <th className="p-6 font-black uppercase tracking-widest">المؤشر</th>
+                                    <th className="p-6 font-black uppercase tracking-widest text-center">إجراء</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {budgets.map((b) => (
+                                    <tr key={b._id} className="border-b border-slate-800/50 hover:bg-slate-800/30 transition-colors group">
+                                        <td className="p-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className={`w-3 h-3 rounded-full ${b.trafficLight === 'red' ? 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.5)]' : b.trafficLight === 'yellow' ? 'bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]' : 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]'}`}></div>
+                                                <div>
+                                                    <p className="font-black text-white text-base">{b.category}</p>
+                                                    {b.status === 'draft' && <span className="text-[10px] text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded font-bold">مسودة</span>}
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="p-6 font-black text-white text-lg">{(b.plannedAmount || b.limit || 0).toLocaleString()} <span className="text-[10px] opacity-40">ج.م</span></td>
+                                        <td className="p-6 font-black text-emerald-400 text-lg">{b.spent.toLocaleString()} <span className="text-[10px] opacity-40">ج.م</span></td>
+                                        <td className="p-6">
+                                            <p className={`font-black text-lg flex items-center gap-1 ${b.variance < 0 ? 'text-red-400' : 'text-slate-300'}`}>
+                                                {Math.abs(b.variance).toLocaleString()} <span className="text-[10px] opacity-40">ج.م</span>
+                                                {b.variance < 0 ? <TrendingUp size={14} className="text-red-500" title="تجاوز الميزانية" /> : <TrendingDown size={14} className="text-emerald-500" title="وفر في الميزانية" />}
+                                            </p>
+                                        </td>
+                                        <td className="p-6">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-24 h-2 bg-slate-800 rounded-full overflow-hidden">
+                                                    <div 
+                                                        className={`h-full rounded-full transition-all duration-1000 ${b.trafficLight === 'red' ? 'bg-red-500' : b.trafficLight === 'yellow' ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                                                        style={{ width: `${Math.min(b.variancePercent, 100)}%` }}
+                                                    ></div>
+                                                </div>
+                                                <span className={`text-xs font-black w-10 text-left ${b.trafficLight === 'red' ? 'text-red-500' : 'text-slate-400'}`}>{b.variancePercent}%</span>
+                                            </div>
+                                        </td>
+                                        <td className="p-6 text-center">
+                                            <div className="flex justify-center gap-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={() => { setForm({ category: b.category, plannedAmount: b.plannedAmount || b.limit, status: b.status, notes: b.notes }); setShowModal(true); }} className="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg transition-colors"><Edit2 size={14}/></button>
+                                                <button onClick={() => handleDelete(b._id)} className="p-2 text-slate-400 hover:text-red-500 bg-slate-800 rounded-lg transition-colors"><Trash2 size={14}/></button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Over-budget Categories Widget */}
+            {budgets.filter(b => b.trafficLight === 'red').length > 0 && (
+                <div className="mx-4 md:mx-0 p-8 bg-red-950/20 border border-red-500/20 rounded-[2.5rem] shadow-xl">
+                    <h3 className="text-lg font-black text-red-400 flex items-center gap-2 mb-6">
+                        <AlertTriangle size={20} /> فئات حرجة (تجاوزت الموازنة)
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        {budgets.filter(b => b.trafficLight === 'red').map(b => (
+                            <div key={b._id} className="p-5 bg-slate-900 border border-red-500/30 rounded-2xl">
+                                <p className="text-sm font-bold text-white mb-2">{b.category}</p>
+                                <p className="text-xl font-black text-red-400">{b.variancePercent}% <span className="text-[10px] text-slate-500 font-bold ml-1">استهلاك</span></p>
+                                <p className="text-[10px] text-red-500/70 mt-1">عجز: {Math.abs(b.variance).toLocaleString()} ج.م</p>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
+
+            {/* ===== Modal ===== */}
+            {showModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-slate-950 border border-blue-500/30 w-full max-w-md rounded-[3rem] p-10 relative shadow-2xl overflow-hidden">
+                        <button onClick={() => setShowModal(false)} className="absolute top-8 left-8 text-slate-500 hover:text-white transition-colors"><X size={28} /></button>
+                        <h2 className="text-2xl font-black text-white mb-8 italic flex items-center gap-3">
+                            <PieChart className="text-blue-500" /> اعتماد موازنة
                         </h2>
-                        <form onSubmit={handleCreate} className="space-y-6">
-                            <div className="space-y-3">
-                                <label className="text-xs text-slate-400 font-bold">الفئة</label>
-                                <select 
-                                    className="w-full bg-slate-900 border border-slate-800 text-white p-5 rounded-2xl outline-none focus:border-blue-500 font-bold"
-                                    value={newBudget.category}
-                                    onChange={e => setNewBudget({...newBudget, category: e.target.value})}
-                                >
-                                    {['طعام', 'مواصلات', 'فواتير', 'تسوق', 'صحة', 'تعليم', 'ترفيه', 'سكن', 'عام', 'أخرى'].map(c => <option key={c} value={c}>{c}</option>)}
+                        
+                        <form onSubmit={handleSave} className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase">الفئة المستهدفة</label>
+                                <select required className="w-full bg-slate-900 border border-slate-800 text-white p-5 rounded-2xl font-bold outline-none focus:border-blue-500 appearance-none"
+                                    value={form.category} onChange={e => setForm({ ...form, category: e.target.value })}>
+                                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
-                            <div className="space-y-3">
-                                <label className="text-xs text-slate-400 font-bold">المبلغ الأقصى المسموح شهرياً (ج.م)</label>
-                                <input 
-                                    type="number" 
-                                    className="w-full bg-slate-900 border border-slate-800 text-white p-5 rounded-2xl outline-none focus:border-blue-500 font-black text-xl"
-                                    placeholder="مثلاً: 5000"
-                                    value={newBudget.limit}
-                                    onChange={e => setNewBudget({...newBudget, limit: e.target.value})}
-                                    required
-                                />
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase">المبلغ المخطط (المعتمد)</label>
+                                <input type="number" required placeholder="0.00" className="w-full bg-slate-900 border border-slate-800 text-white p-5 rounded-2xl font-black text-2xl text-center outline-none focus:border-blue-500 transition-all"
+                                    value={form.plannedAmount} onChange={e => setForm({ ...form, plannedAmount: e.target.value })} />
                             </div>
-                            <div className="flex gap-4 pt-6">
-                                <button type="submit" className="flex-1 py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black shadow-xl shadow-blue-900/30 transition-all text-lg">تأكيد الميزانية</button>
-                                <button type="button" onClick={() => setShowAddModal(false)} className="py-5 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-2xl font-black transition-all">إلغاء</button>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-500 font-bold uppercase">حالة الموازنة</label>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <button type="button" onClick={() => setForm({...form, status: 'approved'})} className={`py-4 rounded-xl font-bold text-sm transition-all ${form.status === 'approved' ? 'bg-blue-600 text-white' : 'bg-slate-900 text-slate-500'}`}>معتمدة (نهائية)</button>
+                                    <button type="button" onClick={() => setForm({...form, status: 'draft'})} className={`py-4 rounded-xl font-bold text-sm transition-all ${form.status === 'draft' ? 'bg-amber-600 text-white' : 'bg-slate-900 text-slate-500'}`}>مسودة (مبدئية)</button>
+                                </div>
                             </div>
+
+                            <button type="submit" className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-blue-900/20 transition-all mt-4">
+                                حفظ التخطيط المالي
+                            </button>
                         </form>
                     </div>
                 </div>
