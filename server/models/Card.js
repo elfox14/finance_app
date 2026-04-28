@@ -5,8 +5,9 @@ const cardSchema = new mongoose.Schema({
     cardName: { type: String, required: true },
     bankName: { type: String, required: true },
     lastFourDigits: { type: String, maxLength: 4 },
-    cardType: { type: String, enum: ['مشتريات', 'ائتمان', 'تقسيط'], default: 'مشتريات' },
-    creditLimit: { type: Number, required: true },
+    cardType: { type: String, enum: ['debit', 'credit', 'خصم مباشر', 'ائتمانية'], default: 'ائتمانية' },
+    linkedAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // For Debit cards
+    creditLimit: { type: Number, default: 0 }, // For Credit cards
     currentBalance: { type: Number, default: 0 }, // المبلغ المستخدم حالياً
     statementDay: { type: Number, required: true, min: 1, max: 31 },
     dueDay: { type: Number, required: true, min: 1, max: 31 },

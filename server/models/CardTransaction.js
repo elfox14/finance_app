@@ -14,6 +14,13 @@ const cardTransactionSchema = new mongoose.Schema({
     },
     isInstallment: { type: Boolean, default: false },
     installmentId: { type: mongoose.Schema.Types.ObjectId, ref: 'CardInstallment' },
+    hasReceipt: { type: Boolean, default: false },
+    receiptUrl: String,
+    reconciliationStatus: { 
+        type: String, 
+        enum: ['pending', 'matched', 'disputed', 'missing_receipt'], 
+        default: 'pending' 
+    },
     notes: String,
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });
