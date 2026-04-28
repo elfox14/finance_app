@@ -1,4 +1,6 @@
 const Transaction = require('../models/Transaction');
+const Expense = require('../models/Expense');
+const Income = require('../models/Income');
 const Account = require('../models/Account');
 const Loan = require('../models/Loan');
 const Card = require('../models/Card');
@@ -16,10 +18,13 @@ exports.getDashboardStats = async (req, res) => {
 
         // 1. Fetch data with correct userId
         const [
-            transactions, accounts, loans, cards, debts, 
+            transactions, legacyExpenses, legacyIncomes,
+            accounts, loans, cards, debts, 
             groups, budgets, certificates
         ] = await Promise.all([
             Transaction.find({ userId, deletedAt: null }),
+            Expense.find({ userId, deletedAt: null }),
+            Income.find({ userId, deletedAt: null }),
             Account.find({ userId, deletedAt: null }),
             Loan.find({ userId, deletedAt: null }),
             Card.find({ userId, deletedAt: null }),
@@ -29,8 +34,15 @@ exports.getDashboardStats = async (req, res) => {
             Certificate.find({ userId, status: 'active' }) // Active certificates
         ]);
 
+        // Merge legacy Expenses and Incomes into the unified Transaction flow
+        const unifiedTransactions = [
+            ...transactions,
+            ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى' })),
+            ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى' }))
+        ];
+
         // 2. Filter valid and posted transactions
-        const postedTransactions = transactions.filter(t => ['مُرحَّل', 'مُسوّى'].includes(t.status));
+        const postedTransactions = unifiedTransactions.filter(t => ['مُرحَّل', 'مُسوّى'].includes(t.status));
         const currentMonthTxs = postedTransactions.filter(t => {
             const d = new Date(t.date);
             return (d.getMonth() + 1) === currentMonth && d.getFullYear() === currentYear;
@@ -161,7 +173,7 @@ exports.getDashboardStats = async (req, res) => {
         if (totalInvestments > 0) assetDistribution.push({ name: 'شهادات استثمار', value: totalInvestments });
 
         // Count pending transactions
-        const pendingTransactions = transactions.filter(t => ['غير مصنف', 'مصنف'].includes(t.status)).length;
+        const pendingTransactions = unifiedTransactions.filter(t => ['غير مصنف', 'مصنف'].includes(t.status)).length;
 
         res.json({
             topStats: {

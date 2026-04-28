@@ -1,4 +1,6 @@
 const Transaction = require('../models/Transaction');
+const Expense = require('../models/Expense');
+const Income = require('../models/Income');
 const Account = require('../models/Account');
 const Loan = require('../models/Loan');
 const Card = require('../models/Card');
@@ -15,10 +17,13 @@ exports.getReports = async (req, res) => {
 
         // 1. Fetch all necessary data
         const [
-            transactions, accounts, loans, cards, 
+            transactions, legacyExpenses, legacyIncomes,
+            accounts, loans, cards, 
             certificates, debts, budgets
         ] = await Promise.all([
             Transaction.find({ userId, status: { $in: ['مُسوّى', 'مُرحَّل'] }, deletedAt: null }),
+            Expense.find({ userId, deletedAt: null }),
+            Income.find({ userId, deletedAt: null }),
             Account.find({ userId, deletedAt: null }),
             Loan.find({ userId, deletedAt: null }),
             Card.find({ userId, deletedAt: null }),
@@ -27,6 +32,12 @@ exports.getReports = async (req, res) => {
             Budget.find({ userId, month: currentMonth, year: currentYear })
         ]);
 
+        const unifiedTransactions = [
+            ...transactions,
+            ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى' })),
+            ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى' }))
+        ];
+
         // 2. Trend Analysis (Last 6 Months Income vs Expense)
         const trends = [];
         for (let i = 5; i >= 0; i--) {
@@ -34,7 +45,7 @@ exports.getReports = async (req, res) => {
             const m = d.getMonth() + 1;
             const y = d.getFullYear();
             
-            const monthTxs = transactions.filter(tx => {
+            const monthTxs = unifiedTransactions.filter(tx => {
                 const date = new Date(tx.date);
                 return (date.getMonth() + 1) === m && date.getFullYear() === y;
             });
@@ -51,7 +62,7 @@ exports.getReports = async (req, res) => {
         }
 
         // 3. Category Breakdown (Current Month)
-        const currentMonthExpenses = transactions.filter(tx => {
+        const currentMonthExpenses = unifiedTransactions.filter(tx => {
             const d = new Date(tx.date);
             return tx.type === 'مصروف' && (d.getMonth() + 1) === currentMonth && d.getFullYear() === currentYear;
         });

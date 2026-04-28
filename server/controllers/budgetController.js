@@ -1,5 +1,6 @@
 const Budget = require('../models/Budget');
 const Transaction = require('../models/Transaction');
+const Expense = require('../models/Expense');
 
 // @desc    Get all budgets for a specific month with actuals
 exports.getBudgets = async (req, res) => {
@@ -14,17 +15,29 @@ exports.getBudgets = async (req, res) => {
         const startOfMonth = new Date(targetYear, targetMonth - 1, 1);
         const endOfMonth = new Date(targetYear, targetMonth, 0, 23, 59, 59);
         
-        const actualTransactions = await Transaction.find({ 
-            userId: req.user._id, 
-            type: 'مصروف',
-            status: { $in: ['مُرحَّل', 'مُسوّى'] }, // Only count posted/reconciled expenses
-            date: { $gte: startOfMonth, $lte: endOfMonth },
-            deletedAt: null 
-        });
+        const [actualTransactions, legacyExpenses] = await Promise.all([
+            Transaction.find({ 
+                userId: req.user._id, 
+                type: 'مصروف',
+                status: { $in: ['مُرحَّل', 'مُسوّى'] }, 
+                date: { $gte: startOfMonth, $lte: endOfMonth },
+                deletedAt: null 
+            }),
+            Expense.find({ 
+                userId: req.user._id, 
+                date: { $gte: startOfMonth, $lte: endOfMonth },
+                deletedAt: null 
+            })
+        ]);
+
+        const unifiedExpenses = [
+            ...actualTransactions,
+            ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى' }))
+        ];
 
         // Compute Variance and Percentages
         const budgetsWithProgress = budgets.map(b => {
-            const spent = actualTransactions
+            const spent = unifiedExpenses
                 .filter(tx => tx.category === b.category)
                 .reduce((sum, tx) => sum + tx.amount, 0);
             
@@ -52,7 +65,7 @@ exports.getBudgets = async (req, res) => {
         const exceededCount = budgetsWithProgress.filter(b => b.trafficLight === 'red').length;
 
         // Total Actual including unbudgeted categories
-        const overallSpent = actualTransactions.reduce((s, tx) => s + tx.amount, 0);
+        const overallSpent = unifiedExpenses.reduce((s, tx) => s + tx.amount, 0);
         const unbudgetedSpent = overallSpent - totalActual;
 
         res.json({

@@ -1,5 +1,7 @@
 const Transaction = require('../models/Transaction');
 const Account = require('../models/Account');
+const Expense = require('../models/Expense');
+const Income = require('../models/Income');
 const Loan = require('../models/Loan');
 const Card = require('../models/Card');
 const Certificate = require('../models/Certificate');
@@ -16,10 +18,13 @@ exports.getNotifications = async (req, res) => {
 
         // Fetch all relevant operational data
         const [
-            transactions, accounts, loans, cards, 
+            transactions, legacyExpenses, legacyIncomes,
+            accounts, loans, cards, 
             certificates, debts, budgets
         ] = await Promise.all([
             Transaction.find({ userId, deletedAt: null }),
+            Expense.find({ userId, deletedAt: null }),
+            Income.find({ userId, deletedAt: null }),
             Account.find({ userId, deletedAt: null }),
             Loan.find({ userId, deletedAt: null, status: 'نشط' }),
             Card.find({ userId, deletedAt: null }),
@@ -28,13 +33,19 @@ exports.getNotifications = async (req, res) => {
             Budget.find({ userId, month: now.getMonth() + 1, year: now.getFullYear() })
         ]);
 
+        const unifiedTransactions = [
+            ...transactions,
+            ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى' })),
+            ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى' }))
+        ];
+
         const alerts = [];
         const opportunities = [];
 
         // --- 1. ALERTS (تنبيهات ومخاطر) ---
 
         // 1.1 Uncategorized / Unreconciled Transactions
-        const uncategorizedCount = transactions.filter(t => t.status === 'غير مصنف' || t.status === 'مصنف').length;
+        const uncategorizedCount = unifiedTransactions.filter(t => t.status === 'غير مصنف' || t.status === 'مصنف').length;
         if (uncategorizedCount > 0) {
             alerts.push({
                 id: 'uncat_' + Date.now(),
@@ -68,7 +79,7 @@ exports.getNotifications = async (req, res) => {
         });
 
         // 1.3 Budget Overspend
-        const monthExpenses = transactions.filter(t => t.type === 'مصروف' && new Date(t.date) >= startOfMonth && ['مُرحَّل', 'مُسوّى'].includes(t.status));
+        const monthExpenses = unifiedTransactions.filter(t => t.type === 'مصروف' && new Date(t.date) >= startOfMonth && ['مُرحَّل', 'مُسوّى'].includes(t.status));
         budgets.forEach(b => {
             const spent = monthExpenses.filter(e => e.category === b.category).reduce((s, e) => s + e.amount, 0);
             const planned = b.plannedAmount || b.limit;
@@ -128,7 +139,7 @@ exports.getNotifications = async (req, res) => {
 
         // 2.1 Surplus Cash
         const totalCash = accounts.reduce((s, a) => s + (a.balance || 0), 0);
-        const monthlyIncomes = transactions.filter(t => t.type === 'دخل' && new Date(t.date) >= startOfMonth && ['مُرحَّل', 'مُسوّى'].includes(t.status));
+        const monthlyIncomes = unifiedTransactions.filter(t => t.type === 'دخل' && new Date(t.date) >= startOfMonth && ['مُرحَّل', 'مُسوّى'].includes(t.status));
         const avgIncome = monthlyIncomes.reduce((s, i) => s + i.amount, 0) || 5000; // fallback
         
         if (totalCash > avgIncome * 1.5) {
