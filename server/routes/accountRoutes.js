@@ -5,7 +5,8 @@ const {
     createAccount, 
     updateAccount, 
     deleteAccount,
-    adjustBalance
+    adjustBalance,
+    reconcileAccount
 } = require('../controllers/accountController');
 const { protect } = require('../middleware/authMiddleware');
 
@@ -16,6 +17,7 @@ router.route('/')
     .post(createAccount);
 
 router.post('/:id/adjust', adjustBalance);
+router.put('/:id/reconcile', reconcileAccount);
 
 router.route('/:id')
     .put(updateAccount)
