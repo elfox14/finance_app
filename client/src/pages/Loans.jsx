@@ -269,7 +269,7 @@ const Loans = () => {
 
                             {detailsTab === 'schedule' && (
                                 <div className="space-y-4">
-                                    {loanDetails.installments.map(inst => (
+                                    {(loanDetails.installments || []).map(inst => (
                                         <div key={inst._id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-slate-900 rounded-[2rem] border border-slate-800">
                                             <div className="flex items-center gap-6">
                                                 <div className="text-center w-12 h-12 bg-slate-800 rounded-2xl flex flex-col items-center justify-center">
@@ -307,7 +307,7 @@ const Loans = () => {
 
                             {detailsTab === 'history' && (
                                 <div className="space-y-4">
-                                    {loanDetails.payments.map(p => (
+                                    {(loanDetails.payments || []).map(p => (
                                         <div key={p._id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-emerald-900/10 rounded-[2rem] border border-emerald-500/20">
                                             <div className="flex items-center gap-6 mb-4 md:mb-0">
                                                 <div className="p-4 bg-emerald-500/10 text-emerald-500 rounded-2xl"><CheckCircle2 size={24} /></div>

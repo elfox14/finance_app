@@ -303,13 +303,13 @@ const Cards = () => {
                             </h2>
                             <div className="flex flex-wrap gap-4 mt-8 border-b border-slate-800">
                                 {['reconciliation', 'transactions', 'installments', 'payments'].map(tab => {
-                                    if (!selectedCard?.cardType.includes('credit') && (tab === 'installments' || tab === 'payments')) return null;
+                                    if (!selectedCard?.cardType?.includes('credit') && (tab === 'installments' || tab === 'payments')) return null;
                                     const labels = { reconciliation: 'مطابقة وتسوية', transactions: 'سجل العمليات', installments: 'الأقساط النشطة', payments: 'سجل السداد' };
                                     return (
                                         <button key={tab} onClick={() => setDetailsTab(tab)} className={`pb-4 px-6 text-base font-black transition-all border-b-4 ${detailsTab === tab ? 'border-blue-500 text-white' : 'border-transparent text-slate-500 hover:text-slate-300'}`}>
                                             {labels[tab]}
-                                            {tab === 'reconciliation' && cardDetails.transactions?.filter(t => t.reconciliationStatus === 'pending').length > 0 && (
-                                                <span className="ml-2 bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full">{cardDetails.transactions.filter(t => t.reconciliationStatus === 'pending').length}</span>
+                                            {tab === 'reconciliation' && (cardDetails.transactions || []).filter(t => t.reconciliationStatus === 'pending').length > 0 && (
+                                                <span className="ml-2 bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full">{(cardDetails.transactions || []).filter(t => t.reconciliationStatus === 'pending').length}</span>
                                             )}
                                         </button>
                                     );
@@ -323,7 +323,7 @@ const Cards = () => {
                                     <div className="bg-blue-900/20 border border-blue-500/30 p-4 rounded-2xl mb-6">
                                         <p className="text-sm font-bold text-blue-200 flex items-center gap-2"><ShieldAlert size={16}/> التسوية (Reconciliation): قارن هذه العمليات مع كشف حساب البنك أو التطبيق البنكي، واضغط "مطابقة" للتأكيد.</p>
                                     </div>
-                                    {cardDetails.transactions.filter(t => t.reconciliationStatus === 'pending').map(t => (
+                                    {(cardDetails.transactions || []).filter(t => t.reconciliationStatus === 'pending').map(t => (
                                         <div key={t._id} className="flex items-center justify-between p-5 bg-slate-900 rounded-2xl border border-orange-500/30 hover:border-orange-500/50 transition-all">
                                             <div className="flex items-center gap-4">
                                                 <div className="p-3 bg-slate-800 rounded-xl"><Receipt size={20} className="text-orange-400" /></div>
@@ -342,14 +342,14 @@ const Cards = () => {
                                             </div>
                                         </div>
                                     ))}
-                                    {cardDetails.transactions.filter(t => t.reconciliationStatus === 'pending').length === 0 && (
+                                    {(cardDetails.transactions || []).filter(t => t.reconciliationStatus === 'pending').length === 0 && (
                                         <div className="py-12 text-center text-emerald-500"><CheckCircle2 size={48} className="mx-auto mb-4 opacity-50"/> <p className="font-black">كل العمليات مطابقة ومسوّاة!</p></div>
                                     )}
                                 </div>
                             )}
 
                             {detailsTab === 'transactions' && (
-                                cardDetails.transactions.map(t => (
+                                (cardDetails.transactions || []).map(t => (
                                     <div key={t._id} className="flex items-center justify-between p-5 bg-slate-900 rounded-2xl border border-slate-800">
                                         <div className="flex items-center gap-4">
                                             <div className={`w-3 h-3 rounded-full ${t.reconciliationStatus === 'matched' ? 'bg-emerald-500' : t.reconciliationStatus === 'disputed' ? 'bg-red-500' : 'bg-orange-500'}`}></div>
@@ -363,7 +363,45 @@ const Cards = () => {
                                 ))
                             )}
                             
-                            {/* Installments & Payments rendering omitted for brevity but they exist similarly */}
+                            {detailsTab === 'installments' && (
+                                (cardDetails.installments || []).length > 0 ? (cardDetails.installments || []).map(i => (
+                                    <div key={i._id} className="p-8 bg-slate-900 rounded-[2rem] border border-slate-800 space-y-6">
+                                        <div className="flex justify-between items-center">
+                                            <p className="text-xl font-black text-white">قسط شهري: {i.installmentAmount?.toLocaleString()} <span className="text-sm opacity-50">ج.م</span></p>
+                                            <span className="text-xs font-black px-4 py-1.5 bg-emerald-900/30 border border-emerald-500/20 text-emerald-400 rounded-xl">{i.status}</span>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 text-center border-t border-slate-800 pt-6">
+                                            <div className="p-4 bg-slate-800/50 rounded-2xl">
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 md:mb-2">الأصل</p>
+                                                <p className="text-lg md:text-xl font-black text-white">{i.principalAmount}</p>
+                                            </div>
+                                            <div className="p-4 bg-slate-800/50 rounded-2xl">
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 md:mb-2">الفائدة</p>
+                                                <p className="text-lg md:text-xl font-black text-orange-500">{i.totalAfterInterest - i.principalAmount}</p>
+                                            </div>
+                                            <div className="p-4 bg-slate-800/50 rounded-2xl">
+                                                <p className="text-[10px] text-slate-500 font-bold uppercase mb-1 md:mb-2">الشهور</p>
+                                                <p className="text-lg md:text-xl font-black text-blue-500">{i.installmentsCount}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )) : <div className="py-20 text-center text-slate-500">لا توجد أقساط نشطة</div>
+                            )}
+
+                            {detailsTab === 'payments' && (
+                                (cardDetails.payments || []).length > 0 ? (cardDetails.payments || []).map(p => (
+                                    <div key={p._id} className="flex items-center justify-between p-6 bg-emerald-900/10 rounded-[2rem] border border-emerald-500/20">
+                                        <div className="flex items-center gap-6">
+                                            <div className="p-4 bg-emerald-500/10 text-emerald-500 rounded-2xl"><Plus size={24} /></div>
+                                            <div>
+                                                <p className="font-black text-white text-lg mb-1">تم سداد دفعة للمديونية</p>
+                                                <p className="text-xs text-slate-500">{new Date(p.paymentDate).toLocaleDateString('ar-EG', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'})}</p>
+                                            </div>
+                                        </div>
+                                        <p className="text-2xl font-black text-emerald-400">{p.amount?.toLocaleString()} <span className="text-sm opacity-50">ج.م</span></p>
+                                    </div>
+                                )) : <div className="py-20 text-center text-slate-500">لا يوجد سجل سداد</div>
+                            )}
                         </div>
                     </div>
                 </div>
