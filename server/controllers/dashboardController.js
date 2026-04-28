@@ -11,8 +11,9 @@ const Certificate = require('../models/Certificate');
 const LoanPayment = require('../models/LoanPayment');
 const CardPayment = require('../models/CardPayment');
 const GroupPayment = require('../models/GroupPayment');
-const { PeerDebtPayment } = require('../models/PeerDebt');
 const Account = require('../models/Account');
+const kpiService = require('../services/kpiService');
+const Transaction = require('../models/Transaction');
 
 exports.getDashboardStats = async (req, res) => {
     try {
@@ -35,6 +36,8 @@ exports.getDashboardStats = async (req, res) => {
             PeerDebtPayment.find({ userId }),
             Account.find({ userId })
         ]);
+
+        const kpiSnapshot = await kpiService.getLatestSnapshot(userId);
 
         // 2. Filter current month data
         const currentMonthExpenses = allExpenses.filter(e => {
@@ -190,7 +193,8 @@ exports.getDashboardStats = async (req, res) => {
                 return expD.getMonth() === d.getMonth() && expD.getFullYear() === d.getFullYear();
             }).reduce((sum, exp) => sum + exp.amount, 0);
 
-            cashflowData.push({ month: monthLabel, income: monthIncomes, expense: monthExpenses });
+            const netProfit = monthIncomes - monthExpenses;
+            cashflowData.push({ month: monthLabel, income: monthIncomes, expense: monthExpenses, netProfit });
         }
 
         // B. Expense Distribution by Category (Current Month)
@@ -213,6 +217,9 @@ exports.getDashboardStats = async (req, res) => {
             { name: 'شهادات استثمار', value: totalInvestments },
         ].filter(a => a.value > 0);
 
+        // Count pending transactions
+        const pendingTransactions = await Transaction.countDocuments({ userId, status: { $in: ['غير مصنف', 'مصنف'] } });
+
         // Unified Response
         res.json({
             topStats: {
@@ -221,7 +228,8 @@ exports.getDashboardStats = async (req, res) => {
                 next30DayObligations,
                 next30DayReceivables,
                 expectedNetFlow,
-                healthScore: Math.round(healthScore)
+                healthScore: Math.round(healthScore),
+                pendingTransactions
             },
             budgets: budgetsResponse,
             indicators: {
@@ -230,6 +238,7 @@ exports.getDashboardStats = async (req, res) => {
                 cardUtilization: Number(cardUtilization.toFixed(1)),
                 liquidityCoverageMonths: Number(liquidityCoverageMonths.toFixed(1))
             },
+            accountingKPIs: kpiSnapshot,
             upcomingObligations,
             insights,
             charts: {

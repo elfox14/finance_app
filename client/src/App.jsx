@@ -19,6 +19,7 @@ import ResetPassword from './pages/ResetPassword';
 import Budgets from './pages/Budgets'; // استيراد صفحة الموازنات الجديدة
 import Accounts from './pages/Accounts'; // صفحة الحسابات
 import Settings from './pages/Settings'; // صفحة الإعدادات
+import Transactions from './pages/Transactions'; // صفحة العمليات الموحدة
 
 function AppRoutes() {
     return (
@@ -36,6 +37,12 @@ function AppRoutes() {
             <Route path="/expenses" element={
                 <ProtectedRoute>
                     <Layout><Expenses /></Layout>
+                </ProtectedRoute>
+            } />
+
+            <Route path="/transactions" element={
+                <ProtectedRoute>
+                    <Layout><Transactions /></Layout>
                 </ProtectedRoute>
             } />
 

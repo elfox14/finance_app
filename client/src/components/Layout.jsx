@@ -6,7 +6,7 @@ import {
     ArrowDownLeft, CreditCard, Landmark, 
     Users, Bell, LogOut, Menu, X, PieChart, 
     Receipt, ShieldCheck, Target, Handshake,
-    Coins, Banknote, History, Settings
+    Coins, Banknote, History, Settings, ArrowRightLeft
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -19,8 +19,9 @@ const Layout = ({ children }) => {
     // هيكلة القائمة بناءً على المحاور الستة للتصور الجديد
     const navigationGroups = [
         {
-            title: "التدفقات النقدية",
+            title: "العمليات النقدية",
             items: [
+                { path: '/transactions', icon: ArrowRightLeft, label: 'الدفتر الموحد' },
                 { path: '/expenses', icon: ArrowUpRight, label: 'المصروفات' },
                 { path: '/incomes', icon: ArrowDownLeft, label: 'المدخولات' },
             ]

@@ -6,7 +6,7 @@ import {
     TrendingUp, Clock, 
     AlertCircle, ShieldCheck,
     Plus, PieChart as PieIcon, 
-    Sparkles, Lightbulb, Activity
+    Sparkles, Lightbulb, Activity, Target, Percent
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import {
@@ -65,6 +65,7 @@ const Dashboard = () => {
         topStats = {}, 
         budgets = [], 
         indicators = {}, 
+        accountingKPIs = {},
         upcomingObligations = [], 
         insights = [],
         charts = { cashflow: [], categories: [], assets: [] }
@@ -84,7 +85,7 @@ const Dashboard = () => {
         labels: reversedCashflow.map(d => d.month),
         datasets: [
             {
-                label: 'الدخل',
+                label: 'الإيرادات',
                 data: reversedCashflow.map(d => d.income),
                 borderColor: '#10b981',
                 backgroundColor: 'rgba(16, 185, 129, 0.1)',
@@ -92,11 +93,20 @@ const Dashboard = () => {
                 tension: 0.4
             },
             {
-                label: 'المصروفات',
-                data: reversedCashflow.map(d => d.expense),
-                borderColor: '#ef4444',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                label: 'صافي الربح',
+                data: reversedCashflow.map(d => d.netProfit),
+                borderColor: '#3b82f6',
+                backgroundColor: 'rgba(59, 130, 246, 0.1)',
                 fill: true,
+                tension: 0.4
+            },
+            {
+                label: 'الهدف (20% هامش)',
+                data: reversedCashflow.map(d => d.income * 0.20),
+                borderColor: '#8b5cf6',
+                borderDash: [5, 5],
+                backgroundColor: 'transparent',
+                fill: false,
                 tension: 0.4
             }
         ]
@@ -161,31 +171,53 @@ const Dashboard = () => {
                 
                 {/* 1. KPI Cards */}
                 <section>
-                    <h2 className="text-slate-500 font-bold text-sm tracking-wider uppercase mb-4">المؤشرات الرئيسية</h2>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-                        <StatCard label="الرصيد الصافي" val={topStats.currentBalance} icon={<Wallet size={20} />} color="bg-blue-600" />
-                        <StatCard label="التدفق النقدي" val={topStats.expectedNetFlow} icon={<TrendingUp size={20} />} color="bg-emerald-600" />
-                        <StatCard label="التزامات قادمة" val={topStats.next30DayObligations} icon={<ArrowDownLeft size={20} />} color="bg-orange-600" />
-                        <StatCard label="حقوق قادمة" val={topStats.next30DayReceivables} icon={<ArrowUpRight size={20} />} color="bg-indigo-600" />
+                    <h2 className="text-slate-500 font-bold text-sm tracking-wider uppercase mb-4">المؤشرات الرئيسية (KPIs)</h2>
+                    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
+                        <StatCard label="رصيد النقدية الحالي" val={accountingKPIs.cashOnHand} icon={<Wallet size={20} />} color="bg-slate-700" />
+                        <StatCard label="الرصيد المتاح (Working Capital)" val={accountingKPIs.workingCapital} icon={<ShieldCheck size={20} />} color="bg-blue-600" />
+                        <StatCard label="التدفق النقدي التشغيلي" val={accountingKPIs.operatingCashFlowMTD} icon={<TrendingUp size={20} />} color="bg-emerald-600" />
+                        <StatCard label="الإيرادات (MTD)" val={accountingKPIs.incomeMTD} icon={<ArrowUpRight size={20} />} color="bg-indigo-600" />
+                        
+                        <StatCard label="صافي الربح / الدخل" val={accountingKPIs.netIncomeMTD} icon={<Target size={20} />} color={accountingKPIs.netIncomeMTD >= 0 ? "bg-emerald-500" : "bg-red-500"} />
                         
                         <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex flex-col justify-between shadow-xl">
-                            <p className="text-[10px] text-slate-500 font-black uppercase">معدل الادخار</p>
-                            <p className={`text-2xl font-black ${indicators.savingsRate > 15 ? 'text-emerald-500' : 'text-orange-500'}`}>
-                                {indicators.savingsRate}%
+                            <p className="text-[10px] text-slate-500 font-black uppercase">هامش صافي الدخل</p>
+                            <p className={`text-2xl font-black ${accountingKPIs.netMarginMTD > 20 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                                {Number(accountingKPIs.netMarginMTD || 0).toFixed(1)}%
                             </p>
                         </div>
                         
+                        <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex flex-col justify-between shadow-xl">
+                            <p className="text-[10px] text-slate-500 font-black uppercase">معدل نمو الإيرادات</p>
+                            <p className={`text-2xl font-black ${accountingKPIs.incomeGrowthMoM > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                                {Number(accountingKPIs.incomeGrowthMoM || 0).toFixed(1)}%
+                            </p>
+                        </div>
+
                         <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl flex flex-col justify-between shadow-xl relative overflow-hidden">
-                            <div className="absolute -right-4 -bottom-4 opacity-5">
-                                <Activity size={80} />
-                            </div>
-                            <p className="text-[10px] text-slate-500 font-black uppercase">الصحة المالية</p>
-                            <p className={`text-3xl font-black ${getHealthColor(topStats.healthScore)}`}>
-                                {topStats.healthScore}%
+                            <p className="text-[10px] text-slate-500 font-black uppercase">معدل الادخار</p>
+                            <p className={`text-2xl font-black ${accountingKPIs.savingsRate > 15 ? 'text-emerald-500' : 'text-orange-500'}`}>
+                                {Number(accountingKPIs.savingsRate || 0).toFixed(1)}%
                             </p>
                         </div>
                     </div>
                 </section>
+
+                {/* Pending Classification Warning */}
+                {topStats.pendingTransactions > 0 && (
+                    <div className="bg-orange-500/10 border border-orange-500/20 p-4 rounded-2xl flex items-center justify-between shadow-lg">
+                        <div className="flex items-center gap-3">
+                            <AlertCircle className="text-orange-500" size={24} />
+                            <div>
+                                <h4 className="text-orange-400 font-bold text-sm">يوجد {topStats.pendingTransactions} عملية مالية قيد الانتظار</h4>
+                                <p className="text-orange-500/70 text-xs mt-0.5">البيانات المالية في لوحة القيادة لا تشمل هذه العمليات حتى يتم تصنيفها وترحيلها.</p>
+                            </div>
+                        </div>
+                        <Link to="/transactions" className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold rounded-lg transition-colors">
+                            مراجعة وتصنيف
+                        </Link>
+                    </div>
+                )}
 
                 {/* 2. Charts Layer */}
                 <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -302,6 +334,51 @@ const Dashboard = () => {
                     </section>
 
                 </div>
+
+                {/* 4. Budget Variance Table */}
+                <section className="bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl overflow-hidden p-8">
+                    <h3 className="text-xl font-black text-white flex items-center gap-2 mb-6">
+                        <Activity className="text-purple-500" /> أداء الميزانية (Actual vs Budget)
+                    </h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-right">
+                            <thead>
+                                <tr className="border-b border-slate-800 text-slate-500 text-sm">
+                                    <th className="py-4 font-bold">الفئة</th>
+                                    <th className="py-4 font-bold">المستهدف (Budget)</th>
+                                    <th className="py-4 font-bold">الفعلي (Actual)</th>
+                                    <th className="py-4 font-bold">الفرق (Variance)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {budgets.length > 0 ? budgets.map((b, i) => {
+                                    const varianceVal = b.limit - b.spent;
+                                    const variancePercent = b.limit > 0 ? ((b.spent - b.limit) / b.limit) * 100 : 0;
+                                    const isGood = varianceVal >= 0;
+                                    return (
+                                        <tr key={i} className="border-b border-slate-800/50 hover:bg-slate-800/20 transition-colors">
+                                            <td className="py-4 text-white font-bold">{b.category}</td>
+                                            <td className="py-4 text-slate-300">{b.limit.toLocaleString()} ج.م</td>
+                                            <td className="py-4 text-slate-300">{b.spent.toLocaleString()} ج.م</td>
+                                            <td className="py-4">
+                                                <div className={`flex items-center gap-2 ${isGood ? 'text-emerald-500' : 'text-red-500'}`}>
+                                                    <span className="font-bold">{Math.abs(varianceVal).toLocaleString()} ج.م</span>
+                                                    <span className="text-xs px-2 py-0.5 rounded-md bg-opacity-10 font-bold" style={{ backgroundColor: isGood ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)' }}>
+                                                        {isGood ? 'وفر' : 'تجاوز'} ({Math.abs(variancePercent).toFixed(1)}%)
+                                                    </span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    );
+                                }) : (
+                                    <tr>
+                                        <td colSpan="4" className="py-8 text-center text-slate-500">لا توجد ميزانيات محددة هذا الشهر</td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
             </div>
         </div>
     );

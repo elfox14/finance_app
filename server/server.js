@@ -5,6 +5,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
 const path = require('path');
+const cron = require('node-cron');
+const kpiService = require('./services/kpiService');
 
 const checkEnv = () => {
     const dbUri = process.env.MONGO_URI || process.env.MONGODB_URI;
@@ -48,6 +50,7 @@ apiRouter.use('/notifications', require('./routes/notificationRoutes'));
 apiRouter.use('/peer-debts', require('./routes/peerDebtRoutes'));
 apiRouter.use('/reports-data', require('./routes/reportRoutes'));
 apiRouter.use('/accounts', require('./routes/accountRoutes'));
+apiRouter.use('/transactions', require('./routes/transactionRoutes'));
 
 app.use('/api', apiRouter);
 app.use('/fin/api', apiRouter);
@@ -69,7 +72,15 @@ const PORT = process.env.PORT || 10000;
 const startServer = async () => {
     checkEnv();
     await connectDB();
-    app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
+    app.listen(PORT, () => {
+        console.log(`🚀 Server running on port ${PORT}`);
+        
+        // Start Cron Jobs
+        cron.schedule('0 1 * * *', () => {
+            console.log('⏳ Running scheduled KPI Snapshots...');
+            kpiService.generateDailySnapshotsForAll();
+        });
+    });
 };
 
 startServer();
