@@ -181,6 +181,7 @@ exports.getDashboardStats = async (req, res) => {
             workingCapital:          Math.round(availableBalance),
             operatingCashFlowMTD:    Math.round(currentMonthIncomes - currentMonthExpenses),
             incomeMTD:               Math.round(currentMonthIncomes),
+            expensesMTD:             Math.round(currentMonthExpenses),
             netIncomeMTD:            Math.round(currentMonthIncomes - currentMonthExpenses - next30DayObligations),
             netMarginMTD:            currentMonthIncomes > 0 ? Number(((currentMonthIncomes - currentMonthExpenses) / currentMonthIncomes * 100).toFixed(1)) : 0,
             savingsRate:             Number(savingsRateRaw.toFixed(1)),
