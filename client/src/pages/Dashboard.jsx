@@ -14,7 +14,7 @@ const Dashboard = () => {
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
-    const [modalType, setModalType] = useState('income'); // 'income', 'expense', 'assets', 'liabilities'
+    const [modalType, setModalType] = useState('income'); // 'income', 'expense', 'assets', 'liabilities', 'financing'
 
     const fetchData = async () => {
         try {
@@ -40,6 +40,7 @@ const Dashboard = () => {
         accountingKPIs = {}, 
         currentMonthIncomesList = [], 
         currentMonthExpensesList = [],
+        financingDetailed = [],
         assetsDetailed = [],
         liabilitiesDetailed = []
     } = stats || {};
@@ -50,6 +51,7 @@ const Dashboard = () => {
             case 'expense': return { title: 'تفاصيل المصروفات', icon: <ArrowDownLeft className="text-red-500" />, list: currentMonthExpensesList, color: 'red' };
             case 'assets': return { title: 'تفاصيل الأصول الشخصية', icon: <Wallet className="text-emerald-500" />, list: assetsDetailed, color: 'emerald' };
             case 'liabilities': return { title: 'تفاصيل الالتزامات المالية', icon: <TrendingDown className="text-red-500" />, list: liabilitiesDetailed, color: 'red' };
+            case 'financing': return { title: 'تغيرات التمويل والديون', icon: <Activity className="text-blue-500" />, list: financingDetailed, color: 'blue' };
             default: return { title: '', icon: null, list: [], color: 'blue' };
         }
     };
@@ -134,14 +136,14 @@ const Dashboard = () => {
                             </p>
                         </div>
 
-                        <div className="relative z-10 grid grid-cols-2 gap-3 md:gap-4 mt-8">
+                        <div className="relative z-10 grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 mt-8">
                             <button 
                                 onClick={() => { setModalType('income'); setShowModal(true); }}
                                 className="bg-slate-950/40 backdrop-blur-md border border-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] text-right hover:bg-emerald-500/10 transition-all group/card shadow-lg"
                             >
                                 <div className="flex items-center gap-2 mb-1.5 text-emerald-500">
                                     <ArrowUpRight size={16} />
-                                    <span className="text-[9px] md:text-[10px] font-black uppercase">الإيرادات</span>
+                                    <span className="text-[9px] md:text-[10px] font-black uppercase">إيرادات حقيقية</span>
                                 </div>
                                 <p className="text-xl md:text-2xl font-black text-white group-hover/card:translate-x-1 transition-transform">{(accountingKPIs.incomeMTD || 0).toLocaleString()}</p>
                             </button>
@@ -152,9 +154,25 @@ const Dashboard = () => {
                             >
                                 <div className="flex items-center gap-2 mb-1.5 text-red-500">
                                     <ArrowDownLeft size={16} />
-                                    <span className="text-[9px] md:text-[10px] font-black uppercase">المصروفات</span>
+                                    <span className="text-[9px] md:text-[10px] font-black uppercase">مصروفات تشغيلية</span>
                                 </div>
                                 <p className="text-xl md:text-2xl font-black text-white group-hover/card:translate-x-1 transition-transform">{(accountingKPIs.expensesMTD || 0).toLocaleString()}</p>
+                            </button>
+
+                            <button 
+                                onClick={() => { setModalType('financing'); setShowModal(true); }}
+                                className="col-span-2 lg:col-span-1 bg-slate-950/40 backdrop-blur-md border border-white/5 p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] text-right hover:bg-blue-500/10 transition-all group/card shadow-lg"
+                            >
+                                <div className="flex items-center gap-2 mb-1.5 text-blue-400">
+                                    <Activity size={16} />
+                                    <span className="text-[9px] md:text-[10px] font-black uppercase">تغيرات التمويل</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <p className="text-xl md:text-2xl font-black text-white group-hover/card:translate-x-1 transition-transform">{(accountingKPIs.financingMTD || 0).toLocaleString()}</p>
+                                    <span className={`text-[8px] md:text-[9px] font-bold px-2 py-0.5 rounded-full ${accountingKPIs.financingMTD >= 0 ? 'bg-blue-500/20 text-blue-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                        {accountingKPIs.financingMTD >= 0 ? 'زيادة التزام' : 'سداد ديون'}
+                                    </span>
+                                </div>
                             </button>
                         </div>
                     </section>
@@ -233,7 +251,8 @@ const Dashboard = () => {
                                 <div key={i} className={`flex items-center justify-between p-4 md:p-6 bg-slate-900/50 rounded-2xl md:rounded-3xl border border-white/5 transition-all group`}>
                                     <div className="flex items-center gap-3 md:gap-4">
                                         <div className={`p-3 md:p-4 rounded-xl md:rounded-2xl transition-transform group-hover:scale-110 ${
-                                            modalData.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                                            modalData.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-500' : 
+                                            modalData.color === 'red' ? 'bg-red-500/10 text-red-500' : 'bg-blue-500/10 text-blue-500'
                                         }`}>
                                             {item.icon === 'certificate' ? <Landmark size={20} className="md:w-6 md:h-6" /> : 
                                              item.icon === 'debt' ? <Users size={20} className="md:w-6 md:h-6" /> : 
@@ -256,7 +275,10 @@ const Dashboard = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <p className={`text-lg md:text-2xl font-black ${modalData.color === 'emerald' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                    <p className={`text-lg md:text-2xl font-black ${
+                                        modalData.color === 'emerald' ? 'text-emerald-400' : 
+                                        modalData.color === 'red' ? 'text-red-400' : 'text-blue-400'
+                                    }`}>
                                         {(item.value || item.amount || 0).toLocaleString()} 
                                         <span className="text-[10px] md:text-xs opacity-50 ml-1 md:ml-2">ج.م</span>
                                     </p>
@@ -269,9 +291,13 @@ const Dashboard = () => {
                         
                         <div className="mt-8 md:mt-10 pt-6 md:pt-8 border-t border-slate-800 flex justify-between items-center">
                              <p className="text-slate-500 text-xs md:text-sm font-bold italic">الإجمالي المجمع للفئة</p>
-                             <p className={`text-2xl md:text-4xl font-black ${modalData.color === 'emerald' ? 'text-emerald-400' : 'text-red-400'}`}>
+                             <p className={`text-2xl md:text-4xl font-black ${
+                                 modalData.color === 'emerald' ? 'text-emerald-400' : 
+                                 modalData.color === 'red' ? 'text-red-400' : 'text-blue-400'
+                             }`}>
                                 {modalType === 'income' ? (accountingKPIs.incomeMTD || 0).toLocaleString() :
                                  modalType === 'expense' ? (accountingKPIs.expensesMTD || 0).toLocaleString() :
+                                 modalType === 'financing' ? (accountingKPIs.financingMTD || 0).toLocaleString() :
                                  modalType === 'assets' ? (accountingKPIs.totalAssets || 0).toLocaleString() :
                                  (accountingKPIs.totalLiabilities || 0).toLocaleString()} <span className="text-xs md:text-lg ml-1">ج.م</span>
                              </p>

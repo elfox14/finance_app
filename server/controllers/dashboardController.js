@@ -49,7 +49,30 @@ exports.getDashboardStats = async (req, res) => {
         });
 
         const currentMonthExpenses = currentMonthTxs.filter(t => t.type === 'مصروف').reduce((s, t) => s + t.amount, 0);
-        const currentMonthIncomes = currentMonthTxs.filter(t => t.type === 'دخل').reduce((s, t) => s + t.amount, 0);
+        
+        // Separate Real Income from Financing Inflows
+        // Real income: Type is 'دخل' and not linked to a liability entity
+        const realIncomeTxs = currentMonthTxs.filter(t => 
+            t.type === 'دخل' && 
+            (!t.linkedEntity || !['Loan', 'Card', 'PeerDebt', 'Group'].includes(t.linkedEntity.entityType))
+        );
+        const currentMonthIncomes = realIncomeTxs.reduce((s, t) => s + t.amount, 0);
+
+        // Financing Inflows (Loans received, debt taken)
+        const financingInflowTxs = currentMonthTxs.filter(t => 
+            t.type === 'التزام' || 
+            (t.type === 'دخل' && t.linkedEntity && ['Loan', 'PeerDebt'].includes(t.linkedEntity.entityType))
+        );
+        const financingInflow = financingInflowTxs.reduce((s, t) => s + t.amount, 0);
+
+        // Financing Outflows (Loan repayments, paying back personal debt)
+        const financingOutflowTxs = currentMonthTxs.filter(t => 
+            t.type === 'سداد' || 
+            (t.type === 'مصروف' && t.linkedEntity && ['Loan', 'Card', 'PeerDebt', 'Group'].includes(t.linkedEntity.entityType))
+        );
+        const financingOutflow = financingOutflowTxs.reduce((s, t) => s + t.amount, 0);
+
+        const financingMTD = financingInflow - financingOutflow;
 
         // 3. Next 30 Day Obligations
         const activeLoans = loans.filter(l => l.status === 'نشط' && (l.amountRemaining || l.amount) > 0);
@@ -212,6 +235,12 @@ exports.getDashboardStats = async (req, res) => {
 
         if (totalInvestments > 0) assetDistribution.push({ name: 'شهادات استثمار', value: totalInvestments });
 
+        // Financing detailed list for the new UI section
+        const financingDetailed = [
+            ...financingInflowTxs.map(t => ({ name: `استلام: ${t.category || 'تمويل'}`, value: t.amount, type: 'تمويل (داخل)', icon: 'loan', date: t.date })),
+            ...financingOutflowTxs.map(t => ({ name: `سداد: ${t.category || 'التزام'}`, value: t.amount, type: 'تمويل (خارج)', icon: 'debt', date: t.date }))
+        ].sort((a,b) => new Date(b.date) - new Date(a.date));
+
         // Count pending transactions
         const pendingTransactions = unifiedTransactions.filter(t => ['غير مصنف', 'مصنف'].includes(t.status)).length;
 
@@ -236,6 +265,7 @@ exports.getDashboardStats = async (req, res) => {
             totalAssets:             Math.round(finalAssets),
             totalLiabilities:        Math.round(finalLiabilities),
             monthlySurplus:          Math.round(monthlySurplus),
+            financingMTD:            Math.round(financingMTD),
             savingsRate:             Number(savingsRate.toFixed(1)),
             upcomingObligationsTotal: Math.round(next30DayObligations),
             liquidAssets:            Math.round(liquidAssets),
@@ -269,8 +299,9 @@ exports.getDashboardStats = async (req, res) => {
             },
             assetsDetailed,
             liabilitiesDetailed,
-            currentMonthIncomesList: currentMonthTxs.filter(t => t.type === 'دخل').sort((a,b) => new Date(b.date) - new Date(a.date)),
-            currentMonthExpensesList: currentMonthTxs.filter(t => t.type === 'مصروف').sort((a,b) => new Date(b.date) - new Date(a.date))
+            financingDetailed,
+            currentMonthIncomesList: realIncomeTxs.sort((a,b) => new Date(b.date) - new Date(a.date)),
+            currentMonthExpensesList: currentMonthTxs.filter(t => t.type === 'مصروف' && (!t.linkedEntity || t.linkedEntity.entityType === 'None')).sort((a,b) => new Date(b.date) - new Date(a.date))
         });
 
     } catch (err) {
