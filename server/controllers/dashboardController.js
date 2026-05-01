@@ -107,6 +107,15 @@ exports.getDashboardStats = async (req, res) => {
         const totalLiabilities = totalCardBalance + totalLoanBalance + totalBorrowedDebts;
         const netWorth = totalAssets - totalLiabilities;
 
+        // --- NEW KPIs ---
+        const monthlySurplus = currentMonthIncomes - currentMonthExpenses;
+        const savingsRate = currentMonthIncomes > 0 ? (monthlySurplus / currentMonthIncomes) * 100 : 0;
+        const liquidAssets = accounts.filter(a => ['نقدي', 'بنكي', 'محفظة_إلكترونية'].includes(a.type)).reduce((sum, a) => sum + (a.balance || 0), 0);
+        
+        // Net Worth Change: Simplest approximation is the monthly surplus (savings)
+        // Ideally we'd compare to last month's final Net Worth, but for now this is the active change.
+        const netWorthChange = monthlySurplus; 
+
         // 7. Budgets Array
         const budgetsResponse = budgets.map(b => {
             const spent = currentMonthTxs.filter(t => t.type === 'مصروف' && t.category === b.category).reduce((sum, t) => sum + t.amount, 0);
@@ -218,7 +227,12 @@ exports.getDashboardStats = async (req, res) => {
             })(),
             netWorth:                Math.round(netWorth),
             totalAssets:             Math.round(totalAssets),
-            totalLiabilities:        Math.round(totalLiabilities)
+            totalLiabilities:        Math.round(totalLiabilities),
+            monthlySurplus:          Math.round(monthlySurplus),
+            savingsRate:             Number(savingsRate.toFixed(1)),
+            upcomingObligationsTotal: Math.round(next30DayObligations),
+            liquidAssets:            Math.round(liquidAssets),
+            netWorthChange:          Math.round(netWorthChange)
         };
 
         res.json({

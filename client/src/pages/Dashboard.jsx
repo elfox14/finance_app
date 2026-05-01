@@ -68,6 +68,43 @@ const Dashboard = () => {
                 </p>
             </header>
 
+            <div className="px-4 md:px-0">
+                {/* 5 Key KPI Cards */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mb-10">
+                    <KPICard 
+                        label="الفائض/العجز الشهري" 
+                        value={accountingKPIs.monthlySurplus} 
+                        icon={<Activity size={18} />} 
+                        color={accountingKPIs.monthlySurplus >= 0 ? 'text-emerald-500' : 'text-red-500'}
+                    />
+                    <KPICard 
+                        label="نسبة الادخار" 
+                        value={`${accountingKPIs.savingsRate}%`} 
+                        icon={<PieIcon size={18} />} 
+                        color={accountingKPIs.savingsRate >= 15 ? 'text-emerald-500' : 'text-orange-500'}
+                    />
+                    <KPICard 
+                        label="الالتزامات القادمة" 
+                        value={accountingKPIs.upcomingObligationsTotal} 
+                        icon={<Clock size={18} />} 
+                        color="text-orange-400"
+                    />
+                    <KPICard 
+                        label="الأصول السائلة" 
+                        value={accountingKPIs.liquidAssets} 
+                        icon={<Wallet size={18} />} 
+                        color="text-blue-400"
+                    />
+                    <KPICard 
+                        label="التغير في الثروة" 
+                        value={accountingKPIs.netWorthChange} 
+                        icon={<TrendingUp size={18} />} 
+                        color={accountingKPIs.netWorthChange >= 0 ? 'text-emerald-500' : 'text-red-500'}
+                        isDelta
+                    />
+                </div>
+            </div>
+
             <div className="px-4 md:px-0 grid grid-cols-1 xl:grid-cols-2 gap-6">
                 
                 {/* Hero 1: Net Cash Flow (Monthly Performance) */}
@@ -226,5 +263,27 @@ const Dashboard = () => {
         </div>
     );
 };
+
+const KPICard = ({ label, value, icon, color, isDelta }) => (
+    <div className="bg-slate-900 border border-slate-800 p-5 rounded-3xl shadow-lg flex flex-col justify-between hover:border-slate-700 transition-all group">
+        <div className="flex justify-between items-start mb-3">
+            <div className={`p-2 rounded-xl bg-slate-800 ${color.replace('text-', 'bg-')}/10 ${color}`}>
+                {icon}
+            </div>
+            {isDelta && (
+                <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${parseFloat(value) >= 0 ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'}`}>
+                    {parseFloat(value) >= 0 ? '+ ' : ''} هذا الشهر
+                </span>
+            )}
+        </div>
+        <div>
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-tight mb-1">{label}</p>
+            <p className={`text-xl font-black truncate ${color}`}>
+                {typeof value === 'number' ? value.toLocaleString() : value}
+                {typeof value === 'number' && <span className="text-[10px] ml-1 opacity-50">ج.م</span>}
+            </p>
+        </div>
+    </div>
+);
 
 export default Dashboard;
