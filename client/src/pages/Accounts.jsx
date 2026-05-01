@@ -243,7 +243,7 @@ const Accounts = () => {
                             <Landmark className="text-blue-500" />
                             {editMode ? 'تعديل بيانات الحساب' : 'تعريف حساب بنكي جديد'}
                         </h2>
-                        <p className="text-slate-500 text-sm mb-8">تسجيل الرصيد الافتتاحي وبدء توجيه العمليات المالية من الدفتر الموحد.</p>
+                        <p className="text-slate-500 text-sm mb-8">تسجيل الرصيد الافتتاحي وبدء تتبع العمليات المالية تلقائياً.</p>
                         
                         <form onSubmit={handleCreate} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

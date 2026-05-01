@@ -53,7 +53,7 @@ exports.getNotifications = async (req, res) => {
                 severity: 'medium',
                 entity_type: 'transaction',
                 message: `لديك ${uncategorizedCount} حركة مالية غير مرحلة للدفتر أو غير مصنفة.`,
-                suggested_action: 'قم بمراجعة الدفتر الموحد واعتماد العمليات.',
+                suggested_action: 'قم بمراجعة العمليات واعتمادها.',
                 icon: 'AlertCircle',
                 color: 'text-amber-500',
                 bgColor: 'bg-amber-500/10'
@@ -107,7 +107,7 @@ exports.getNotifications = async (req, res) => {
                     type: 'alert',
                     severity: 'medium',
                     entity_type: 'loan',
-                    message: `قسط قرض "${l.loanName}" بقيمة ${l.monthlyPayment.toLocaleString()} ج.م يستحق خلال أيام.`,
+                    message: `قسط قرض "${l.loanName}" بقيمة ${(l.monthlyInstallment || 0).toLocaleString()} ج.م يستحق خلال أيام.`,
                     suggested_action: 'تأكد من وجود سيولة كافية في حسابك البنكي.',
                     icon: 'Landmark',
                     color: 'text-amber-500',
