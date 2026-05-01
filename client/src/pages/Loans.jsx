@@ -45,11 +45,12 @@ const Loans = () => {
             setLoans(resLoans.data.loans || []);
             setStats(resLoans.data.stats || null);
             setUpcomingInstallments(resLoans.data.upcomingInstallments || []);
-            setAccounts(resAccs.data || []);
+            const fetchedAccounts = resAccs.data.accounts || [];
+            setAccounts(fetchedAccounts);
             
-            if (resAccs.data?.length > 0) {
-                setNewLoanForm(f => ({ ...f, receivingAccountId: resAccs.data[0]._id }));
-                setPaymentForm(f => ({ ...f, sourceAccountId: resAccs.data[0]._id }));
+            if (fetchedAccounts.length > 0) {
+                setNewLoanForm(f => ({ ...f, receivingAccountId: fetchedAccounts[0]._id }));
+                setPaymentForm(f => ({ ...f, sourceAccountId: fetchedAccounts[0]._id }));
             }
         } catch (err) { 
             console.error(err); 
@@ -227,10 +228,9 @@ const Loans = () => {
 
             {/* Details Modal */}
             {showDetailsModal && (
-                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto flex">
-                    <div className="relative m-auto w-full max-w-5xl p-4 py-8 md:p-8">
-                        <div className="bg-slate-950 border border-blue-500/30 w-full rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 shadow-2xl text-right">
-                            <button onClick={() => setShowDetailsModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors"><X size={32} /></button>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-slate-950 border border-blue-500/30 w-full max-w-5xl rounded-[3rem] p-8 md:p-12 relative shadow-2xl overflow-y-auto max-h-[90vh] no-scrollbar text-right">
+                        <button onClick={() => setShowDetailsModal(false)} className="absolute top-8 left-8 text-slate-500 hover:text-white transition-colors"><X size={32} /></button>
                         
                         <div className="mb-10">
                             <h2 className="text-3xl md:text-4xl font-black text-white mb-4 italic flex items-center gap-3">
@@ -329,17 +329,15 @@ const Loans = () => {
                                 </div>
                             )}
                         </div>
-                        </div>
                     </div>
                 </div>
             )}
 
             {/* Payment Modal */}
             {showPaymentModal && (
-                <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto flex">
-                    <div className="relative m-auto w-full max-w-md p-4 py-8 md:p-8">
-                        <div className="bg-slate-950 border border-slate-800 w-full rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-2xl text-right">
-                            <button onClick={() => setShowPaymentModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors"><X size={28} /></button>
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-slate-950 border border-slate-800 w-full max-w-md rounded-[3rem] p-10 relative shadow-2xl text-right">
+                        <button onClick={() => setShowPaymentModal(false)} className="absolute top-8 left-8 text-slate-500 hover:text-white transition-colors"><X size={28} /></button>
                         <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3"><DollarSign className="text-emerald-500" /> تنفيذ السداد</h2>
                         <form onSubmit={handleRecordPayment} className="space-y-6">
                             <div className="bg-slate-900 p-6 rounded-3xl border border-slate-800 space-y-4">
@@ -368,17 +366,15 @@ const Loans = () => {
                             
                             <button type="submit" className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-[2rem] font-black text-lg shadow-xl shadow-emerald-900/30 transition-all mt-4">اعتماد السداد وتوجيه القيود</button>
                         </form>
-                        </div>
                     </div>
                 </div>
             )}
 
             {/* Add Loan Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto flex">
-                    <div className="relative m-auto w-full max-w-3xl p-4 py-8 md:p-8">
-                        <div className="bg-slate-950 border border-blue-500/30 w-full rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-2xl text-right">
-                            <button onClick={() => setShowAddModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors"><X size={32} /></button>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-slate-950 border border-blue-500/30 w-full max-w-3xl rounded-[3rem] p-10 relative shadow-2xl text-right overflow-y-auto max-h-[90vh] no-scrollbar">
+                        <button onClick={() => setShowAddModal(false)} className="absolute top-8 left-8 text-slate-500 hover:text-white transition-colors"><X size={32} /></button>
                         <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3 italic">
                             <Landmark className="text-blue-500" /> إضافة قرض وإنشاء جدول السداد
                         </h2>
@@ -431,7 +427,6 @@ const Loans = () => {
                                 <button type="submit" className="flex-1 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/30 transition-all">تأكيد وجدولة الأقساط آلياً</button>
                             </div>
                         </form>
-                        </div>
                     </div>
                 </div>
             )}
