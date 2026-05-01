@@ -50,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         localStorage.removeItem('token');
         setUser(null);
-        window.location.replace('/login'); // استخدام إعادة تحميل كاملة لتنظيف الذاكرة
+        window.location.replace('/fin/login'); // استخدام إعادة تحميل كاملة لتنظيف الذاكرة
     };
 
     // تحديث بيانات المستخدم في الـ state بعد أي تعديل

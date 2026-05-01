@@ -126,7 +126,7 @@ function AppRoutes() {
 function App() {
     return (
         <AuthProvider>
-            <Router basename="/">
+            <Router basename="/fin">
                 <AppRoutes />
             </Router>
         </AuthProvider>
