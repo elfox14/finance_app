@@ -5,7 +5,8 @@ import {
     ArrowUpRight, ArrowDownLeft,
     DollarSign, Activity, Calendar, X,
     Receipt, Clock, Tag,
-    ShieldCheck, PieChart as PieIcon, Landmark
+    ShieldCheck, PieChart as PieIcon, Landmark,
+    Wallet, Users
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -37,7 +38,8 @@ const Dashboard = () => {
     const { 
         accountingKPIs = {}, 
         currentMonthIncomesList = [], 
-        currentMonthExpensesList = [] 
+        currentMonthExpensesList = [],
+        assetsDetailed = []
     } = stats || {};
     
     const activeList = modalType === 'income' ? currentMonthIncomesList : currentMonthExpensesList;
@@ -113,9 +115,43 @@ const Dashboard = () => {
                     </div>
                 </section>
 
-                {/* Section 2: Net Worth (Overall Wealth) */}
-                <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-8 md:p-10 rounded-[3rem] shadow-2xl flex flex-col md:flex-row items-center gap-10 relative overflow-hidden group">
+                {/* Section 2: Assets Breakdown & Net Worth */}
+                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                    
+                    {/* Detailed Assets List */}
+                    <section className="xl:col-span-1 bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col">
+                        <h3 className="text-xl font-black text-white flex items-center gap-2 mb-6">
+                            <Wallet className="text-emerald-500" /> تفاصيل الأصول
+                        </h3>
+                        <div className="space-y-4 flex-1 overflow-y-auto max-h-[400px] no-scrollbar">
+                            {assetsDetailed.map((asset, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-2xl border border-white/5 hover:border-emerald-500/20 transition-all">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
+                                            {asset.icon === 'certificate' ? <Landmark size={16} /> : asset.icon === 'debt' ? <Users size={16} /> : <DollarSign size={16} />}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-white">{asset.name}</p>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase">{asset.type.replace('_', ' ')}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-sm font-black text-white">{asset.value.toLocaleString()} <span className="text-[10px] opacity-50">ج.م</span></p>
+                                </div>
+                            ))}
+                            {assetsDetailed.length === 0 && (
+                                <div className="py-10 text-center text-slate-500 italic text-xs">لا توجد أصول مسجلة حالياً</div>
+                            )}
+                        </div>
+                        <div className="mt-6 pt-6 border-t border-slate-800">
+                            <div className="flex justify-between items-center text-emerald-400 font-black">
+                                <span>إجمالي الأصول الشخصية</span>
+                                <span>{(accountingKPIs.totalAssets || 0).toLocaleString()} ج.م</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    {/* Net Worth Card */}
+                    <div className="xl:col-span-2 bg-slate-900 border border-slate-800 p-8 md:p-10 rounded-[3rem] shadow-2xl flex flex-col md:flex-row items-center gap-10 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform">
                             <ShieldCheck size={200} className="text-blue-500" />
                         </div>
@@ -127,32 +163,18 @@ const Dashboard = () => {
                                 <span className="text-xl ml-2 opacity-50">ج.م</span>
                             </h2>
                             <p className="text-blue-400 font-bold mt-4 text-sm flex items-center justify-center md:justify-start gap-2">
-                                <ShieldCheck size={16} /> أمانك المالي: مجموع ما تملك مطروحاً منه ما عليك
+                                <ShieldCheck size={16} /> أمانك المالي: ما تملك مطروحاً منه ما عليك
                             </p>
                         </div>
 
-                        <div className="relative z-10 flex gap-4 w-full md:w-auto">
-                            <div className="flex-1 bg-slate-800/50 p-6 rounded-[2rem] border border-white/5 text-center">
-                                <p className="text-[10px] text-slate-500 font-bold mb-1 uppercase">إجمالي الأصول</p>
-                                <p className="text-xl font-black text-emerald-400">{(accountingKPIs.totalAssets || 0).toLocaleString()}</p>
-                            </div>
-                            <div className="flex-1 bg-slate-800/50 p-6 rounded-[2rem] border border-white/5 text-center">
+                        <div className="relative z-10 flex flex-col gap-4 w-full md:w-auto">
+                            <div className="bg-slate-800/50 p-6 rounded-[2rem] border border-white/5 text-center min-w-[180px]">
                                 <p className="text-[10px] text-slate-500 font-bold mb-1 uppercase">إجمالي الالتزامات</p>
                                 <p className="text-xl font-black text-red-400">{(accountingKPIs.totalLiabilities || 0).toLocaleString()}</p>
                             </div>
                         </div>
                     </div>
-
-                    <div className="bg-blue-600/10 border border-blue-500/20 p-8 rounded-[3rem] shadow-xl flex flex-col justify-center items-center text-center group">
-                        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-4 shadow-lg group-hover:rotate-12 transition-transform">
-                            <PieIcon size={32} />
-                        </div>
-                        <h3 className="text-lg font-black text-white mb-2">توزيع المحفظة</h3>
-                        <p className="text-xs text-slate-400 leading-relaxed px-4">
-                            سيتم قريباً إضافة رسم بياني يوضح نسبة السيولة إلى الديون والاستثمارات.
-                        </p>
-                    </div>
-                </section>
+                </div>
 
                 <section className="py-10 text-center">
                     <div className="inline-flex items-center gap-2 text-slate-600 bg-slate-900/30 px-6 py-3 rounded-full border border-slate-800/50">

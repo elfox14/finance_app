@@ -179,6 +179,14 @@ exports.getDashboardStats = async (req, res) => {
         });
         
         const totalInvestments = certificates.reduce((sum, c) => sum + (c.principalAmount || 0), 0);
+        
+        // Detailed asset breakdown for the new UI section
+        const assetsDetailed = [
+            ...accounts.map(a => ({ name: a.name, value: a.balance || 0, type: a.type, icon: 'account' })),
+            ...certificates.map(c => ({ name: c.name || 'شهادة استثمار', value: c.principalAmount, type: 'استثمار/شهادة', icon: 'certificate' })),
+            ...activeLentDebts.map(d => ({ name: `حق طرف ${d.personName}`, value: d.amount, type: 'ديون مستحقة', icon: 'debt' }))
+        ].filter(a => a.value > 0).sort((a,b) => b.value - a.value);
+
         if (totalInvestments > 0) assetDistribution.push({ name: 'شهادات استثمار', value: totalInvestments });
 
         // Count pending transactions
@@ -232,6 +240,7 @@ exports.getDashboardStats = async (req, res) => {
                 categories: categoryData,
                 assets: assetDistribution.filter(a => a.value > 0)
             },
+            assetsDetailed,
             currentMonthIncomesList: currentMonthTxs.filter(t => t.type === 'دخل').sort((a,b) => new Date(b.date) - new Date(a.date)),
             currentMonthExpensesList: currentMonthTxs.filter(t => t.type === 'مصروف').sort((a,b) => new Date(b.date) - new Date(a.date))
         });
