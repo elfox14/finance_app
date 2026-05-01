@@ -6,17 +6,12 @@ export default defineConfig({
   plugins: [
     react(),
   ],
-  base: '/fin/', // هذا السطر هو الذي سيحل مشكلة الشاشة البيضاء
+  base: '/', // تغيير المسار ليصبح من الجذر لضمان عمل الروابط بشكل مباشر
   server: {
     proxy: {
       '/api': {
         target: 'http://localhost:10000',
         changeOrigin: true,
-      },
-      '/fin/api': {
-        target: 'http://localhost:10000',
-        changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/fin\/api/, '/api')
       }
     }
   }

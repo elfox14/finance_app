@@ -25,7 +25,7 @@ const connectDB = async () => {
         console.log(`✅ MongoDB Connected`);
     } catch (error) {
         console.error(`❌ DB Connection Failed: ${error.message}`);
-        process.exit(1);
+        // لا نغلق السيرفر للسماح له بخدمة ملفات الـ Frontend حتى لو القاعدة معطلة مؤقتاً
     }
 };
 
@@ -56,17 +56,14 @@ apiRouter.use('/accounts', require('./routes/accountRoutes'));
 apiRouter.use('/transactions', require('./routes/transactionRoutes'));
 
 app.use('/api', apiRouter);
-app.use('/fin/api', apiRouter);
 
 // 🚀 Static Files
 const clientDistPath = path.join(__dirname, '../client/dist');
-app.use('/fin', express.static(clientDistPath));
 app.use(express.static(clientDistPath));
 
-// 🔄 SPA Fallback: التوجيه لـ index.html عند الريفريش
+// 🔄 SPA Fallback
 app.get('*', (req, res) => {
-    // تجاهل طلبات الـ API التي وصلت هنا بالخطأ
-    if (req.url.startsWith('/api') || req.url.startsWith('/fin/api')) {
+    if (req.url.startsWith('/api')) {
         return res.status(404).json({ message: 'API Route Not Found' });
     }
     res.sendFile(path.resolve(clientDistPath, 'index.html'));
