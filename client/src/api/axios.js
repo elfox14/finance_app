@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // الحصول على المسار الأساسي من إعدادات البيئة أو استخدام المسار الافتراضي
-const baseURL = import.meta.env.VITE_API_URL || `${import.meta.env.BASE_URL || '/fin/'}api`;
+const baseURL = import.meta.env.VITE_API_URL || `/api`;
 
 const api = axios.create({
     baseURL: baseURL,
