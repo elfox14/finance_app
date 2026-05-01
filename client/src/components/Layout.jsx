@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
@@ -15,9 +15,11 @@ const Layout = ({ children }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
 
-    const userName = user?.name || 'مستخدم جيبي';
+    const closeSidebar = useCallback(() => {
+        // تأخير بسيط جداً ليعطي إيحاء بصري بالضغط قبل الإغلاق
+        setTimeout(() => setIsSidebarOpen(false), 150);
+    }, []);
 
-    // هيكلة القائمة بناءً على المحاور الستة للتصور الجديد
     const navigationGroups = [
         {
             title: "العمليات النقدية",
@@ -104,7 +106,7 @@ const Layout = ({ children }) => {
 
                     {navigationGroups.map((group, idx) => (
                         <div key={idx} className="space-y-2">
-                            <h3 className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest">{group.title}</h3>
+                            <h3 className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest cursor-default">{group.title}</h3>
                             <div className="space-y-1">
                                 {group.items.map((item) => (
                                     <Link
@@ -146,18 +148,24 @@ const Layout = ({ children }) => {
                     </div>
                     <span className="font-black text-white text-lg italic">جيبي</span>
                 </div>
-                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white transition-transform active:scale-90">
+                <button 
+                    onClick={() => setIsSidebarOpen(true)} 
+                    className="p-2 text-slate-400 hover:text-white transition-transform active:scale-90 touch-none"
+                >
                     <Menu size={24} />
                 </button>
             </header>
 
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
-                <div className="fixed inset-0 bg-black/95 z-[100] lg:hidden animate-in fade-in duration-300">
-                    <div className="h-full w-full flex flex-col p-8 overflow-y-auto">
+                <div 
+                    className="fixed inset-0 bg-black/95 z-[100] lg:hidden animate-in fade-in duration-300"
+                    onClick={(e) => { if(e.target === e.currentTarget) setIsSidebarOpen(false); }}
+                >
+                    <div className="h-full w-full flex flex-col p-8 overflow-y-auto" onClick={e => e.stopPropagation()}>
                         <div className="flex justify-between items-center mb-10 border-b border-slate-900 pb-6">
                             <h2 className="font-black text-white text-2xl italic">القائمة الشاملة</h2>
-                            <button onClick={() => setIsSidebarOpen(false)} className="p-3 bg-slate-900 rounded-2xl text-slate-500">
+                            <button onClick={() => setIsSidebarOpen(false)} className="p-3 bg-slate-900 rounded-2xl text-slate-500 active:scale-90">
                                 <X size={28} />
                             </button>
                         </div>
@@ -170,8 +178,8 @@ const Layout = ({ children }) => {
                                             <Link
                                                 key={item.path}
                                                 to={item.path}
-                                                onClick={() => setIsSidebarOpen(false)}
-                                                className={`flex flex-col items-center gap-3 p-6 rounded-3xl transition-all border ${
+                                                onClick={closeSidebar}
+                                                className={`flex flex-col items-center gap-3 p-6 rounded-3xl transition-all border active:scale-95 ${
                                                     isActive(item.path) ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-900/40' : 'bg-slate-900 border-slate-800 text-slate-400'
                                                 }`}
                                             >
@@ -183,7 +191,7 @@ const Layout = ({ children }) => {
                                 </div>
                             ))}
                         </nav>
-                        <button onClick={logout} className="mt-12 w-full py-5 bg-red-500/10 text-red-500 rounded-3xl font-black text-lg">خروج</button>
+                        <button onClick={logout} className="mt-12 w-full py-5 bg-red-500/10 text-red-500 rounded-3xl font-black text-lg active:scale-95">خروج</button>
                     </div>
                 </div>
             )}
@@ -201,7 +209,7 @@ const Layout = ({ children }) => {
                     <Link
                         key={item.path}
                         to={item.path}
-                        className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${
+                        className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-110 ${
                             isActive(item.path) ? 'text-blue-500 scale-110 font-black' : 'text-slate-600'
                         }`}
                     >
