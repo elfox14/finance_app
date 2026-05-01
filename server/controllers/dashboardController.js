@@ -11,7 +11,7 @@ const Certificate = require('../models/Certificate');
 
 exports.getDashboardStats = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user._id;
         const now = new Date();
         const currentMonth = now.getMonth() + 1;
         const currentYear = now.getFullYear();
@@ -23,7 +23,7 @@ exports.getDashboardStats = async (req, res) => {
             groups, budgets, certificates
         ] = await Promise.all([
             Transaction.find({ userId, deletedAt: null }),
-            Expense.find({ userId, deletedAt: null }),
+            Expense.find({ userId }),                          // Expense schema has no deletedAt
             Income.find({ userId, deletedAt: null }),
             Account.find({ userId, deletedAt: null }),
             Loan.find({ userId, deletedAt: null }),
@@ -175,6 +175,25 @@ exports.getDashboardStats = async (req, res) => {
         // Count pending transactions
         const pendingTransactions = unifiedTransactions.filter(t => ['غير مصنف', 'مصنف'].includes(t.status)).length;
 
+        // 11. accountingKPIs — the Dashboard UI reads from this key
+        const accountingKPIs = {
+            cashOnHand:              Math.round(currentBalance),
+            workingCapital:          Math.round(availableBalance),
+            operatingCashFlowMTD:    Math.round(currentMonthIncomes - currentMonthExpenses),
+            incomeMTD:               Math.round(currentMonthIncomes),
+            netIncomeMTD:            Math.round(currentMonthIncomes - currentMonthExpenses - next30DayObligations),
+            netMarginMTD:            currentMonthIncomes > 0 ? Number(((currentMonthIncomes - currentMonthExpenses) / currentMonthIncomes * 100).toFixed(1)) : 0,
+            savingsRate:             Number(savingsRateRaw.toFixed(1)),
+            incomeGrowthMoM:         (() => {
+                // Compare current month income to previous month income
+                const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+                const prevMonthIncome = postedTransactions
+                    .filter(t => t.type === 'دخل' && new Date(t.date).getMonth() === prevMonthDate.getMonth() && new Date(t.date).getFullYear() === prevMonthDate.getFullYear())
+                    .reduce((s, t) => s + t.amount, 0);
+                return prevMonthIncome > 0 ? Number((((currentMonthIncomes - prevMonthIncome) / prevMonthIncome) * 100).toFixed(1)) : 0;
+            })()
+        };
+
         res.json({
             topStats: {
                 currentBalance: Math.max(0, currentBalance),
@@ -186,6 +205,7 @@ exports.getDashboardStats = async (req, res) => {
                 pendingTransactions
             },
             budgets: budgetsResponse,
+            accountingKPIs,
             indicators: {
                 savingsRate: Number(savingsRateRaw.toFixed(1)),
                 debtToIncomeRatio: Number(dtiRaw.toFixed(1)),

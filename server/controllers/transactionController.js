@@ -3,7 +3,7 @@ const Account = require('../models/Account');
 
 exports.createTransaction = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user._id;
         const { date, type, amount, currency, accountId, destinationAccountId, counterparty, category, subCategory, status, reference, notes, tags, linkedEntity } = req.body;
 
         // Basic validation
@@ -61,7 +61,7 @@ exports.createTransaction = async (req, res) => {
 
 exports.getTransactions = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user._id;
         const { type, accountId, status, category, startDate, endDate, limit } = req.query;
 
         const query = { userId };
@@ -96,7 +96,7 @@ exports.getTransactions = async (req, res) => {
 
 exports.updateTransactionStatus = async (req, res) => {
     try {
-        const userId = req.user.id;
+        const userId = req.user._id;
         const { id } = req.params;
         const { status } = req.body;
 
