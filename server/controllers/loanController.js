@@ -81,6 +81,11 @@ exports.createLoan = async (req, res) => {
         const userId = req.user._id;
         const data = { ...req.body, userId };
         
+        // Prevent Mongoose CastError if receivingAccountId is an empty string
+        if (!data.receivingAccountId) {
+            delete data.receivingAccountId;
+        }
+        
         const principal = Number(data.principalAmount);
         const rate = Number(data.interestRate || 0);
         const months = Number(data.durationMonths);

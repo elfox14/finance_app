@@ -52,10 +52,10 @@ const Cards = () => {
             setCards(resCards.data.cards || []);
             setStats(resCards.data.stats || null);
             setRecentTransactions(resCards.data.recentTransactions || []);
-            setAccounts(resAccs.data || []);
-            if (resAccs.data?.length > 0) {
-                setNewCardForm(f => ({ ...f, linkedAccountId: resAccs.data[0]._id }));
-                setPayForm(f => ({ ...f, sourceAccount: resAccs.data[0]._id }));
+            const fetchedAccounts = resAccs.data.accounts || [];
+            setAccounts(fetchedAccounts);
+            if (fetchedAccounts.length > 0) {
+                setPayForm(f => ({ ...f, sourceAccount: fetchedAccounts[0]._id }));
             }
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
@@ -76,7 +76,7 @@ const Cards = () => {
         try {
             await api.post('/cards', newCardForm);
             setShowAddModal(false);
-            setNewCardForm({ cardName: '', bankName: '', cardType: 'credit', linkedAccountId: accounts[0]?._id, creditLimit: '', statementDay: '1', dueDay: '1' });
+            setNewCardForm({ cardName: '', bankName: '', cardType: 'credit', linkedAccountId: '', creditLimit: '', statementDay: '1', dueDay: '1' });
             fetchData();
         } catch (err) { alert('خطأ في إضافة البطاقة'); }
     };
@@ -439,6 +439,7 @@ const Cards = () => {
                                 <div className="space-y-2">
                                     <label className="text-[10px] text-slate-400 font-bold uppercase">الحساب البنكي المرتبط</label>
                                     <select className="w-full bg-slate-900 border border-slate-800 text-white p-4 rounded-xl font-bold focus:border-blue-500 outline-none" value={newCardForm.linkedAccountId} onChange={e => setNewCardForm({...newCardForm, linkedAccountId: e.target.value})}>
+                                        <option value="">بدون حساب</option>
                                         {accounts.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
                                     </select>
                                 </div>

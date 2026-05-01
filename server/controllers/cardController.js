@@ -171,6 +171,11 @@ exports.reconcileTransaction = async (req, res) => {
 exports.createCard = async (req, res) => {
     try {
         const data = { ...req.body, userId: req.user._id };
+        
+        // Prevent Mongoose CastError if linkedAccountId is an empty string
+        if (!data.linkedAccountId) {
+            delete data.linkedAccountId;
+        }
         if (data.cardType === 'debit' || data.cardType === 'خصم مباشر') {
             data.creditLimit = 0; // Debit cards don't have credit limits
         }
