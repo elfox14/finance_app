@@ -130,6 +130,9 @@ exports.addCardTransaction = async (req, res) => {
                 userId, date: transactionDate || new Date(), type: 'مصروف', amount: Number(amount),
                 category, counterparty: merchantName, status: 'مُسوّى',
                 notes: `مشتريات بطاقة ائتمان: ${card.cardName}`,
+                classification: 'operating_expense',
+                affectsCashflow: true,
+                affectsNetworth: true,
                 linkedEntity: { entityType: 'Card', entityId: card._id }
             });
 
@@ -140,6 +143,9 @@ exports.addCardTransaction = async (req, res) => {
                     userId, date: transactionDate || new Date(), type: 'مصروف', amount: Number(amount),
                     accountId: card.linkedAccountId, category, counterparty: merchantName, status: 'مُسوّى',
                     notes: `مشتريات بطاقة خصم: ${card.cardName}`,
+                    classification: 'operating_expense',
+                    affectsCashflow: true,
+                    affectsNetworth: true,
                     linkedEntity: { entityType: 'Card', entityId: card._id }
                 });
             }
@@ -244,6 +250,9 @@ exports.addCardPayment = async (req, res) => {
                 userId, date: paymentDate || new Date(), type: 'سداد', amount: Number(amount),
                 accountId: sourceAccount, category: 'سداد بطاقة ائتمان', counterparty: card.bankName, status: 'مُسوّى',
                 notes: `سداد مستحقات بطاقة: ${card.cardName} ${notes ? '- '+notes : ''}`,
+                classification: 'debt_principal_payment',
+                affectsCashflow: false,
+                affectsNetworth: false,
                 linkedEntity: { entityType: 'Card', entityId: card._id }
             });
         }

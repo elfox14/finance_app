@@ -11,6 +11,21 @@ exports.createTransaction = async (req, res) => {
         if (!accountId) return res.status(400).json({ message: 'الحساب مطلوب' });
         if (type === 'تحويل' && !destinationAccountId) return res.status(400).json({ message: 'حساب الوجهة مطلوب في عملية التحويل' });
 
+        // Auto-derive classification from type if not explicitly provided
+        const classificationMap = {
+            'دخل': 'operating_income',
+            'مصروف': 'operating_expense',
+            'تحويل': 'asset_transfer',
+            'سداد': 'debt_principal_payment',
+            'التزام': 'financing_in',
+            'أصل': 'asset_acquisition'
+        };
+        const derivedClassification = req.body.classification || classificationMap[type] || 'operating_expense';
+
+        // Set affectsCashflow/affectsNetworth based on classification
+        const nonCashflowTypes = ['financing_in', 'debt_principal_payment', 'asset_transfer', 'asset_acquisition', 'asset_liquidation'];
+        const nonNetworthTypes = ['financing_in', 'debt_principal_payment', 'asset_transfer'];
+
         const newTx = new Transaction({
             userId,
             date: date || new Date(),
@@ -22,17 +37,20 @@ exports.createTransaction = async (req, res) => {
             counterparty,
             category: category || 'عام',
             subCategory,
-            status: status || 'مُرحَّل',
+            status: status || 'مُرحَّل',
             reference,
             notes,
             tags,
-            linkedEntity
+            linkedEntity,
+            classification: derivedClassification,
+            affectsCashflow: req.body.affectsCashflow !== undefined ? req.body.affectsCashflow : !nonCashflowTypes.includes(derivedClassification),
+            affectsNetworth: req.body.affectsNetworth !== undefined ? req.body.affectsNetworth : !nonNetworthTypes.includes(derivedClassification)
         });
 
         await newTx.save();
 
         // Update Account Balances if Posted/Reconciled
-        if (['مُرحَّل', 'مُسوّى'].includes(newTx.status)) {
+        if (['مُرحَّل', 'مُسوّى'].includes(newTx.status)) {
             const account = await Account.findById(accountId);
             if (account) {
                 if (['مصروف', 'سداد', 'تحويل'].includes(type)) {
@@ -108,8 +126,8 @@ exports.updateTransactionStatus = async (req, res) => {
         await tx.save();
 
         // Handle balance logic if moving to/from Posted/Reconciled
-        const wasActive = ['مُرحَّل', 'مُسوّى'].includes(oldStatus);
-        const isActive = ['مُرحَّل', 'مُسوّى'].includes(status);
+        const wasActive = ['مُرحَّل', 'مُسوّى'].includes(oldStatus);
+        const isActive = ['مُرحَّل', 'مُسوّى'].includes(status);
 
         if (!wasActive && isActive) {
             // Apply balances

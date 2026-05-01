@@ -9,210 +9,311 @@ const Group = require('../models/Group');
 const Budget = require('../models/Budget');
 const Certificate = require('../models/Certificate');
 
+// ──────────────────────────────────────────────────────────
+//  Helper: classify a legacy transaction that has no classification field
+// ──────────────────────────────────────────────────────────
+function deriveClassification(tx) {
+    if (tx.classification) return tx.classification;
+
+    const entity = tx.linkedEntity?.entityType;
+    const isLinked = entity && entity !== 'None';
+
+    if (tx.type === 'التزام') return 'financing_in';
+    if (tx.type === 'سداد')  return 'debt_principal_payment';
+    if (tx.type === 'تحويل') return 'asset_transfer';
+    if (tx.type === 'أصل')   return 'asset_acquisition';
+
+    if (tx.type === 'دخل') {
+        if (isLinked && ['Loan', 'PeerDebt'].includes(entity)) return 'financing_in';
+        return 'operating_income';
+    }
+    if (tx.type === 'مصروف') {
+        if (tx.category === 'فوائد قروض' || tx.category === 'عمولات') return 'finance_cost';
+        if (isLinked && ['Loan'].includes(entity) && tx.category?.includes('فوائد')) return 'finance_cost';
+        return 'operating_expense';
+    }
+    return 'operating_expense';
+}
+
 exports.getDashboardStats = async (req, res) => {
     try {
         const userId = req.user._id;
         const now = new Date();
         const currentMonth = now.getMonth() + 1;
         const currentYear = now.getFullYear();
+        const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
 
-        // 1. Fetch data with correct userId
+        // ════════════════════════════════════════
+        // 1. FETCH ALL DATA
+        // ════════════════════════════════════════
         const [
             transactions, legacyExpenses, legacyIncomes,
             accounts, loans, cards, debts, 
             groups, budgets, certificates
         ] = await Promise.all([
             Transaction.find({ userId, deletedAt: null }),
-            Expense.find({ userId }),                          // Expense schema has no deletedAt
+            Expense.find({ userId }),
             Income.find({ userId, deletedAt: null }),
             Account.find({ userId, deletedAt: null }),
             Loan.find({ userId, deletedAt: null }),
             Card.find({ userId, deletedAt: null }),
-            PeerDebt.find({ userId, deletedAt: null }), 
-            Group.find({ userId, deletedAt: null }), 
+            PeerDebt.find({ userId, deletedAt: null }),
+            Group.find({ userId, deletedAt: null }),
             Budget.find({ userId, month: currentMonth, year: currentYear }),
-            Certificate.find({ userId, status: 'active' }) // Active certificates
+            Certificate.find({ userId, status: 'active' })
         ]);
 
-        // Merge legacy Expenses and Incomes into the unified Transaction flow
+        // Merge legacy into unified
         const unifiedTransactions = [
             ...transactions,
-            ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى' })),
-            ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى' }))
+            ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى', classification: 'operating_expense', affectsCashflow: true, affectsNetworth: true })),
+            ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى', classification: 'operating_income', affectsCashflow: true, affectsNetworth: true }))
         ];
 
-        // 2. Filter valid and posted transactions
-        const postedTransactions = unifiedTransactions.filter(t => ['مُرحَّل', 'مُسوّى'].includes(t.status));
-        const currentMonthTxs = postedTransactions.filter(t => {
+        // Posted transactions only
+        const postedTxs = unifiedTransactions.filter(t => ['مُرحَّل', 'مُسوّى'].includes(t.status));
+        const monthTxs = postedTxs.filter(t => {
             const d = new Date(t.date);
             return (d.getMonth() + 1) === currentMonth && d.getFullYear() === currentYear;
         });
 
-        const currentMonthExpenses = currentMonthTxs.filter(t => t.type === 'مصروف').reduce((s, t) => s + t.amount, 0);
-        
-        // Separate Real Income from Financing Inflows
-        // Real income: Type is 'دخل' and not linked to a liability entity
-        const realIncomeTxs = currentMonthTxs.filter(t => 
-            t.type === 'دخل' && 
-            (!t.linkedEntity || !['Loan', 'Card', 'PeerDebt', 'Group'].includes(t.linkedEntity.entityType))
-        );
-        const currentMonthIncomes = realIncomeTxs.reduce((s, t) => s + t.amount, 0);
+        // ════════════════════════════════════════
+        // 2. CLASSIFICATION-BASED AGGREGATION
+        // ════════════════════════════════════════
+        let operatingIncome = 0;
+        let operatingExpense = 0;
+        let financeCost = 0;
+        let financingIn = 0;
+        let debtPrincipalPayment = 0;
 
-        // Financing Inflows (Loans received, debt taken)
-        const financingInflowTxs = currentMonthTxs.filter(t => 
-            t.type === 'التزام' || 
-            (t.type === 'دخل' && t.linkedEntity && ['Loan', 'PeerDebt'].includes(t.linkedEntity.entityType))
-        );
-        const financingInflow = financingInflowTxs.reduce((s, t) => s + t.amount, 0);
+        // Lists for modals
+        const operatingIncomeList = [];
+        const operatingExpenseList = [];
+        const financeCostList = [];
+        const financingInList = [];
+        const debtPaymentList = [];
 
-        // Financing Outflows (Loan repayments, paying back personal debt)
-        const financingOutflowTxs = currentMonthTxs.filter(t => 
-            t.type === 'سداد' || 
-            (t.type === 'مصروف' && t.linkedEntity && ['Loan', 'Card', 'PeerDebt', 'Group'].includes(t.linkedEntity.entityType))
-        );
-        const financingOutflow = financingOutflowTxs.reduce((s, t) => s + t.amount, 0);
-
-        const financingMTD = financingInflow - financingOutflow;
-
-        // 3. Next 30 Day Obligations
-        const activeLoans = loans.filter(l => l.status === 'نشط' && (l.remainingAmount || 0) > 0);
-        const upcomingLoans = activeLoans.reduce((sum, l) => sum + (l.monthlyInstallment || 0), 0);
-        
-        const activeCards = cards.filter(c => c.cardType === 'credit' && (c.currentBalance || 0) > 0);
-        const upcomingCards = activeCards.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
-        
-        const activeGroups = groups.filter(g => !g.isPaidOut);
-        const upcomingGroups = activeGroups.reduce((sum, g) => sum + (g.monthlyAmount || 0), 0);
-        
-        const activeBorrowedDebts = debts.filter(d => d.type === 'borrowed' && !d.isPaid);
-        const upcomingDebts = activeBorrowedDebts.reduce((sum, d) => sum + (d.amount || 0), 0);
-
-        const next30DayObligations = upcomingLoans + upcomingCards + upcomingGroups + upcomingDebts;
-
-        // 4. Next 30 Day Receivables (حقوق)
-        const activeLentDebts = debts.filter(d => d.type === 'lent' && !d.isPaid);
-        const upcomingLent = activeLentDebts.reduce((sum, d) => sum + (d.amount || 0), 0);
-        
-        // Approximation for cert interest
-        let expectedCertReturns = 0;
-        certificates.forEach(c => {
-             if (c.payoutFrequency === 'شهري') {
-                 expectedCertReturns += (c.principalAmount * (c.interestRate / 100)) / 12;
-             }
+        monthTxs.forEach(tx => {
+            const cls = deriveClassification(tx);
+            switch (cls) {
+                case 'operating_income':
+                    operatingIncome += tx.amount;
+                    operatingIncomeList.push(tx);
+                    break;
+                case 'operating_expense':
+                    operatingExpense += tx.amount;
+                    operatingExpenseList.push(tx);
+                    break;
+                case 'finance_cost':
+                    financeCost += tx.amount;
+                    financeCostList.push(tx);
+                    break;
+                case 'financing_in':
+                    financingIn += tx.amount;
+                    financingInList.push(tx);
+                    break;
+                case 'debt_principal_payment':
+                    debtPrincipalPayment += tx.amount;
+                    debtPaymentList.push(tx);
+                    break;
+            }
         });
 
-        const next30DayReceivables = upcomingLent + expectedCertReturns;
+        // ════════════════════════════════════════
+        // 3. ROW 1 — ملخص اليوم (Quick Summary)
+        // ════════════════════════════════════════
 
-        // 5. Cash Flow & Balances
-        const currentBalance = accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
-        const availableBalance = currentBalance - next30DayObligations;
-        const expectedNetFlow = currentMonthIncomes - currentMonthExpenses;
+        // 3a. صافي السيولة المتاحة = النقدية + البنك + المحافظ
+        const liquidAssets = accounts
+            .filter(a => ['نقدي', 'بنكي', 'محفظة_إلكترونية'].includes(a.type))
+            .reduce((sum, a) => sum + (a.balance || 0), 0);
 
-        // 6. Indicators
-        const savingsRateRaw = currentMonthIncomes > 0 ? ((currentMonthIncomes - currentMonthExpenses - next30DayObligations) / currentMonthIncomes) * 100 : 0;
-        const dtiRaw = currentMonthIncomes > 0 ? (next30DayObligations / currentMonthIncomes) * 100 : 0;
-        
-        const totalCardBalance = activeCards.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
-        const totalCardLimit = activeCards.reduce((sum, c) => sum + (c.creditLimit || 1), 0);
-        const cardUtilization = activeCards.length > 0 && totalCardLimit > 0 ? (totalCardBalance / totalCardLimit) * 100 : 0;
-        
-        const avgMonthlyExpense = currentMonthExpenses > 0 ? currentMonthExpenses : 1;
-        const liquidityCoverageMonths = availableBalance / avgMonthlyExpense;
+        // 3b. صافي التدفق النقدي = إيرادات تشغيلية - مصروفات تشغيلية - فوائد
+        const operatingCashFlow = operatingIncome - operatingExpense - financeCost;
 
-        const healthScore = Math.max(0, Math.min(100, 100 - (dtiRaw * 0.5) - (availableBalance < 0 ? 40 : 0) - (cardUtilization > 80 ? 20 : 0) + (savingsRateRaw > 20 ? 10 : 0)));
+        // 3c. صافي الثروة = إجمالي الأصول - إجمالي الالتزامات
+        const totalAccountsBalance = accounts.reduce((sum, a) => sum + (a.balance || 0), 0);
+        const totalInvestments = certificates.reduce((sum, c) => sum + (c.principalAmount || 0), 0);
+        const totalLentDebts = debts.filter(d => d.type === 'lent' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
+        const totalGroupSavings = groups.filter(g => !g.isPaidOut).reduce((sum, g) => sum + (g.paidAmount || 0), 0);
+        const totalAssets = totalAccountsBalance + totalInvestments + totalLentDebts + totalGroupSavings;
 
-        // --- Net Worth Calculation ---
         const totalLoanBalance = loans.reduce((sum, l) => {
             if (l.remainingAmount != null) return sum + l.remainingAmount;
             return sum + ((l.principalAmount || 0) - (l.paidAmount || 0));
         }, 0);
+        const totalCardBalance = cards.filter(c => (c.cardType === 'credit' || c.cardType === 'ائتمانية')).reduce((sum, c) => sum + (c.currentBalance || 0), 0);
         const totalBorrowedDebts = debts.filter(d => d.type === 'borrowed' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
-        const totalLentDebts = debts.filter(d => d.type === 'lent' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
-        const totalInvestments = certificates.reduce((sum, c) => sum + (c.principalAmount || 0), 0);
-        
-        const totalAssets = currentBalance + totalInvestments + totalLentDebts;
-        
-        // Add Group Savings (if the user hasn't taken the pot yet, their paid amount is an asset)
-        const totalGroupSavings = groups.filter(g => !g.isPaidOut).reduce((sum, g) => sum + (g.paidAmount || 0), 0);
-        const finalAssets = totalAssets + totalGroupSavings;
-        
-        const totalLiabilities = totalCardBalance + totalLoanBalance + totalBorrowedDebts;
-        
-        // Add Group Debt (if the user HAS taken the pot, remaining payments are a liability)
         const totalGroupDebt = groups.filter(g => g.isPaidOut && !g.isCompleted).reduce((sum, g) => sum + (g.remainingAmount || 0), 0);
-        const finalLiabilities = totalLiabilities + totalGroupDebt;
+        const totalLiabilities = totalLoanBalance + totalCardBalance + totalBorrowedDebts + totalGroupDebt;
 
-        const netWorth = finalAssets - finalLiabilities;
+        const netWorth = totalAssets - totalLiabilities;
 
-        // --- NEW KPIs ---
-        const monthlySurplus = currentMonthIncomes - currentMonthExpenses;
-        const savingsRate = currentMonthIncomes > 0 ? (monthlySurplus / currentMonthIncomes) * 100 : 0;
-        const liquidAssets = accounts.filter(a => ['نقدي', 'بنكي', 'محفظة_إلكترونية'].includes(a.type)).reduce((sum, a) => sum + (a.balance || 0), 0);
-        
-        const netWorthChange = monthlySurplus; 
+        // 3d. الالتزامات القائمة (الشهرية المستحقة)
+        const activeLoans = loans.filter(l => l.status === 'نشط' && (l.remainingAmount || 0) > 0);
+        const activeCards = cards.filter(c => (c.cardType === 'credit' || c.cardType === 'ائتمانية') && (c.currentBalance || 0) > 0);
+        const activeGroups = groups.filter(g => !g.isPaidOut);
+        const activeBorrowedDebts = debts.filter(d => d.type === 'borrowed' && !d.isPaid);
 
-        // 7. Budgets Array
+        const outstandingObligations = 
+            activeLoans.reduce((s, l) => s + (l.monthlyInstallment || 0), 0) +
+            activeCards.reduce((s, c) => s + (c.currentBalance || 0), 0) +
+            activeGroups.reduce((s, g) => s + (g.monthlyAmount || 0), 0) +
+            activeBorrowedDebts.reduce((s, d) => s + (d.amount || 0), 0);
+
+        // ════════════════════════════════════════
+        // 4. ROW 3 — مؤشرات القرار
+        // ════════════════════════════════════════
+
+        // 4a. نسبة الادخار
+        const savingsRate = operatingIncome > 0 
+            ? Number(((operatingCashFlow / operatingIncome) * 100).toFixed(1)) 
+            : 0;
+
+        // 4b. نسبة الالتزامات إلى الدخل
+        const monthlyDebtPayments = activeLoans.reduce((s, l) => s + (l.monthlyInstallment || 0), 0) + 
+                                     activeGroups.reduce((s, g) => s + (g.monthlyAmount || 0), 0);
+        const debtToIncomeRatio = operatingIncome > 0 
+            ? Number(((monthlyDebtPayments / operatingIncome) * 100).toFixed(1)) 
+            : 0;
+
+        // 4c. تغير صافي الثروة (مقارنة بالشهر السابق)
+        // Approximate: net worth change = operating cash flow - debt principal (already reduces liabilities)
+        const netWorthChange = operatingCashFlow;
+
+        // 4d. التغطية النقدية = السيولة ÷ متوسط المصروفات الشهرية
+        // Calculate 3-month average expenses for stability
+        const threeMonthsAgo = new Date(currentYear, currentMonth - 4, 1);
+        const recentExpenses = postedTxs.filter(t => {
+            const d = new Date(t.date);
+            return d >= threeMonthsAgo && deriveClassification(t) === 'operating_expense';
+        });
+        const monthsCount = Math.max(1, Math.min(3, Math.ceil((now - threeMonthsAgo) / (30 * 24 * 60 * 60 * 1000))));
+        const avgMonthlyExpense = recentExpenses.reduce((s, t) => s + t.amount, 0) / monthsCount;
+        const cashCoverageMonths = avgMonthlyExpense > 0 
+            ? Number((liquidAssets / avgMonthlyExpense).toFixed(1)) 
+            : 0;
+
+        // ════════════════════════════════════════
+        // 5. SMART INSIGHTS — قراءة وضعك المالي
+        // ════════════════════════════════════════
+        const insights = [];
+
+        // Cashflow vs obligations
+        if (operatingCashFlow > 0 && financingIn > 0) {
+            insights.push('التدفق النقدي هذا الشهر موجب لكن الالتزامات ارتفعت بسبب تمويل جديد.');
+        } else if (operatingCashFlow > 0) {
+            insights.push('أداء تشغيلي إيجابي — إيراداتك تغطي مصروفاتك وفوائدك.');
+        } else if (operatingCashFlow < 0) {
+            insights.push('تنبيه: مصروفاتك التشغيلية والفوائد تتجاوز إيراداتك هذا الشهر.');
+        }
+
+        // Debt payment impact
+        if (debtPrincipalPayment > 0 && financeCost > 0) {
+            const ratio = financeCost / (debtPrincipalPayment + financeCost);
+            if (ratio > 0.4) {
+                insights.push('سدادك هذا الشهر خفّض أصل الدين، لكن تكلفة الفوائد ما زالت مرتفعة.');
+            } else {
+                insights.push('سدادك هذا الشهر خفّض أصل الدين بفعالية وتكلفة الفوائد معقولة.');
+            }
+        }
+
+        // Net worth trend
+        if (netWorthChange > 0) {
+            insights.push('صافي ثروتك يتحسن — الأصول تنمو أسرع من الالتزامات.');
+        } else if (netWorthChange < 0) {
+            insights.push('صافي ثروتك ينخفض — راجع مصروفاتك وخطة السداد.');
+        }
+
+        // Savings rate
+        if (savingsRate >= 20) {
+            insights.push(`نسبة ادخارك ${savingsRate}% — ممتازة! فوق المعدل الصحي.`);
+        } else if (savingsRate >= 0 && savingsRate < 10) {
+            insights.push(`نسبة ادخارك ${savingsRate}% — منخفضة. حاول تقليل المصروفات المتغيرة.`);
+        }
+
+        // Cash coverage warning
+        if (cashCoverageMonths > 0 && cashCoverageMonths < 1) {
+            insights.push('تحذير: سيولتك لا تكفي لتغطية شهر واحد من المصروفات.');
+        }
+
+        // Budget overspend
         const budgetsResponse = budgets.map(b => {
-            const spent = currentMonthTxs.filter(t => t.type === 'مصروف' && t.category === b.category).reduce((sum, t) => sum + t.amount, 0);
+            const spent = operatingExpenseList.filter(t => t.category === b.category).reduce((sum, t) => sum + t.amount, 0);
             const limit = b.plannedAmount || b.limit || 0;
             return {
                 category: b.category,
-                limit: limit,
-                spent: spent,
+                limit,
+                spent,
                 remaining: limit - spent,
                 percent: limit > 0 ? Math.round((spent / limit) * 100) : 0
             };
         });
-
-        // 8. Upcoming Obligations List
-        const upcomingObligationsList = [
-            ...activeLoans.map(l => ({ type: 'loan', name: l.loanName, amount: l.monthlyInstallment || 0, dueDate: l.nextPaymentDate || now })),
-            ...activeGroups.map(g => ({ type: 'group', name: g.groupName, amount: g.monthlyAmount, dueDate: new Date(now.getFullYear(), now.getMonth(), 28) })), // approximate
-            ...activeCards.map(c => ({ type: 'card', name: c.cardName, amount: c.currentBalance || 0, dueDate: new Date(now.getFullYear(), now.getMonth(), c.dueDay || 25) })),
-            ...activeBorrowedDebts.map(d => ({ type: 'debt', name: `سلفة من ${d.personName}`, amount: d.amount, dueDate: d.dueDate || now }))
-        ].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
-
-        // 9. Insights
-        const insights = [];
-        if (savingsRateRaw > 15) {
-            insights.push("أنت ضمن الحدود الآمنة للادخار هذا الشهر.");
-        } else if (savingsRateRaw < 0) {
-            insights.push("معدل الادخار سلبي، نفقاتك والتزاماتك تتجاوز دخلك.");
-        }
 
         const overspentBudgets = budgetsResponse.filter(b => b.percent > 100);
         if (overspentBudgets.length > 0) {
             insights.push(`تجاوزت الميزانية في: ${overspentBudgets.map(b => b.category).join('، ')}.`);
         }
 
-        if (cardUtilization > 80) insights.push("استخدام البطاقات الائتمانية مرتفع جداً ويشكل ضغطاً على السيولة.");
+        // ════════════════════════════════════════
+        // 6. UPCOMING OBLIGATIONS LIST
+        // ════════════════════════════════════════
+        const upcomingObligationsList = [
+            ...activeLoans.map(l => ({ type: 'loan', name: l.loanName, amount: l.monthlyInstallment || 0, dueDate: l.nextPaymentDate || now })),
+            ...activeGroups.map(g => ({ type: 'group', name: g.groupName, amount: g.monthlyAmount, dueDate: new Date(now.getFullYear(), now.getMonth(), 28) })),
+            ...activeCards.map(c => ({ type: 'card', name: c.cardName, amount: c.currentBalance || 0, dueDate: new Date(now.getFullYear(), now.getMonth(), c.dueDay || 25) })),
+            ...activeBorrowedDebts.map(d => ({ type: 'debt', name: `سلفة من ${d.personName}`, amount: d.amount, dueDate: d.dueDate || now }))
+        ].sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate)).slice(0, 5);
 
-        // 10. Chart Data Generators
-        // A. 12-Month Cashflow
+        // ════════════════════════════════════════
+        // 7. DETAILED BREAKDOWNS FOR MODALS
+        // ════════════════════════════════════════
+        const assetsDetailed = [
+            ...accounts.map(a => ({ name: a.name, value: a.balance || 0, type: a.type, icon: 'account' })),
+            ...certificates.map(c => ({ name: c.certificateName || 'شهادة', value: c.principalAmount, type: 'شهادة', icon: 'certificate' })),
+            ...debts.filter(d => d.type === 'lent' && !d.isPaid).map(d => ({ name: `حق طرف ${d.personName}`, value: d.amount, type: 'سلف لك', icon: 'debt' }))
+        ].filter(a => a.value > 0).sort((a, b) => b.value - a.value);
+
+        const liabilitiesDetailed = [
+            ...activeLoans.map(l => ({ name: l.loanName, value: l.remainingAmount || ((l.principalAmount || 0) - (l.paidAmount || 0)), type: l.loanType || 'قرض', icon: 'loan' })),
+            ...activeCards.map(c => ({ name: c.cardName, value: c.currentBalance || 0, type: 'بطاقة ائتمان', icon: 'card' })),
+            ...activeBorrowedDebts.map(d => ({ name: `دين لـ ${d.personName}`, value: d.amount, type: 'سلف عليك', icon: 'debt' })),
+            ...groups.filter(g => g.isPaidOut && !g.isCompleted).map(g => ({ name: `جمعية: ${g.groupName}`, value: g.remainingAmount || 0, type: 'جمعية', icon: 'debt' }))
+        ].filter(l => l.value > 0).sort((a, b) => b.value - a.value);
+
+        // ════════════════════════════════════════
+        // 8. CHARTS
+        // ════════════════════════════════════════
+
+        // A. 12-Month Operating Cashflow Chart
         const cashflowData = [];
         for (let i = 11; i >= 0; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
             const monthLabel = d.toLocaleDateString('ar-EG', { month: 'short' });
             
-            const monthTxs = postedTransactions.filter(t => {
+            const mTxs = postedTxs.filter(t => {
                 const txD = new Date(t.date);
                 return txD.getMonth() === d.getMonth() && txD.getFullYear() === d.getFullYear();
             });
 
-            // Filter out financing transactions from the operating cashflow chart
-            const income = monthTxs.filter(t => t.type === 'دخل' && (!t.linkedEntity || !['Loan', 'Card', 'PeerDebt', 'Group'].includes(t.linkedEntity?.entityType))).reduce((s, t) => s + t.amount, 0);
-            const expense = monthTxs.filter(t => t.type === 'مصروف' && (!t.linkedEntity || !['Loan', 'Card', 'PeerDebt', 'Group'].includes(t.linkedEntity?.entityType))).reduce((s, t) => s + t.amount, 0);
+            let mIncome = 0, mExpense = 0, mFinCost = 0;
+            mTxs.forEach(t => {
+                const cls = deriveClassification(t);
+                if (cls === 'operating_income') mIncome += t.amount;
+                if (cls === 'operating_expense') mExpense += t.amount;
+                if (cls === 'finance_cost') mFinCost += t.amount;
+            });
 
-            cashflowData.push({ month: monthLabel, income, expense, netProfit: income - expense });
+            cashflowData.push({ month: monthLabel, income: mIncome, expense: mExpense + mFinCost, netProfit: mIncome - mExpense - mFinCost });
         }
 
-        // B. Expense Distribution by Category (Current Month)
+        // B. Expense Category Distribution (Operating Only)
         const categoryMap = {};
-        currentMonthTxs.filter(t => t.type === 'مصروف').forEach(e => {
+        operatingExpenseList.forEach(e => {
             const cat = e.category || 'أخرى';
             categoryMap[cat] = (categoryMap[cat] || 0) + e.amount;
         });
-        const categoryData = Object.keys(categoryMap).map(k => ({ name: k, value: categoryMap[k] })).sort((a,b) => b.value - a.value);
+        const categoryData = Object.keys(categoryMap).map(k => ({ name: k, value: categoryMap[k] })).sort((a, b) => b.value - a.value);
 
         // C. Asset Distribution
         const assetDistribution = [];
@@ -222,90 +323,63 @@ exports.getDashboardStats = async (req, res) => {
             if (existing) existing.value += a.balance || 0;
             else assetDistribution.push({ name: typeLabel, value: a.balance || 0 });
         });
-        
-        // Detailed asset breakdown for the new UI section
-        const assetsDetailed = [
-            ...accounts.map(a => ({ name: a.name, value: a.balance || 0, type: a.type, icon: 'account' })),
-            ...certificates.map(c => ({ name: c.name || 'شهادة استثمار', value: c.principalAmount, type: 'استثمار/شهادة', icon: 'certificate' })),
-            ...activeLentDebts.map(d => ({ name: `حق طرف ${d.personName}`, value: d.amount, type: 'ديون مستحقة', icon: 'debt' }))
-        ].filter(a => a.value > 0).sort((a,b) => b.value - a.value);
-
-        const liabilitiesDetailed = [
-            ...activeLoans.map(l => ({ name: l.loanName, value: l.remainingAmount || l.principalAmount - l.paidAmount || 0, type: l.loanType || 'قرض', icon: 'loan' })),
-            ...activeCards.map(c => ({ name: c.cardName, value: c.currentBalance || 0, type: 'بطاقة ائتمان', icon: 'card' })),
-            ...activeBorrowedDebts.map(d => ({ name: `دين لـ ${d.personName}`, value: d.amount, type: 'ديون شخصية', icon: 'debt' })),
-            ...groups.filter(g => g.isPaidOut && !g.isCompleted).map(g => ({ name: `جمعية: ${g.groupName}`, value: g.remainingAmount || 0, type: 'جمعية (مديونية)', icon: 'debt' }))
-        ].filter(l => l.value > 0).sort((a,b) => b.value - a.value);
-
         if (totalInvestments > 0) assetDistribution.push({ name: 'شهادات استثمار', value: totalInvestments });
 
-        // Financing detailed list for the new UI section
-        const financingDetailed = [
-            ...financingInflowTxs.map(t => ({ name: `استلام: ${t.category || 'تمويل'}`, value: t.amount, type: 'تمويل (داخل)', icon: 'loan', date: t.date })),
-            ...financingOutflowTxs.map(t => ({ name: `سداد: ${t.category || 'التزام'}`, value: t.amount, type: 'تمويل (خارج)', icon: 'debt', date: t.date }))
-        ].sort((a,b) => new Date(b.date) - new Date(a.date));
-
-        // Count pending transactions
-        const pendingTransactions = unifiedTransactions.filter(t => ['غير مصنف', 'مصنف'].includes(t.status)).length;
-
-        // 11. accountingKPIs — the Dashboard UI reads from this key
-        const accountingKPIs = {
-            cashOnHand:              Math.round(currentBalance),
-            workingCapital:          Math.round(availableBalance),
-            operatingCashFlowMTD:    Math.round(currentMonthIncomes - currentMonthExpenses),
-            incomeMTD:               Math.round(currentMonthIncomes),
-            expensesMTD:             Math.round(currentMonthExpenses),
-            netIncomeMTD:            Math.round(currentMonthIncomes - currentMonthExpenses - next30DayObligations),
-            netMarginMTD:            currentMonthIncomes > 0 ? Number(((currentMonthIncomes - currentMonthExpenses) / currentMonthIncomes * 100).toFixed(1)) : 0,
-            incomeGrowthMoM:         (() => {
-                // Compare current month income to previous month income
-                const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                const prevMonthIncome = postedTransactions
-                    .filter(t => t.type === 'دخل' && new Date(t.date).getMonth() === prevMonthDate.getMonth() && new Date(t.date).getFullYear() === prevMonthDate.getFullYear())
-                    .reduce((s, t) => s + t.amount, 0);
-                return prevMonthIncome > 0 ? Number((((currentMonthIncomes - prevMonthIncome) / prevMonthIncome) * 100).toFixed(1)) : 0;
-            })(),
-            netWorth:                Math.round(netWorth),
-            totalAssets:             Math.round(finalAssets),
-            totalLiabilities:        Math.round(finalLiabilities),
-            monthlySurplus:          Math.round(monthlySurplus),
-            financingMTD:            Math.round(financingMTD),
-            savingsRate:             Number(savingsRate.toFixed(1)),
-            upcomingObligationsTotal: Math.round(next30DayObligations),
-            liquidAssets:            Math.round(liquidAssets),
-            netWorthChange:          Math.round(netWorthChange)
-        };
-
+        // ════════════════════════════════════════
+        // 9. RESPONSE
+        // ════════════════════════════════════════
         res.json({
-            topStats: {
-                currentBalance: Math.max(0, currentBalance),
-                availableBalance,
-                next30DayObligations,
-                next30DayReceivables,
-                expectedNetFlow,
-                healthScore: Math.round(healthScore),
-                pendingTransactions
+            // Row 1: ملخص اليوم
+            row1: {
+                liquidAssets: Math.round(liquidAssets),
+                operatingCashFlow: Math.round(operatingCashFlow),
+                netWorth: Math.round(netWorth),
+                outstandingObligations: Math.round(outstandingObligations)
             },
+
+            // Row 2: أداء الشهر (drivers)
+            row2: {
+                operatingIncome: Math.round(operatingIncome),
+                operatingExpense: Math.round(operatingExpense),
+                financingIn: Math.round(financingIn),
+                debtPrincipalPayment: Math.round(debtPrincipalPayment),
+                financeCost: Math.round(financeCost)
+            },
+
+            // Row 3: مؤشرات القرار
+            row3: {
+                savingsRate,
+                debtToIncomeRatio,
+                netWorthChange: Math.round(netWorthChange),
+                cashCoverageMonths
+            },
+
+            // Details for modals
+            details: {
+                operatingIncomeList: operatingIncomeList.sort((a, b) => new Date(b.date) - new Date(a.date)),
+                operatingExpenseList: operatingExpenseList.sort((a, b) => new Date(b.date) - new Date(a.date)),
+                financeCostList: financeCostList.sort((a, b) => new Date(b.date) - new Date(a.date)),
+                financingInList: financingInList.sort((a, b) => new Date(b.date) - new Date(a.date)),
+                debtPaymentList: debtPaymentList.sort((a, b) => new Date(b.date) - new Date(a.date)),
+                assetsDetailed,
+                liabilitiesDetailed
+            },
+
+            // Net worth breakdown
+            netWorthBreakdown: {
+                totalAssets: Math.round(totalAssets),
+                totalLiabilities: Math.round(totalLiabilities)
+            },
+
+            // Supplementary
             budgets: budgetsResponse,
-            accountingKPIs,
-            indicators: {
-                savingsRate: Number(savingsRateRaw.toFixed(1)),
-                debtToIncomeRatio: Number(dtiRaw.toFixed(1)),
-                cardUtilization: Number(cardUtilization.toFixed(1)),
-                liquidityCoverageMonths: Number(liquidityCoverageMonths.toFixed(1))
-            },
             upcomingObligations: upcomingObligationsList,
             insights,
             charts: {
                 cashflow: cashflowData,
                 categories: categoryData,
                 assets: assetDistribution.filter(a => a.value > 0)
-            },
-            assetsDetailed,
-            liabilitiesDetailed,
-            financingDetailed,
-            currentMonthIncomesList: realIncomeTxs.sort((a,b) => new Date(b.date) - new Date(a.date)),
-            currentMonthExpensesList: currentMonthTxs.filter(t => t.type === 'مصروف' && (!t.linkedEntity || t.linkedEntity.entityType === 'None')).sort((a,b) => new Date(b.date) - new Date(a.date))
+            }
         });
 
     } catch (err) {

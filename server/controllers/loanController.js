@@ -145,13 +145,16 @@ exports.createLoan = async (req, res) => {
             await Transaction.create({
                 userId,
                 date: data.startDate || new Date(),
-                type: 'التزام', // Liability received (acts like cash inflow)
+                type: 'التزام',
                 amount: principal,
                 accountId: data.receivingAccountId,
                 category: 'قروض مستلمة',
                 counterparty: data.lenderName,
                 status: 'مُسوّى',
                 notes: `استلام قرض: ${data.loanName}`,
+                classification: 'financing_in',
+                affectsCashflow: false,
+                affectsNetworth: false,
                 linkedEntity: { entityType: 'Loan', entityId: loan._id }
             });
 
@@ -233,6 +236,9 @@ exports.recordPayment = async (req, res) => {
                     userId, date: txDate, type: 'سداد', amount: Number(principalPaid),
                     accountId: sourceAccountId, category: 'سداد قروض', counterparty,
                     status: 'مُسوّى', notes: `سداد أصل قرض: ${loan.loanName} ${note ? '- '+note : ''}`,
+                    classification: 'debt_principal_payment',
+                    affectsCashflow: false,
+                    affectsNetworth: false,
                     linkedEntity: { entityType: 'Loan', entityId: loan._id }
                 });
             }
@@ -243,6 +249,9 @@ exports.recordPayment = async (req, res) => {
                     userId, date: txDate, type: 'مصروف', amount: Number(interestPaid),
                     accountId: sourceAccountId, category: 'فوائد قروض', counterparty,
                     status: 'مُسوّى', notes: `سداد فوائد قرض: ${loan.loanName}`,
+                    classification: 'finance_cost',
+                    affectsCashflow: true,
+                    affectsNetworth: true,
                     linkedEntity: { entityType: 'Loan', entityId: loan._id }
                 });
             }
@@ -253,6 +262,9 @@ exports.recordPayment = async (req, res) => {
                     userId, date: txDate, type: 'سداد', amount: Number(amount),
                     accountId: sourceAccountId, category: 'سداد قروض', counterparty,
                     status: 'مُسوّى', notes: `سداد قسط قرض: ${loan.loanName}`,
+                    classification: 'debt_principal_payment',
+                    affectsCashflow: false,
+                    affectsNetworth: false,
                     linkedEntity: { entityType: 'Loan', entityId: loan._id }
                 });
             }

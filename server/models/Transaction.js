@@ -14,6 +14,25 @@ const transactionSchema = new mongoose.Schema({
     amount: { type: Number, required: true, min: 0 },
     currency: { type: String, default: 'EGP' },
     
+    // === NEW: Classification System ===
+    // This is the primary accounting classification for reports and dashboard
+    classification: {
+        type: String,
+        enum: [
+            'operating_income',         // الدخل التشغيلي: رواتب، أرباح، تحصيلات
+            'operating_expense',        // المصروف التشغيلي: سكن، أكل، مواصلات
+            'financing_in',             // تمويل وارد: قروض مستلمة، سلف عليك
+            'debt_principal_payment',   // سداد أصل الدين: أقساط القروض، سداد السلف
+            'finance_cost',             // فوائد وعمولات: تكلفة الاقتراض
+            'asset_transfer',           // تحويلات داخلية بين الحسابات
+            'asset_acquisition',        // شراء أصل: شهادة، استثمار
+            'asset_liquidation'         // تسييل أصل: كسر شهادة
+        ]
+    },
+    affectsCashflow: { type: Boolean, default: true },   // هل تؤثر على التدفق النقدي التشغيلي
+    affectsNetworth: { type: Boolean, default: true },   // هل تؤثر على صافي الثروة
+    // === END NEW ===
+
     // Accounts
     accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true }, // Source Account
     destinationAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // For transfers
@@ -26,8 +45,8 @@ const transactionSchema = new mongoose.Schema({
     // Status & Reconciliation
     status: { 
         type: String, 
-        enum: ['غير مصنف', 'مصنف', 'مُرحَّل', 'مُسوّى'], 
-        default: 'مُرحَّل' // Default to posted for manual entries, imported can be unclassified
+        enum: ['غير مصنف', 'مصنف', 'مُرحَّل', 'مُسوّى'], 
+        default: 'مُرحَّل' // Default to posted for manual entries, imported can be unclassified
     },
     confidenceScore: { type: Number, min: 0, max: 100, default: 100 }, // For AI/Auto classification
     
@@ -48,5 +67,7 @@ const transactionSchema = new mongoose.Schema({
 transactionSchema.index({ userId: 1, date: -1, status: 1 });
 transactionSchema.index({ userId: 1, type: 1, status: 1 });
 transactionSchema.index({ userId: 1, category: 1 });
+transactionSchema.index({ userId: 1, classification: 1 });
+transactionSchema.index({ userId: 1, affectsCashflow: 1 });
 
 module.exports = mongoose.model('Transaction', transactionSchema);
