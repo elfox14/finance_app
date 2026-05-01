@@ -219,7 +219,9 @@ exports.getDashboardStats = async (req, res) => {
                 cashflow: cashflowData,
                 categories: categoryData,
                 assets: assetDistribution.filter(a => a.value > 0)
-            }
+            },
+            currentMonthIncomesList: currentMonthTxs.filter(t => t.type === 'دخل').sort((a,b) => new Date(b.date) - new Date(a.date)),
+            currentMonthExpensesList: currentMonthTxs.filter(t => t.type === 'مصروف').sort((a,b) => new Date(b.date) - new Date(a.date))
         });
 
     } catch (err) {
