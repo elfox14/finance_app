@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import { 
     TrendingUp, TrendingDown, 
@@ -8,10 +9,11 @@ import {
     ShieldCheck, PieChart as PieIcon, Landmark,
     Wallet, Users, CreditCard, Zap,
     List, Lightbulb, AlertTriangle, Heart,
-    Banknote, Shield, BarChart3
+    Banknote, Shield, BarChart3, ChevronLeft
 } from 'lucide-react';
 
 const Dashboard = () => {
+    const navigate = useNavigate();
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
@@ -46,8 +48,6 @@ const Dashboard = () => {
             case 'finIn': return { title: 'تمويل وارد', icon: <Landmark className="text-blue-500" />, list: details.financingInList || [], color: 'blue', total: row2.financingIn };
             case 'debtPay': return { title: 'سداد ديون', icon: <Shield className="text-orange-500" />, list: details.debtPaymentList || [], color: 'orange', total: row2.debtPrincipalPayment };
             case 'finCost': return { title: 'فوائد وعمولات', icon: <Percent className="text-rose-500" />, list: details.financeCostList || [], color: 'rose', total: row2.financeCost };
-            case 'assets': return { title: 'تفاصيل الأصول', icon: <Wallet className="text-emerald-500" />, list: details.assetsDetailed || [], color: 'emerald', total: netWorthBreakdown.totalAssets };
-            case 'liabilities': return { title: 'تفاصيل الالتزامات', icon: <TrendingDown className="text-red-500" />, list: details.liabilitiesDetailed || [], color: 'red', total: netWorthBreakdown.totalLiabilities };
             default: return { title: '', icon: null, list: [], color: 'blue', total: 0 };
         }
     };
@@ -69,44 +69,42 @@ const Dashboard = () => {
 
             <div className="px-4 md:px-0 space-y-8 md:space-y-10">
 
-                {/* ═══════════════════════════════════════════════════ */}
-                {/* ROW 1: ملخص اليوم — 4 بطاقات رئيسية               */}
-                {/* ═══════════════════════════════════════════════════ */}
+                {/* ROW 1: ملخص اليوم */}
                 <section>
                     <SectionLabel text="ملخص اليوم" icon={<Zap size={14} />} />
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                         <HeroCard 
                             label="صافي السيولة" value={row1.liquidAssets}
                             icon={<Wallet size={20} />} color="blue"
-                            sub="النقدية + البنك + المحافظ"
+                            sub="اضغط لعرض الحسابات"
+                            onClick={() => navigate('/accounts')}
                         />
                         <HeroCard 
                             label="التدفق النقدي" value={row1.operatingCashFlow}
                             icon={<Activity size={20} />} 
                             color={isPositiveCF ? 'emerald' : 'red'}
-                            sub="إيرادات − مصروفات − فوائد"
+                            sub="اضغط لعرض التقارير"
+                            onClick={() => navigate('/reports')}
                             signed
                         />
                         <HeroCard 
                             label="صافي الثروة" value={row1.netWorth}
                             icon={<ShieldCheck size={20} />} 
                             color={row1.netWorth >= 0 ? 'emerald' : 'red'}
-                            sub="الأصول − الالتزامات"
-                            onClick={() => openModal('assets')}
+                            sub="اضغط لعرض السجل"
+                            onClick={() => navigate('/ledger')}
                             signed
                         />
                         <HeroCard 
                             label="الالتزامات القائمة" value={row1.outstandingObligations}
                             icon={<AlertTriangle size={20} />} color="orange"
-                            sub="قروض + بطاقات + سلف + جمعيات"
-                            onClick={() => openModal('liabilities')}
+                            sub="اضغط لعرض القروض"
+                            onClick={() => navigate('/loans')}
                         />
                     </div>
                 </section>
 
-                {/* ═══════════════════════════════════════════════════ */}
-                {/* ROW 2: أداء الشهر — 5 بطاقات سبب التغير            */}
-                {/* ═══════════════════════════════════════════════════ */}
+                {/* ROW 2: أداء الشهر */}
                 <section>
                     <SectionLabel text="أداء الشهر" icon={<BarChart3 size={14} />} />
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
@@ -139,9 +137,7 @@ const Dashboard = () => {
                     </div>
                 </section>
 
-                {/* ═══════════════════════════════════════════════════ */}
-                {/* ROW 3: قراءة وضعك المالي — 4 مؤشرات + رسائل ذكية  */}
-                {/* ═══════════════════════════════════════════════════ */}
+                {/* ROW 3: قراءة وضعك المالي */}
                 <section>
                     <SectionLabel text="قراءة وضعك المالي" icon={<Lightbulb size={14} />} />
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
@@ -188,9 +184,7 @@ const Dashboard = () => {
                     )}
                 </section>
 
-                {/* ═══════════════════════════════════════════════════ */}
-                {/* ROW 4: التزامات قادمة                               */}
-                {/* ═══════════════════════════════════════════════════ */}
+                {/* ROW 4: التزامات قادمة */}
                 {upcomingObligations.length > 0 && (
                     <section>
                         <SectionLabel text="التزامات قادمة" icon={<Clock size={14} />} />
@@ -214,9 +208,7 @@ const Dashboard = () => {
                 )}
             </div>
 
-            {/* ═══════════════════════════════════════════════════ */}
-            {/* MODAL                                              */}
-            {/* ═══════════════════════════════════════════════════ */}
+            {/* MODAL */}
             {showModal && (
                 <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-0 md:p-4 bg-black/90 backdrop-blur-md">
                     <div className="bg-slate-950 border-t md:border border-white/10 w-full max-w-2xl rounded-t-[2.5rem] md:rounded-[3rem] p-6 md:p-10 relative shadow-2xl overflow-y-auto max-h-[90vh] md:max-h-[85vh] no-scrollbar text-right" dir="rtl">
@@ -247,7 +239,6 @@ const Dashboard = () => {
                                                 <span className="text-[10px] text-slate-500 font-bold">
                                                     {item.type ? item.type : item.date ? new Date(item.date).toLocaleDateString('ar-EG') : ''}
                                                 </span>
-                                                {item.counterparty && <span className="text-[10px] text-slate-500 font-bold flex items-center gap-1"><Tag size={9} /> {item.counterparty}</span>}
                                             </div>
                                         </div>
                                     </div>
@@ -256,9 +247,6 @@ const Dashboard = () => {
                                     </p>
                                 </div>
                             ))}
-                            {modalData.list.length === 0 && (
-                                <div className="py-16 text-center text-slate-500 italic">لا توجد بيانات مسجلة</div>
-                            )}
                         </div>
                         
                         <div className="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center">
@@ -273,10 +261,6 @@ const Dashboard = () => {
         </div>
     );
 };
-
-/* ═══════════════════════════════════════════════════ */
-/* COMPONENTS                                         */
-/* ═══════════════════════════════════════════════════ */
 
 const SectionLabel = ({ text, icon }) => (
     <div className="flex items-center gap-2 mb-4">
@@ -300,19 +284,20 @@ const HeroCard = ({ label, value, icon, color, sub, signed, onClick }) => {
     const displayValue = signed && v > 0 ? `+${v.toLocaleString()}` : v.toLocaleString();
     
     return (
-        <button onClick={onClick} className={`relative overflow-hidden bg-slate-900 border ${c.border} p-5 md:p-6 rounded-[1.8rem] md:rounded-[2.2rem] shadow-xl ${c.glow} flex flex-col justify-between min-h-[140px] md:min-h-[160px] text-right transition-all hover:scale-[1.02] group`}>
+        <button onClick={onClick} className={`relative overflow-hidden bg-slate-900 border ${c.border} p-5 md:p-6 rounded-[1.8rem] md:rounded-[2.2rem] shadow-xl ${c.glow} flex flex-col justify-between min-h-[140px] md:min-h-[160px] text-right transition-all hover:scale-[1.02] group active:scale-95`}>
             <div className={`absolute -bottom-4 -left-4 opacity-5 group-hover:scale-110 transition-transform`}>
                 <Activity size={120} className={c.text} />
             </div>
             <div className="flex justify-between items-start relative z-10">
                 <div className={`p-2.5 rounded-xl ${c.bg} ${c.text}`}>{icon}</div>
+                <ChevronLeft size={16} className="text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <div className="relative z-10 mt-auto">
+            <div className="relative z-10 mt-auto text-right">
                 <p className="text-[9px] md:text-[10px] text-slate-500 font-bold uppercase tracking-tight mb-1">{label}</p>
                 <p className={`text-xl md:text-2xl font-black ${signed ? (v >= 0 ? 'text-emerald-400' : 'text-red-400') : 'text-white'} truncate`}>
                     {displayValue} <span className="text-[8px] opacity-50 font-bold">ج.م</span>
                 </p>
-                {sub && <p className="text-[8px] text-slate-600 font-bold mt-1 hidden md:block">{sub}</p>}
+                {sub && <p className="text-[8px] text-slate-600 font-bold mt-1">{sub}</p>}
             </div>
         </button>
     );
@@ -322,10 +307,13 @@ const DriverCard = ({ label, value, icon, color, onClick, className = '' }) => {
     const c = colorMap[color] || colorMap.blue;
     const v = value || 0;
     return (
-        <button onClick={onClick} className={`bg-slate-900 border border-slate-800 p-4 md:p-5 rounded-[1.5rem] md:rounded-[2rem] shadow-lg flex flex-col justify-between hover:${c.border} transition-all group text-right ${className}`}>
-            <div className="flex items-center gap-2 mb-3">
-                <div className={`p-2 rounded-lg ${c.bg} ${c.text}`}>{icon}</div>
-                <span className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase">{label}</span>
+        <button onClick={onClick} className={`bg-slate-900 border border-slate-800 p-4 md:p-5 rounded-[1.5rem] md:rounded-[2rem] shadow-lg flex flex-col justify-between hover:${c.border} transition-all group text-right ${className} active:scale-95`}>
+            <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                    <div className={`p-2 rounded-lg ${c.bg} ${c.text}`}>{icon}</div>
+                    <span className="text-[9px] md:text-[10px] font-black text-slate-500 uppercase">{label}</span>
+                </div>
+                <ChevronLeft size={12} className="text-slate-700 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <p className={`text-lg md:text-xl font-black text-white group-hover:${c.text} transition-colors truncate`}>
                 {v.toLocaleString()} <span className="text-[8px] opacity-50 font-bold">ج.م</span>

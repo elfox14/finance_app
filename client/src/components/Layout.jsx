@@ -6,7 +6,8 @@ import {
     ArrowDownLeft, CreditCard, Landmark, 
     Users, Bell, LogOut, Menu, X, PieChart, 
     Receipt, ShieldCheck, Target, Handshake,
-    Coins, Banknote, History, Settings, ListChecks
+    Coins, Banknote, History, Settings, ListChecks,
+    ChevronLeft
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -76,7 +77,7 @@ const Layout = ({ children }) => {
 
     return (
         <div className="min-h-screen bg-black text-slate-300 font-sans selection:bg-blue-500/30" dir="rtl">
-            {/* Desktop Sidebar - المستشار المالي */}
+            {/* Desktop Sidebar */}
             <aside className="fixed right-0 top-0 h-screen w-80 bg-slate-950 border-l border-slate-900 hidden lg:flex flex-col z-50 overflow-hidden">
                 <div className="p-8 border-b border-slate-900 bg-slate-950/80 backdrop-blur-xl">
                     <div className="flex items-center gap-3 px-2">
@@ -88,18 +89,19 @@ const Layout = ({ children }) => {
                 </div>
                 
                 <nav className="flex-1 overflow-y-auto p-4 space-y-8 no-scrollbar">
-                    {/* Dashboard Link */}
                     <Link
                         to="/"
-                        className={`flex items-center gap-3 px-4 py-4 rounded-2xl transition-all duration-300 ${
+                        className={`flex items-center justify-between gap-3 px-4 py-4 rounded-2xl transition-all duration-300 ${
                             isActive('/') ? 'bg-blue-600 text-white shadow-xl shadow-blue-900/20' : 'hover:bg-slate-900'
                         }`}
                     >
-                        <LayoutDashboard size={20} />
-                        <span className="font-black text-sm">لوحة القيادة المركزية</span>
+                        <div className="flex items-center gap-3">
+                            <LayoutDashboard size={20} />
+                            <span className="font-black text-sm">لوحة القيادة المركزية</span>
+                        </div>
+                        <ChevronLeft size={16} className={isActive('/') ? 'opacity-100' : 'opacity-0'} />
                     </Link>
 
-                    {/* Navigation Groups */}
                     {navigationGroups.map((group, idx) => (
                         <div key={idx} className="space-y-2">
                             <h3 className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest">{group.title}</h3>
@@ -108,14 +110,17 @@ const Layout = ({ children }) => {
                                     <Link
                                         key={item.path}
                                         to={item.path}
-                                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
+                                        className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
                                             isActive(item.path) 
                                             ? 'bg-slate-800 text-white border-r-4 border-blue-500' 
                                             : 'text-slate-500 hover:text-white hover:bg-slate-900/50'
                                         }`}
                                     >
-                                        <item.icon size={18} className={isActive(item.path) ? 'text-blue-500' : 'text-slate-700 group-hover:text-blue-400'} />
-                                        <span className="font-bold text-xs">{item.label}</span>
+                                        <div className="flex items-center gap-3">
+                                            <item.icon size={18} className={isActive(item.path) ? 'text-blue-500' : 'text-slate-700 group-hover:text-blue-400'} />
+                                            <span className="font-bold text-xs">{item.label}</span>
+                                        </div>
+                                        <ChevronLeft size={14} className={isActive(item.path) ? 'opacity-100' : 'opacity-0'} />
                                     </Link>
                                 ))}
                             </div>
@@ -141,7 +146,7 @@ const Layout = ({ children }) => {
                     </div>
                     <span className="font-black text-white text-lg italic">جيبي</span>
                 </div>
-                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white">
+                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-slate-400 hover:text-white transition-transform active:scale-90">
                     <Menu size={24} />
                 </button>
             </header>
@@ -167,7 +172,7 @@ const Layout = ({ children }) => {
                                                 to={item.path}
                                                 onClick={() => setIsSidebarOpen(false)}
                                                 className={`flex flex-col items-center gap-3 p-6 rounded-3xl transition-all border ${
-                                                    isActive(item.path) ? 'bg-blue-600 border-blue-500 text-white' : 'bg-slate-900 border-slate-800 text-slate-400'
+                                                    isActive(item.path) ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-900/40' : 'bg-slate-900 border-slate-800 text-slate-400'
                                                 }`}
                                             >
                                                 <item.icon size={24} />
@@ -197,11 +202,11 @@ const Layout = ({ children }) => {
                         key={item.path}
                         to={item.path}
                         className={`flex flex-col items-center gap-1.5 transition-all duration-300 ${
-                            isActive(item.path) ? 'text-blue-500 scale-110' : 'text-slate-600'
+                            isActive(item.path) ? 'text-blue-500 scale-110 font-black' : 'text-slate-600'
                         }`}
                     >
                         <item.icon size={22} />
-                        <span className="text-[10px] font-black">{item.label}</span>
+                        <span className="text-[10px]">{item.label}</span>
                     </Link>
                 ))}
             </nav>
