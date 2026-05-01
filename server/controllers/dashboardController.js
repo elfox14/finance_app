@@ -196,8 +196,6 @@ exports.getDashboardStats = async (req, res) => {
             else assetDistribution.push({ name: typeLabel, value: a.balance || 0 });
         });
         
-        const totalInvestments = certificates.reduce((sum, c) => sum + (c.principalAmount || 0), 0);
-        
         // Detailed asset breakdown for the new UI section
         const assetsDetailed = [
             ...accounts.map(a => ({ name: a.name, value: a.balance || 0, type: a.type, icon: 'account' })),
@@ -226,7 +224,6 @@ exports.getDashboardStats = async (req, res) => {
             expensesMTD:             Math.round(currentMonthExpenses),
             netIncomeMTD:            Math.round(currentMonthIncomes - currentMonthExpenses - next30DayObligations),
             netMarginMTD:            currentMonthIncomes > 0 ? Number(((currentMonthIncomes - currentMonthExpenses) / currentMonthIncomes * 100).toFixed(1)) : 0,
-            savingsRate:             Number(savingsRateRaw.toFixed(1)),
             incomeGrowthMoM:         (() => {
                 // Compare current month income to previous month income
                 const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
