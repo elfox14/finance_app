@@ -227,9 +227,9 @@ const Loans = () => {
 
             {/* Details Modal */}
             {showDetailsModal && (
-                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-                    <div className="min-h-full flex items-center justify-center p-4 md:p-8">
-                        <div className="bg-slate-950 border border-blue-500/30 w-full max-w-5xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 relative shadow-2xl text-right">
+                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto flex">
+                    <div className="relative m-auto w-full max-w-5xl p-4 py-8 md:p-8">
+                        <div className="bg-slate-950 border border-blue-500/30 w-full rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 shadow-2xl text-right">
                             <button onClick={() => setShowDetailsModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors"><X size={32} /></button>
                         
                         <div className="mb-10">
@@ -336,9 +336,9 @@ const Loans = () => {
 
             {/* Payment Modal */}
             {showPaymentModal && (
-                <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-                    <div className="min-h-full flex items-center justify-center p-4 md:p-8">
-                        <div className="bg-slate-950 border border-slate-800 w-full max-w-md rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 relative shadow-2xl text-right">
+                <div className="fixed inset-0 z-[200] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto flex">
+                    <div className="relative m-auto w-full max-w-md p-4 py-8 md:p-8">
+                        <div className="bg-slate-950 border border-slate-800 w-full rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-2xl text-right">
                             <button onClick={() => setShowPaymentModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors"><X size={28} /></button>
                         <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3"><DollarSign className="text-emerald-500" /> تنفيذ السداد</h2>
                         <form onSubmit={handleRecordPayment} className="space-y-6">
@@ -375,9 +375,9 @@ const Loans = () => {
 
             {/* Add Loan Modal */}
             {showAddModal && (
-                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto">
-                    <div className="min-h-full flex items-center justify-center p-4 md:p-8">
-                        <div className="bg-slate-950 border border-blue-500/30 w-full max-w-3xl rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 relative shadow-2xl text-right">
+                <div className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-md animate-in fade-in duration-300 overflow-y-auto flex">
+                    <div className="relative m-auto w-full max-w-3xl p-4 py-8 md:p-8">
+                        <div className="bg-slate-950 border border-blue-500/30 w-full rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 shadow-2xl text-right">
                             <button onClick={() => setShowAddModal(false)} className="absolute top-6 left-6 text-slate-500 hover:text-white transition-colors"><X size={32} /></button>
                         <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3 italic">
                             <Landmark className="text-blue-500" /> إضافة قرض وإنشاء جدول السداد
