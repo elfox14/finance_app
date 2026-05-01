@@ -1,6 +1,6 @@
 const Income = require('../models/Income');
-const Expense = require('../models/Expense');
-const Loan = require('../models/Loan');
+const Account = require('../models/Account');
+const Transaction = require('../models/Transaction');
 
 // @desc    Get all incomes with professional cash flow analytics
 exports.getIncomes = async (req, res) => {
@@ -16,21 +16,11 @@ exports.getIncomes = async (req, res) => {
         const thisMonthIncomes = incomes.filter(i => new Date(i.date) >= startOfMonth);
         const totalIncomeThisMonth = thisMonthIncomes.reduce((sum, i) => sum + i.amount, 0);
 
-        // تحليل الحالة (محصل vs متوقع)
         const collected = thisMonthIncomes.filter(i => ['محصل', 'received'].includes(i.cashFlowType)).reduce((s, i) => s + i.amount, 0);
         const expected = thisMonthIncomes.filter(i => ['متوقع', 'expected'].includes(i.cashFlowType)).reduce((s, i) => s + i.amount, 0);
 
-        // تحليل الطبيعة (ثابت vs متغير)
         const fixed = thisMonthIncomes.filter(i => ['ثابت', 'fixed'].includes(i.incomeType)).reduce((s, i) => s + i.amount, 0);
         const variable = thisMonthIncomes.filter(i => ['متغير', 'variable'].includes(i.incomeType)).reduce((s, i) => s + i.amount, 0);
-
-        // حساب قدرة التغطية (Coverage Ratio)
-        const [expenses, loans] = await Promise.all([
-            Expense.find({ userId, deletedAt: null, date: { $gte: startOfMonth } }),
-            Loan.find({ userId, deletedAt: null, isPaid: false })
-        ]);
-        const totalObligations = expenses.reduce((s, e) => s + e.amount, 0) + loans.reduce((s, l) => s + l.monthlyPayment, 0);
-        const coverageRatio = totalObligations > 0 ? (totalIncomeThisMonth / totalObligations).toFixed(2) : '∞';
 
         res.json({
             incomes,
@@ -41,7 +31,6 @@ exports.getIncomes = async (req, res) => {
                 fixed,
                 variable,
                 fixedRatio: totalIncomeThisMonth > 0 ? ((fixed / totalIncomeThisMonth) * 100).toFixed(1) : 0,
-                coverageRatio,
                 topSource: Object.entries(thisMonthIncomes.reduce((acc, i) => {
                     acc[i.source] = (acc[i.source] || 0) + i.amount;
                     return acc;
@@ -56,8 +45,37 @@ exports.getIncomes = async (req, res) => {
 // @desc    Create income
 exports.createIncome = async (req, res) => {
     try {
-        const data = { ...req.body, userId: req.user._id };
+        const userId = req.user._id;
+        const data = { ...req.body, userId };
+        
+        // 1. Create specialized income record
         const income = await Income.create(data);
+
+        // 2. Create corresponding Transaction for the Unified Ledger
+        if (data.accountId) {
+            await Transaction.create({
+                userId,
+                date: data.date || new Date(),
+                type: 'دخل',
+                amount: data.amount,
+                accountId: data.accountId,
+                category: data.source || 'دخل متنوع',
+                notes: data.notes,
+                status: 'مُسوّى',
+                classification: 'operating_income',
+                affectsCashflow: true,
+                affectsNetworth: true,
+                linkedEntity: { entityType: 'None' }
+            });
+
+            // 3. Update Account Balance
+            const account = await Account.findById(data.accountId);
+            if (account) {
+                account.balance += data.amount;
+                await account.save();
+            }
+        }
+
         res.status(201).json(income);
     } catch (error) {
         res.status(400).json({ message: error.message });

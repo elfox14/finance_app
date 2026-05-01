@@ -8,6 +8,28 @@ const Certificate = require('../models/Certificate');
 const { PeerDebt } = require('../models/PeerDebt');
 const Budget = require('../models/Budget');
 
+// Helper to classify legacy transactions
+function deriveClassification(tx) {
+    if (tx.classification) return tx.classification;
+    const entity = tx.linkedEntity?.entityType;
+    const isLinked = entity && entity !== 'None';
+
+    if (tx.type === 'التزام') return 'financing_in';
+    if (tx.type === 'سداد')  return 'debt_principal_payment';
+    if (tx.type === 'تحويل') return 'asset_transfer';
+    if (tx.type === 'أصل')   return 'asset_acquisition';
+
+    if (tx.type === 'دخل') {
+        if (isLinked && ['Loan', 'PeerDebt'].includes(entity)) return 'financing_in';
+        return 'operating_income';
+    }
+    if (tx.type === 'مصروف') {
+        if (tx.category === 'فوائد قروض' || tx.category === 'عمولات') return 'finance_cost';
+        return 'operating_expense';
+    }
+    return 'operating_expense';
+}
+
 exports.getReports = async (req, res) => {
     try {
         const userId = req.user._id;
@@ -21,13 +43,13 @@ exports.getReports = async (req, res) => {
             accounts, loans, cards, 
             certificates, debts, budgets
         ] = await Promise.all([
-            Transaction.find({ userId, status: { $in: ['مُسوّى', 'مُرحَّل'] }, deletedAt: null }),
-            Expense.find({ userId, deletedAt: null }),
+            Transaction.find({ userId, status: { $in: ['مُسوّى', 'مُرحَّل'] }, deletedAt: null }),
+            Expense.find({ userId }),
             Income.find({ userId, deletedAt: null }),
             Account.find({ userId, deletedAt: null }),
             Loan.find({ userId, deletedAt: null }),
             Card.find({ userId, deletedAt: null }),
-            Certificate.find({ userId }),
+            Certificate.find({ userId, status: 'active' }),
             PeerDebt.find({ userId, deletedAt: null }),
             Budget.find({ userId, month: currentMonth, year: currentYear })
         ]);
@@ -38,7 +60,7 @@ exports.getReports = async (req, res) => {
             ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى' }))
         ];
 
-        // 2. Trend Analysis (Last 6 Months Income vs Expense)
+        // 2. Trend Analysis (Last 6 Months OPERATING Performance)
         const trends = [];
         for (let i = 5; i >= 0; i--) {
             const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -50,24 +72,34 @@ exports.getReports = async (req, res) => {
                 return (date.getMonth() + 1) === m && date.getFullYear() === y;
             });
 
-            const income = monthTxs.filter(tx => tx.type === 'دخل').reduce((s, tx) => s + tx.amount, 0);
-            const expense = monthTxs.filter(tx => tx.type === 'مصروف').reduce((s, tx) => s + tx.amount, 0);
+            let income = 0;
+            let expense = 0;
+            let finCost = 0;
+
+            monthTxs.forEach(tx => {
+                const cls = deriveClassification(tx);
+                if (cls === 'operating_income') income += tx.amount;
+                if (cls === 'operating_expense') expense += tx.amount;
+                if (cls === 'finance_cost') finCost += tx.amount;
+            });
 
             trends.push({
                 month: d.toLocaleString('ar-EG', { month: 'short' }),
                 income,
-                expense,
-                net: income - expense
+                expense: expense + finCost,
+                net: income - (expense + finCost)
             });
         }
 
-        // 3. Category Breakdown (Current Month)
-        const currentMonthExpenses = unifiedTransactions.filter(tx => {
+        // 3. Category Breakdown (Operating Only - Current Month)
+        const currentMonthOperatingExpenses = unifiedTransactions.filter(tx => {
             const d = new Date(tx.date);
-            return tx.type === 'مصروف' && (d.getMonth() + 1) === currentMonth && d.getFullYear() === currentYear;
+            const cls = deriveClassification(tx);
+            return (cls === 'operating_expense' || cls === 'finance_cost') && 
+                   (d.getMonth() + 1) === currentMonth && d.getFullYear() === currentYear;
         });
 
-        const categoryAnalysis = currentMonthExpenses.reduce((acc, tx) => {
+        const categoryAnalysis = currentMonthOperatingExpenses.reduce((acc, tx) => {
             const cat = tx.category || 'أخرى';
             acc[cat] = (acc[cat] || 0) + tx.amount;
             return acc;
@@ -86,53 +118,36 @@ exports.getReports = async (req, res) => {
             };
         });
 
-        // 5. Obligations Timeline (7, 30 days)
+        // 5. Obligations Timeline
         const allObligations = [
-            ...loans.filter(l => l.status === 'نشط' || !l.isPaid).map(l => ({ name: l.loanName, amount: l.monthlyPayment, date: l.nextPaymentDate, type: 'loan' })),
-            ...cards.filter(c => c.cardType === 'credit' && c.currentBalance > 0).map(c => ({ name: c.cardName, amount: c.currentBalance, date: new Date(currentYear, currentMonth - 1, c.dueDay), type: 'card' })),
+            ...loans.filter(l => l.status === 'نشط').map(l => ({ name: l.loanName, amount: l.monthlyInstallment || 0, date: l.nextPaymentDate, type: 'loan' })),
+            ...cards.filter(c => (c.cardType === 'credit' || c.cardType === 'ائتمانية') && c.currentBalance > 0).map(c => ({ name: c.cardName, amount: c.currentBalance, date: new Date(currentYear, currentMonth - 1, c.dueDay), type: 'card' })),
             ...debts.filter(d => d.type === 'borrowed' && !d.isPaid).map(d => ({ name: d.personName, amount: d.amount, date: d.dueDate, type: 'debt' }))
         ].sort((a, b) => new Date(a.date) - new Date(b.date));
 
-        const next30DaysObs = allObligations.filter(o => o.date && (new Date(o.date) - now) / (1000 * 60 * 60 * 24) <= 30 && (new Date(o.date) - now) >= 0);
+        const next30DaysObs = allObligations.filter(o => o.date && (new Date(o.date) - now) / (1000 * 60 * 60 * 24) <= 30 && (new Date(o.date) - now) >= -1);
 
-        // 6. Summary Assets & Liabilities
+        // 6. Summary Assets & Liabilities (Matching Dashboard Logic)
         const totalCash = accounts.reduce((s, a) => s + (a.balance || 0), 0);
-        const totalCerts = certificates.filter(c => c.status === 'active').reduce((s, c) => s + (c.principalAmount || 0), 0);
-        const totalAssets = totalCash + totalCerts;
+        const totalInvestments = certificates.reduce((sum, c) => sum + (c.principalAmount || 0), 0);
+        const totalLentDebts = debts.filter(d => d.type === 'lent' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
+        const totalAssets = totalCash + totalInvestments + totalLentDebts;
 
-        const totalLoans = loans.filter(l => l.status === 'نشط').reduce((s, l) => s + l.amountRemaining, 0);
-        const totalCardDebt = cards.filter(c => c.cardType === 'credit').reduce((s, c) => s + c.currentBalance, 0);
-        const totalBorrowed = debts.filter(d => d.type === 'borrowed' && !d.isPaid).reduce((s, d) => s + d.amount, 0);
-        const totalLent = debts.filter(d => d.type === 'lent' && !d.isPaid).reduce((s, d) => s + d.amount, 0);
-        const totalDebt = totalLoans + totalCardDebt + totalBorrowed;
+        const totalLoanBalance = loans.reduce((sum, l) => {
+            if (l.remainingAmount != null) return sum + l.remainingAmount;
+            return sum + ((l.principalAmount || 0) - (l.paidAmount || 0));
+        }, 0);
+        const totalCardDebt = cards.filter(c => (c.cardType === 'credit' || c.cardType === 'ائتمانية')).reduce((s, c) => s + (c.currentBalance || 0), 0);
+        const totalBorrowed = debts.filter(d => d.type === 'borrowed' && !d.isPaid).reduce((s, d) => s + (d.amount || 0), 0);
+        const totalDebt = totalLoanBalance + totalCardDebt + totalBorrowed;
 
-        // 7. Smart Recommendations
-        const recommendations = [];
-        if (budgetPerformance.some(b => b.status === 'over')) {
-            const over = budgetPerformance.filter(b => b.status === 'over');
-            recommendations.push(`تحذير: لقد تجاوزت الموازنة المحددة في ${over.length} فئات هذا الشهر.`);
-        }
-        
+        // 7. Recommendations & Summary
         const lastMonth = trends[trends.length-1];
-        if (lastMonth.income > 0) {
-            const savingsRate = lastMonth.net / lastMonth.income;
-            if (savingsRate < 0.1) recommendations.push("نسبة الادخار منخفضة (أقل من 10%). حاول تقليل المصروفات في فئات مثل الترفيه أو التسوق.");
-        }
-        
-        if (totalDebt > totalAssets) {
-            recommendations.push("انتباه: إجمالي الالتزامات يتجاوز إجمالي الأصول المتاحة.");
-        }
-
         const summary = {
             savingsRate: lastMonth.income > 0 ? ((lastMonth.net / lastMonth.income) * 100).toFixed(1) : 0,
             debtRatio: lastMonth.income > 0 ? ((next30DaysObs.reduce((s, o) => s + o.amount, 0) / lastMonth.income) * 100).toFixed(1) : 0,
-            totalAssets: totalAssets + totalLent,
-            totalDebt: totalDebt
-        };
-
-        const timeline = {
-            next30Days: next30DaysObs,
-            totalUpcoming30: next30DaysObs.reduce((s, o) => s + o.amount, 0)
+            totalAssets,
+            totalDebt
         };
 
         res.json({
@@ -140,13 +155,15 @@ exports.getReports = async (req, res) => {
             trends,
             categoryAnalysis,
             budgetPerformance,
-            timeline,
-            recommendations,
+            timeline: {
+                next30Days: next30DaysObs,
+                totalUpcoming30: next30DaysObs.reduce((s, o) => s + o.amount, 0)
+            },
             wealthDistribution: {
                 cash: totalCash,
-                certificates: totalCerts,
-                lent: totalLent,
-                loans: totalLoans,
+                certificates: totalInvestments,
+                lent: totalLentDebts,
+                loans: totalLoanBalance,
                 cards: totalCardDebt,
                 borrowed: totalBorrowed
             }

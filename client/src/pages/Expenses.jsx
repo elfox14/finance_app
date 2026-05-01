@@ -4,7 +4,8 @@ import {
     Plus, Trash2, Search, Filter, 
     TrendingUp, Clock, AlertCircle, 
     ArrowUpRight, ShoppingBag, Calendar,
-    BarChart3, List, PieChart as PieIcon, Upload, ArrowDownRight
+    BarChart3, List, PieChart as PieIcon, Upload, ArrowDownRight,
+    Wallet
 } from 'lucide-react';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
@@ -13,19 +14,19 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Expenses = () => {
     const [expenses, setExpenses] = useState([]);
+    const [accounts, setAccounts] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
     const [showAdvanced, setShowAdvanced] = useState(false);
 
     const categories = ['السكن', 'الطعام', 'النقل', 'الفواتير', 'الصحة', 'الديون', 'الادخار', 'الترفيه', 'التقنية', 'عام', 'أخرى'];
-    const paymentMethods = ['كاش', 'بنك', 'بطاقة', 'محفظة', 'تحويل'];
 
     const [formData, setFormData] = useState({
         amount: '',
         category: 'عام',
         date: new Date().toISOString().split('T')[0],
-        paymentMethod: 'كاش',
+        accountId: '',
         description: '',
         vendor: '',
         expenseType: 'متغير',
@@ -34,11 +35,20 @@ const Expenses = () => {
 
     const fetchData = async () => {
         try {
-            const res = await api.get('/expenses');
-            setExpenses(res.data.expenses);
-            setStats(res.data.stats);
+            const [expRes, accRes] = await Promise.all([
+                api.get('/expenses'),
+                api.get('/accounts')
+            ]);
+            setExpenses(expRes.data.expenses);
+            setStats(expRes.data.stats);
+            setAccounts(accRes.data);
+            
+            // Set default account if available
+            if (accRes.data.length > 0 && !formData.accountId) {
+                setFormData(prev => ({ ...prev, accountId: accRes.data[0]._id }));
+            }
         } catch (err) {
-            console.error('Error fetching expenses:', err);
+            console.error('Error fetching data:', err);
         } finally {
             setLoading(false);
         }
@@ -50,6 +60,10 @@ const Expenses = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!formData.accountId) {
+            alert('يرجى اختيار الحساب');
+            return;
+        }
         try {
             await api.post('/expenses', formData);
             setShowForm(false);
@@ -128,13 +142,21 @@ const Expenses = () => {
                                     className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-4 text-white font-black text-xl focus:border-blue-500 outline-none" />
                             </div>
                             <div className="space-y-3">
+                                <label className="text-xs font-bold text-slate-400">الحساب</label>
+                                <select name="accountId" value={formData.accountId} onChange={handleChange} required
+                                    className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500">
+                                    <option value="">اختر الحساب...</option>
+                                    {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-3">
                                 <label className="text-xs font-bold text-slate-400">الفئة</label>
                                 <select name="category" value={formData.category} onChange={handleChange} required
                                     className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500">
                                     {categories.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                             </div>
-                            <div className="space-y-3 lg:col-span-2">
+                            <div className="space-y-3">
                                 <label className="text-xs font-bold text-slate-400">الوصف (اختياري)</label>
                                 <input type="text" name="description" placeholder="ماذا اشتريت؟" value={formData.description} onChange={handleChange}
                                     className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-4 text-white font-bold text-lg focus:border-blue-500 outline-none" />
@@ -142,16 +164,10 @@ const Expenses = () => {
                         </div>
 
                         {showAdvanced && (
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pt-6 border-t border-slate-800/50 animate-in fade-in">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-slate-800/50 animate-in fade-in">
                                 <div className="space-y-3">
                                     <label className="text-xs font-bold text-slate-400">التاريخ</label>
                                     <input type="date" name="date" value={formData.date} onChange={handleChange} className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-4 py-3 text-white font-bold outline-none" />
-                                </div>
-                                <div className="space-y-3">
-                                    <label className="text-xs font-bold text-slate-400">وسيلة الدفع</label>
-                                    <select name="paymentMethod" value={formData.paymentMethod} onChange={handleChange} className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-4 py-3 text-white font-bold outline-none">
-                                        {paymentMethods.map(p => <option key={p} value={p}>{p}</option>)}
-                                    </select>
                                 </div>
                                 <div className="space-y-3">
                                     <label className="text-xs font-bold text-slate-400">المورد / الجهة</label>
@@ -164,7 +180,7 @@ const Expenses = () => {
                                         <option value="ثابت">ثابت</option>
                                     </select>
                                 </div>
-                                <div className="md:col-span-4 flex items-center gap-6">
+                                <div className="md:col-span-3 flex items-center gap-6">
                                     <label className="flex items-center gap-2 cursor-pointer text-slate-300 font-bold">
                                         <input type="checkbox" name="isRecurring" checked={formData.isRecurring} onChange={handleChange} className="w-5 h-5 rounded text-blue-600 bg-slate-800 border-slate-700" />
                                         مصروف متكرر
@@ -194,7 +210,7 @@ const Expenses = () => {
                     icon={stats?.momChange > 0 ? <TrendingUp size={24} className="text-red-500 opacity-50 absolute -right-2 -bottom-2" /> : <ArrowDownRight size={24} className="text-emerald-500 opacity-50 absolute -right-2 -bottom-2" />}
                 />
                 <ControlStat label="المصروفات الثابتة" val={stats?.fixedTotal} color="text-slate-300" bg="bg-slate-900" />
-                <ControlStat label="قيد المراجعة / غير مصنف" val={stats?.uncategorizedCount} isText color="text-orange-500" bg="bg-slate-900" />
+                <ControlStat label="فئات الميزانية" val={stats?.budgetStatus?.length || 0} isText color="text-orange-500" bg="bg-slate-900" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
@@ -241,30 +257,22 @@ const Expenses = () => {
                         <h3 className="text-xl font-black text-white flex items-center gap-3">
                             <List className="text-slate-400" /> سجل المصروفات التفصيلي
                         </h3>
-                        <div className="flex gap-2">
-                            <button className="p-2 bg-slate-800 rounded-xl text-slate-400 hover:text-white"><Filter size={18} /></button>
-                        </div>
                     </div>
                     <div className="divide-y divide-slate-800/50">
                         {expenses.length > 0 ? expenses.map((exp) => (
                             <div key={exp._id} className="p-6 flex flex-col md:flex-row md:items-center justify-between group hover:bg-slate-800/30 transition-all gap-4">
                                 <div className="flex items-center gap-5">
-                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner ${
-                                        exp.status === 'reconciled' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 
-                                        exp.status === 'new' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' : 'bg-slate-500/10 text-slate-400 border-slate-700'
-                                    }`}>
+                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-inner bg-slate-500/10 text-slate-400 border border-slate-700`}>
                                         <ShoppingBag size={20} />
                                     </div>
                                     <div>
                                         <p className="font-black text-white text-lg flex items-center gap-2">
                                             {exp.description || 'مصروف عام'} 
-                                            {exp.hasReceipt && <span className="bg-slate-800 text-[10px] px-2 py-0.5 rounded text-slate-400">مرفق</span>}
                                         </p>
                                         <div className="flex flex-wrap items-center gap-2 mt-2">
                                             <span className="text-[10px] font-bold text-slate-400 bg-slate-800/80 px-3 py-1 rounded-xl">{exp.category}</span>
                                             <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Calendar size={10} />{new Date(exp.date).toLocaleDateString('ar-EG')}</span>
-                                            <span className="text-[10px] font-bold text-indigo-400 bg-indigo-900/20 px-3 py-1 rounded-xl">{exp.paymentMethod}</span>
-                                            {exp.vendor && <span className="text-[10px] font-bold text-slate-400 italic">@ {exp.vendor}</span>}
+                                            <span className="text-[10px] font-bold text-indigo-400 bg-indigo-900/20 px-3 py-1 rounded-xl flex items-center gap-1"><Wallet size={10}/> {accounts.find(a => a._id === exp.accountId)?.name || 'كاش'}</span>
                                         </div>
                                     </div>
                                 </div>

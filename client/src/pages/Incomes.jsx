@@ -17,6 +17,7 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 
 const Incomes = () => {
     const [incomes, setIncomes] = useState([]);
+    const [accounts, setAccounts] = useState([]);
     const [stats, setStats] = useState(null);
     const [loading, setLoading] = useState(true);
     const [showForm, setShowForm] = useState(false);
@@ -27,7 +28,7 @@ const Incomes = () => {
         source: '',
         incomeType: 'ثابت',
         cashFlowType: 'محصل',
-        account: 'نقدي',
+        accountId: '',
         isRecurring: false,
         recurringPeriod: 'شهري',
         date: new Date().toISOString().split('T')[0],
@@ -36,13 +37,20 @@ const Incomes = () => {
 
     const incomeTypes = ['ثابت', 'متغير', 'موسمي', 'استثنائي'];
     const cashFlowStatuses = ['محصل', 'مستحق', 'متوقع'];
-    const accounts = ['نقدي', 'بنك', 'محفظة'];
 
     const fetchData = async () => {
         try {
-            const res = await api.get('/incomes');
-            setIncomes(res.data.incomes);
-            setStats(res.data.stats);
+            const [incRes, accRes] = await Promise.all([
+                api.get('/incomes'),
+                api.get('/accounts')
+            ]);
+            setIncomes(incRes.data.incomes);
+            setStats(incRes.data.stats);
+            setAccounts(accRes.data);
+
+            if (accRes.data.length > 0 && !formData.accountId) {
+                setFormData(prev => ({ ...prev, accountId: accRes.data[0]._id }));
+            }
         } catch (err) {
             console.error('Error fetching incomes:', err);
         } finally {
@@ -56,6 +64,10 @@ const Incomes = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (!formData.accountId) {
+            alert('يرجى اختيار الحساب');
+            return;
+        }
         try {
             await api.post('/incomes', formData);
             
@@ -67,7 +79,7 @@ const Incomes = () => {
                 source: '',
                 incomeType: 'ثابت',
                 cashFlowType: 'محصل',
-                account: 'نقدي',
+                accountId: accounts[0]?._id || '',
                 isRecurring: false,
                 recurringPeriod: 'شهري',
                 date: new Date().toISOString().split('T')[0],
@@ -121,7 +133,6 @@ const Incomes = () => {
 
     return (
         <div className="space-y-10 fade-in pb-24 md:pb-10" dir="rtl">
-            {/* 1) Overview Header */}
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4 md:px-0">
                 <div>
                     <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">سجل الإيرادات</h1>
@@ -135,7 +146,6 @@ const Incomes = () => {
                 </button>
             </header>
 
-            {/* Smart Feedback Toast */}
             {feedback && (
                 <div className="fixed top-24 left-1/2 -translate-x-1/2 z-[100] bg-emerald-600 text-white px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
                     <Sparkles size={20} />
@@ -143,7 +153,6 @@ const Incomes = () => {
                 </div>
             )}
 
-            {/* 4) Entry Form (Conditional) */}
             {showForm && (
                 <div className="bg-slate-900 border border-emerald-500/30 p-8 rounded-[3rem] shadow-2xl animate-in zoom-in-95 duration-300 mx-4 md:mx-0">
                     <h3 className="text-xl font-black text-white mb-8 flex items-center gap-3">
@@ -160,6 +169,18 @@ const Incomes = () => {
                             />
                         </div>
                         <div className="space-y-3">
+                            <label className="text-xs font-bold text-slate-400">الحساب المستلم</label>
+                            <select 
+                                className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-5 text-white font-bold text-lg focus:border-emerald-500 transition-all outline-none"
+                                value={formData.accountId}
+                                onChange={(e) => setFormData({...formData, accountId: e.target.value})}
+                                required
+                            >
+                                <option value="">اختر الحساب...</option>
+                                {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
+                            </select>
+                        </div>
+                        <div className="space-y-3 md:col-span-2">
                             <label className="text-xs font-bold text-slate-400">مصدر الدخل (البيان)</label>
                             <input 
                                 type="text" required placeholder="مثال: راتب، عمولة، أرباح..."
@@ -192,18 +213,6 @@ const Incomes = () => {
                             </div>
                         </div>
 
-                        <div className="flex flex-col justify-center">
-                            <div className="flex items-center gap-4 p-5 bg-slate-800/50 rounded-2xl border border-slate-700 hover:border-emerald-500/50 transition-colors">
-                                <input 
-                                    type="checkbox" id="recurring"
-                                    className="w-6 h-6 rounded-lg text-emerald-600 bg-slate-900 border-slate-700 cursor-pointer"
-                                    checked={formData.isRecurring}
-                                    onChange={(e) => setFormData({...formData, isRecurring: e.target.checked})}
-                                />
-                                <label htmlFor="recurring" className="text-sm font-bold text-white cursor-pointer select-none">إيراد متكرر شهرياً</label>
-                            </div>
-                        </div>
-
                         <button type="submit" className="md:col-span-2 w-full bg-emerald-600 py-5 rounded-2xl font-black text-white shadow-xl shadow-emerald-900/40 hover:bg-emerald-500 transition-all text-lg mt-2">
                             تأكيد وحفظ الإيراد
                         </button>
@@ -213,7 +222,6 @@ const Incomes = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 md:px-0">
                 <div className="lg:col-span-2 space-y-8">
-                    {/* 2) Top Stats Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         <OverviewStat label="إجمالي الدخل" val={stats?.totalIncomeThisMonth} color="text-emerald-500" bg="bg-emerald-600/10" />
                         <OverviewStat label="أعلى مصدر" val={stats?.topSource} isText color="text-blue-500" bg="bg-blue-600/10" />
@@ -221,9 +229,7 @@ const Incomes = () => {
                         <OverviewStat label="السيولة المحصلة" val={stats?.collected} color="text-emerald-400" bg="bg-emerald-500/10" />
                     </div>
 
-                    {/* Chart & Stability Panel */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        {/* Type Chart */}
                         <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col">
                             <h3 className="text-xl font-black text-white flex items-center gap-2 mb-6">
                                 <PieIcon className="text-emerald-500" /> توزيع الإيرادات حسب الطبيعة
@@ -237,7 +243,6 @@ const Incomes = () => {
                             </div>
                         </div>
 
-                        {/* Stability Index */}
                         <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col justify-center text-center relative overflow-hidden group">
                             <div className="absolute top-0 right-0 p-8 opacity-5 group-hover:scale-110 transition-transform">
                                 <ShieldCheck size={120} className="text-blue-500" />
@@ -255,16 +260,11 @@ const Incomes = () => {
                         </div>
                     </div>
 
-                    {/* 5) Income Ledger */}
                     <div className="bg-slate-900 border border-slate-800 rounded-[3rem] shadow-2xl overflow-hidden flex flex-col">
                         <div className="p-8 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
                             <h3 className="text-xl font-black text-white flex items-center gap-3">
                                 <List className="text-slate-400" /> سجل التدفقات الداخلة
                             </h3>
-                            <div className="flex gap-2">
-                                <button className="p-3 bg-slate-800 rounded-2xl text-slate-400 hover:text-white transition-colors"><Search size={18} /></button>
-                                <button className="p-3 bg-slate-800 rounded-2xl text-slate-400 hover:text-white transition-colors"><Filter size={18} /></button>
-                            </div>
                         </div>
                         <div className="divide-y divide-slate-800/50">
                             {incomes.length > 0 ? incomes.map((inc) => (
@@ -288,7 +288,7 @@ const Incomes = () => {
                                                     inc.cashFlowType === 'محصل' ? 'bg-emerald-900/20 text-emerald-400' : 'bg-amber-900/20 text-amber-400'
                                                 }`}>{inc.cashFlowType}</span>
                                                 <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Calendar size={10} />{new Date(inc.date).toLocaleDateString('ar-EG')}</span>
-                                                {inc.isRecurring && <RefreshCcw size={12} className="text-emerald-500" title="متكرر" />}
+                                                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1"><Wallet size={10}/> {accounts.find(a => a._id === inc.accountId)?.name || 'كاش'}</span>
                                             </div>
                                         </div>
                                     </div>
@@ -312,10 +312,7 @@ const Incomes = () => {
                     </div>
                 </div>
 
-                {/* Sidebar Intelligence */}
                 <div className="space-y-8">
-                    
-                    {/* Coverage Ratio Card */}
                     <div className={`bg-gradient-to-br ${stats?.coverageRatio >= 1 ? 'from-emerald-900/40 to-blue-900/40 border-emerald-500/30' : 'from-red-900/40 to-orange-900/40 border-red-500/30'} border p-8 rounded-[3rem] shadow-2xl relative overflow-hidden`}>
                         <div className="absolute top-0 right-0 p-8 opacity-10">
                             <ShieldCheck size={100} className="text-white" />
@@ -331,28 +328,14 @@ const Incomes = () => {
                         </p>
                     </div>
 
-                    {/* CashFlow Breakdown */}
                     <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl">
                         <h3 className="text-xl font-black text-white mb-8 flex items-center gap-3">
                             <Coins className="text-emerald-500" /> حالة السيولة
                         </h3>
                         <div className="space-y-6">
-                            <CashFlowIndicator label="محصل (سيولة فعلية في يدك)" val={stats?.collected} total={stats?.totalIncomeThisMonth} activeColor="bg-emerald-500" textColor="text-emerald-400" />
+                            <CashFlowIndicator label="محصل (سيولة فعلية)" val={stats?.collected} total={stats?.totalIncomeThisMonth} activeColor="bg-emerald-500" textColor="text-emerald-400" />
                             <CashFlowIndicator label="متوقع (سيولة مستقبلية)" val={stats?.expected} total={stats?.totalIncomeThisMonth} activeColor="bg-amber-500" textColor="text-amber-400" />
                         </div>
-                    </div>
-
-                    {/* Smart Tips */}
-                    <div className="bg-gradient-to-br from-indigo-900/40 to-blue-900/40 border border-indigo-500/30 p-8 rounded-[3rem] shadow-2xl relative overflow-hidden group">
-                        <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
-                            <Sparkles size={80} className="text-yellow-400" />
-                        </div>
-                        <h3 className="text-xl font-black text-white mb-6 flex items-center gap-3 relative z-10">
-                            <Sparkles className="text-yellow-400" size={24} /> نصيحة التحصيل
-                        </h3>
-                        <p className="text-sm text-indigo-100 leading-relaxed italic relative z-10">
-                            "لديك مبالغ متوقعة بقيمة <span className="text-emerald-400 font-black">{stats?.expected?.toLocaleString() || 0} ج.م</span> لم يتم تحصيلها بعد. متابعة هذه المبالغ وتحصيلها في موعدها سيحسن مؤشر السيولة لديك بشكل ملحوظ."
-                        </p>
                     </div>
                 </div>
             </div>
