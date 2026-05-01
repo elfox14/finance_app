@@ -109,6 +109,7 @@ exports.getDashboardStats = async (req, res) => {
         const totalGroupSavings = groups.filter(g => !g.isPaidOut).reduce((sum, g) => sum + (g.paidAmount || 0), 0);
         const finalAssets = totalAssets + totalGroupSavings;
 
+        const totalLoanBalance = loans.reduce((sum, l) => sum + (l.remainingAmount || l.principalAmount - l.paidAmount || 0), 0);
         const totalLiabilities = totalCardBalance + totalLoanBalance + totalBorrowedDebts;
         
         // Add Group Debt (if the user HAS taken the pot, remaining payments are a liability)
