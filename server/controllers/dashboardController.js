@@ -104,16 +104,25 @@ exports.getDashboardStats = async (req, res) => {
         const totalLentDebts = debts.filter(d => d.type === 'lent' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
         
         const totalAssets = currentBalance + totalInvestments + totalLentDebts;
+        
+        // Add Group Savings (if the user hasn't taken the pot yet, their paid amount is an asset)
+        const totalGroupSavings = groups.filter(g => !g.isPaidOut).reduce((sum, g) => sum + (g.paidAmount || 0), 0);
+        const finalAssets = totalAssets + totalGroupSavings;
+
+        const totalLoanBalance = loans.reduce((sum, l) => sum + (l.remainingAmount || l.principalAmount - l.paidAmount || 0), 0);
         const totalLiabilities = totalCardBalance + totalLoanBalance + totalBorrowedDebts;
-        const netWorth = totalAssets - totalLiabilities;
+        
+        // Add Group Debt (if the user HAS taken the pot, remaining payments are a liability)
+        const totalGroupDebt = groups.filter(g => g.isPaidOut && !g.isCompleted).reduce((sum, g) => sum + (g.remainingAmount || 0), 0);
+        const finalLiabilities = totalLiabilities + totalGroupDebt;
+
+        const netWorth = finalAssets - finalLiabilities;
 
         // --- NEW KPIs ---
         const monthlySurplus = currentMonthIncomes - currentMonthExpenses;
         const savingsRate = currentMonthIncomes > 0 ? (monthlySurplus / currentMonthIncomes) * 100 : 0;
         const liquidAssets = accounts.filter(a => ['نقدي', 'بنكي', 'محفظة_إلكترونية'].includes(a.type)).reduce((sum, a) => sum + (a.balance || 0), 0);
         
-        // Net Worth Change: Simplest approximation is the monthly surplus (savings)
-        // Ideally we'd compare to last month's final Net Worth, but for now this is the active change.
         const netWorthChange = monthlySurplus; 
 
         // 7. Budgets Array
@@ -199,7 +208,8 @@ exports.getDashboardStats = async (req, res) => {
         const liabilitiesDetailed = [
             ...activeLoans.map(l => ({ name: l.loanName, value: l.remainingAmount || l.principalAmount - l.paidAmount || 0, type: l.loanType || 'قرض', icon: 'loan' })),
             ...activeCards.map(c => ({ name: c.cardName, value: c.currentBalance || 0, type: 'بطاقة ائتمان', icon: 'card' })),
-            ...activeBorrowedDebts.map(d => ({ name: `دين لـ ${d.personName}`, value: d.amount, type: 'ديون شخصية', icon: 'debt' }))
+            ...activeBorrowedDebts.map(d => ({ name: `دين لـ ${d.personName}`, value: d.amount, type: 'ديون شخصية', icon: 'debt' })),
+            ...groups.filter(g => g.isPaidOut && !g.isCompleted).map(g => ({ name: `جمعية: ${g.groupName}`, value: g.remainingAmount || 0, type: 'جمعية (مديونية)', icon: 'debt' }))
         ].filter(l => l.value > 0).sort((a,b) => b.value - a.value);
 
         if (totalInvestments > 0) assetDistribution.push({ name: 'شهادات استثمار', value: totalInvestments });
@@ -226,8 +236,8 @@ exports.getDashboardStats = async (req, res) => {
                 return prevMonthIncome > 0 ? Number((((currentMonthIncomes - prevMonthIncome) / prevMonthIncome) * 100).toFixed(1)) : 0;
             })(),
             netWorth:                Math.round(netWorth),
-            totalAssets:             Math.round(totalAssets),
-            totalLiabilities:        Math.round(totalLiabilities),
+            totalAssets:             Math.round(finalAssets),
+            totalLiabilities:        Math.round(finalLiabilities),
             monthlySurplus:          Math.round(monthlySurplus),
             savingsRate:             Number(savingsRate.toFixed(1)),
             upcomingObligationsTotal: Math.round(next30DayObligations),
