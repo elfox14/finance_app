@@ -196,9 +196,11 @@ const Dashboard = () => {
 
                         <div className="space-y-4">
                             {modalData.list.map((item, i) => (
-                                <div key={i} className={`flex items-center justify-between p-6 bg-slate-900/50 rounded-3xl border border-white/5 hover:border-${modalData.color}-500/30 transition-all group`}>
+                                <div key={i} className={`flex items-center justify-between p-6 bg-slate-900/50 rounded-3xl border border-white/5 transition-all group`}>
                                     <div className="flex items-center gap-4">
-                                        <div className={`p-4 rounded-2xl bg-${modalData.color}-500/10 text-${modalData.color}-500 group-hover:scale-110 transition-transform`}>
+                                        <div className={`p-4 rounded-2xl transition-transform group-hover:scale-110 ${
+                                            modalData.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-red-500/10 text-red-500'
+                                        }`}>
                                             {item.icon === 'certificate' ? <Landmark size={24} /> : 
                                              item.icon === 'debt' ? <Users size={24} /> : 
                                              item.icon === 'card' ? <CreditCard size={24} /> :
@@ -220,8 +222,8 @@ const Dashboard = () => {
                                             </div>
                                         </div>
                                     </div>
-                                    <p className={`text-2xl font-black text-${modalData.color}-400`}>
-                                        {item.value ? item.value.toLocaleString() : item.amount.toLocaleString()} 
+                                    <p className={`text-2xl font-black ${modalData.color === 'emerald' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                        {(item.value || item.amount || 0).toLocaleString()} 
                                         <span className="text-xs opacity-50 ml-2">ج.م</span>
                                     </p>
                                 </div>
@@ -233,11 +235,11 @@ const Dashboard = () => {
                         
                         <div className="mt-10 pt-8 border-t border-slate-800 flex justify-between items-center">
                              <p className="text-slate-500 font-bold">الإجمالي المجمع</p>
-                             <p className={`text-3xl font-black text-${modalData.color}-400`}>
-                                {modalType === 'income' ? accountingKPIs.incomeMTD.toLocaleString() :
-                                 modalType === 'expense' ? accountingKPIs.expensesMTD.toLocaleString() :
-                                 modalType === 'assets' ? accountingKPIs.totalAssets.toLocaleString() :
-                                 accountingKPIs.totalLiabilities.toLocaleString()} ج.م
+                             <p className={`text-3xl font-black ${modalData.color === 'emerald' ? 'text-emerald-400' : 'text-red-400'}`}>
+                                {modalType === 'income' ? (accountingKPIs.incomeMTD || 0).toLocaleString() :
+                                 modalType === 'expense' ? (accountingKPIs.expensesMTD || 0).toLocaleString() :
+                                 modalType === 'assets' ? (accountingKPIs.totalAssets || 0).toLocaleString() :
+                                 (accountingKPIs.totalLiabilities || 0).toLocaleString()} ج.م
                              </p>
                         </div>
                     </div>
