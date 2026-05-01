@@ -16,9 +16,10 @@ import Lending from './pages/Lending';
 import Borrowed from './pages/Borrowed';
 import Notifications from './pages/Notifications';
 import ResetPassword from './pages/ResetPassword';
-import Budgets from './pages/Budgets'; // استيراد صفحة الموازنات الجديدة
-import Accounts from './pages/Accounts'; // صفحة الحسابات
-import Settings from './pages/Settings'; // صفحة الإعدادات
+import Budgets from './pages/Budgets';
+import Accounts from './pages/Accounts';
+import Settings from './pages/Settings';
+import Ledger from './pages/Ledger';
 
 function AppRoutes() {
     return (
@@ -33,12 +34,17 @@ function AppRoutes() {
                 </ProtectedRoute>
             } />
             
+            <Route path="/ledger" element={
+                <ProtectedRoute>
+                    <Layout><Ledger /></Layout>
+                </ProtectedRoute>
+            } />
+
             <Route path="/expenses" element={
                 <ProtectedRoute>
                     <Layout><Expenses /></Layout>
                 </ProtectedRoute>
             } />
-
 
             <Route path="/incomes" element={
                 <ProtectedRoute>

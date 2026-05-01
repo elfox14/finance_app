@@ -6,7 +6,7 @@ import {
     ArrowDownLeft, CreditCard, Landmark, 
     Users, Bell, LogOut, Menu, X, PieChart, 
     Receipt, ShieldCheck, Target, Handshake,
-    Coins, Banknote, History, Settings
+    Coins, Banknote, History, Settings, ListChecks
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -43,8 +43,9 @@ const Layout = ({ children }) => {
             ]
         },
         {
-            title: "الموازنات",
+            title: "الموازنات والتدقيق",
             items: [
+                { path: '/ledger', icon: ListChecks, label: 'السجل الموحد' },
                 { path: '/budgets', icon: Target, label: 'إدارة الموازنات' },
             ]
         },
@@ -65,7 +66,7 @@ const Layout = ({ children }) => {
 
     const bottomNavItems = [
         { path: '/', icon: LayoutDashboard, label: 'الرئيسية' },
-        { path: '/expenses', icon: ArrowUpRight, label: 'المصاريف' },
+        { path: '/ledger', icon: ListChecks, label: 'السجل' },
         { path: '/budgets', icon: Target, label: 'موازنات' },
         { path: '/reports', icon: PieChart, label: 'تقارير' },
         { path: '/notifications', icon: Bell, label: 'تنبيهات' },
@@ -82,7 +83,7 @@ const Layout = ({ children }) => {
                         <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40">
                             <Wallet className="text-white" size={24} />
                         </div>
-                        <h1 className="text-2xl font-black text-white tracking-tighter italic">جيبي <span className="text-blue-500">v2.5</span></h1>
+                        <h1 className="text-2xl font-black text-white tracking-tighter italic">جيبي <span className="text-blue-500">v4.0</span></h1>
                     </div>
                 </div>
                 
