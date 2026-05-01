@@ -2,6 +2,7 @@ const Loan = require('../models/Loan');
 const LoanInstallment = require('../models/LoanInstallment');
 const LoanPayment = require('../models/LoanPayment');
 const Transaction = require('../models/Transaction');
+const Account = require('../models/Account');
 
 // @desc    Get all loans with deep debt analysis
 exports.getLoans = async (req, res) => {
@@ -153,6 +154,13 @@ exports.createLoan = async (req, res) => {
                 notes: `استلام قرض: ${data.loanName}`,
                 linkedEntity: { entityType: 'Loan', entityId: loan._id }
             });
+
+            // القيد المحاسبي: من حـ/ البنك (أصل يزيد) إلى حـ/ القرض (التزام يزيد)
+            const receivingAccount = await Account.findById(data.receivingAccountId);
+            if (receivingAccount) {
+                receivingAccount.balance += principal;
+                await receivingAccount.save();
+            }
         }
 
         res.status(201).json(loan);
@@ -247,6 +255,13 @@ exports.recordPayment = async (req, res) => {
                     status: 'مُسوّى', notes: `سداد قسط قرض: ${loan.loanName}`,
                     linkedEntity: { entityType: 'Loan', entityId: loan._id }
                 });
+            }
+
+            // القيد المحاسبي: خصم إجمالي السداد من حساب المصدر
+            const sourceAccount = await Account.findById(sourceAccountId);
+            if (sourceAccount) {
+                sourceAccount.balance -= Number(amount);
+                await sourceAccount.save();
             }
         }
 

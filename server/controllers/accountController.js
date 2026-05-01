@@ -27,7 +27,7 @@ exports.getAccounts = async (req, res) => {
                 if (tx.status === 'مُسوّى' || tx.status === 'مُرحَّل') {
                     if (isSource) {
                         if (tx.type === 'مصروف' || tx.type === 'سداد' || tx.type === 'تحويل') ledgerBalance -= tx.amount;
-                        if (tx.type === 'دخل') ledgerBalance += tx.amount; // Though usually income is destination
+                        if (tx.type === 'دخل' || tx.type === 'التزام') ledgerBalance += tx.amount; // التزام = قرض مستلم يرفع الرصيد
                     }
                     if (isDest && tx.type === 'تحويل') {
                         ledgerBalance += tx.amount;

@@ -75,8 +75,8 @@ exports.getDashboardStats = async (req, res) => {
         const financingMTD = financingInflow - financingOutflow;
 
         // 3. Next 30 Day Obligations
-        const activeLoans = loans.filter(l => l.status === 'نشط' && (l.amountRemaining || l.amount) > 0);
-        const upcomingLoans = activeLoans.reduce((sum, l) => sum + (l.monthlyPayment || 0), 0);
+        const activeLoans = loans.filter(l => l.status === 'نشط' && (l.remainingAmount || 0) > 0);
+        const upcomingLoans = activeLoans.reduce((sum, l) => sum + (l.monthlyInstallment || 0), 0);
         
         const activeCards = cards.filter(c => c.cardType === 'credit' && (c.currentBalance || 0) > 0);
         const upcomingCards = activeCards.reduce((sum, c) => sum + (c.currentBalance || 0), 0);
@@ -122,7 +122,10 @@ exports.getDashboardStats = async (req, res) => {
         const healthScore = Math.max(0, Math.min(100, 100 - (dtiRaw * 0.5) - (availableBalance < 0 ? 40 : 0) - (cardUtilization > 80 ? 20 : 0) + (savingsRateRaw > 20 ? 10 : 0)));
 
         // --- Net Worth Calculation ---
-        const totalLoanBalance = loans.reduce((sum, l) => sum + (l.remainingAmount || l.principalAmount - l.paidAmount || 0), 0);
+        const totalLoanBalance = loans.reduce((sum, l) => {
+            if (l.remainingAmount != null) return sum + l.remainingAmount;
+            return sum + ((l.principalAmount || 0) - (l.paidAmount || 0));
+        }, 0);
         const totalBorrowedDebts = debts.filter(d => d.type === 'borrowed' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
         const totalLentDebts = debts.filter(d => d.type === 'lent' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
         const totalInvestments = certificates.reduce((sum, c) => sum + (c.principalAmount || 0), 0);
@@ -163,7 +166,7 @@ exports.getDashboardStats = async (req, res) => {
 
         // 8. Upcoming Obligations List
         const upcomingObligationsList = [
-            ...activeLoans.map(l => ({ type: 'loan', name: l.loanName, amount: l.monthlyPayment || 0, dueDate: l.nextPaymentDate || now })),
+            ...activeLoans.map(l => ({ type: 'loan', name: l.loanName, amount: l.monthlyInstallment || 0, dueDate: l.nextPaymentDate || now })),
             ...activeGroups.map(g => ({ type: 'group', name: g.groupName, amount: g.monthlyAmount, dueDate: new Date(now.getFullYear(), now.getMonth(), 28) })), // approximate
             ...activeCards.map(c => ({ type: 'card', name: c.cardName, amount: c.currentBalance || 0, dueDate: new Date(now.getFullYear(), now.getMonth(), c.dueDay || 25) })),
             ...activeBorrowedDebts.map(d => ({ type: 'debt', name: `سلفة من ${d.personName}`, amount: d.amount, dueDate: d.dueDate || now }))
@@ -196,8 +199,9 @@ exports.getDashboardStats = async (req, res) => {
                 return txD.getMonth() === d.getMonth() && txD.getFullYear() === d.getFullYear();
             });
 
-            const income = monthTxs.filter(t => t.type === 'دخل').reduce((s, t) => s + t.amount, 0);
-            const expense = monthTxs.filter(t => t.type === 'مصروف').reduce((s, t) => s + t.amount, 0);
+            // Filter out financing transactions from the operating cashflow chart
+            const income = monthTxs.filter(t => t.type === 'دخل' && (!t.linkedEntity || !['Loan', 'Card', 'PeerDebt', 'Group'].includes(t.linkedEntity?.entityType))).reduce((s, t) => s + t.amount, 0);
+            const expense = monthTxs.filter(t => t.type === 'مصروف' && (!t.linkedEntity || !['Loan', 'Card', 'PeerDebt', 'Group'].includes(t.linkedEntity?.entityType))).reduce((s, t) => s + t.amount, 0);
 
             cashflowData.push({ month: monthLabel, income, expense, netProfit: income - expense });
         }

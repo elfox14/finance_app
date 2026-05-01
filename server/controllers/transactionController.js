@@ -37,7 +37,7 @@ exports.createTransaction = async (req, res) => {
             if (account) {
                 if (['مصروف', 'سداد', 'تحويل'].includes(type)) {
                     account.balance -= amount;
-                } else if (type === 'دخل') {
+                } else if (type === 'دخل' || type === 'التزام') {
                     account.balance += amount;
                 }
                 await account.save();
