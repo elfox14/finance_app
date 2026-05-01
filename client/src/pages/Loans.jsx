@@ -49,7 +49,6 @@ const Loans = () => {
             setAccounts(fetchedAccounts);
             
             if (fetchedAccounts.length > 0) {
-                setNewLoanForm(f => ({ ...f, receivingAccountId: fetchedAccounts[0]._id }));
                 setPaymentForm(f => ({ ...f, sourceAccountId: fetchedAccounts[0]._id }));
             }
         } catch (err) { 
@@ -74,7 +73,7 @@ const Loans = () => {
         try {
             await api.post('/loans', newLoanForm);
             setShowAddModal(false);
-            setNewLoanForm({ loanName: '', lenderName: '', loanType: 'شخصي', principalAmount: '', interestRate: '0', durationMonths: '24', dueDay: '1', firstDueDate: '', totalPayable: '', monthlyInstallment: '', receivingAccountId: accounts[0]?._id || '' });
+            setNewLoanForm({ loanName: '', lenderName: '', loanType: 'شخصي', principalAmount: '', interestRate: '0', durationMonths: '24', dueDay: '1', firstDueDate: '', totalPayable: '', monthlyInstallment: '', receivingAccountId: '' });
             fetchData();
         } catch (err) { alert('خطأ في إضافة القرض'); }
     };
@@ -402,6 +401,7 @@ const Loans = () => {
                                 <div className="space-y-2">
                                     <label className="text-[10px] text-slate-400 font-bold uppercase">الحساب المستلم للأموال</label>
                                     <select className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl font-bold outline-none focus:border-blue-500" value={newLoanForm.receivingAccountId} onChange={e => setNewLoanForm({...newLoanForm, receivingAccountId: e.target.value})}>
+                                        <option value="">بدون حساب (تسجيل المديونية فقط)</option>
                                         {accounts.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
                                     </select>
                                 </div>
