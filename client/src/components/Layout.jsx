@@ -1,24 +1,19 @@
-import { useState, useCallback } from 'react';
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
     LayoutDashboard, Wallet, ArrowUpRight, 
     ArrowDownLeft, CreditCard, Landmark, 
     Users, Bell, LogOut, Menu, X, PieChart, 
-    Receipt, ShieldCheck, Target, Handshake,
-    Coins, Banknote, History, Settings, ListChecks,
+    Receipt, Target, Handshake,
+    Banknote, Settings, ListChecks,
     ChevronLeft
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-    const { user, logout } = useAuth();
+    const { logout } = useAuth();
     const location = useLocation();
-
-    const closeSidebar = useCallback(() => {
-        // تأخير بسيط جداً ليعطي إيحاء بصري بالضغط قبل الإغلاق
-        setTimeout(() => setIsSidebarOpen(false), 150);
-    }, []);
 
     const navigationGroups = [
         {
@@ -67,62 +62,52 @@ const Layout = ({ children }) => {
         }
     ];
 
-    const bottomNavItems = [
-        { path: '/', icon: LayoutDashboard, label: 'الرئيسية' },
-        { path: '/ledger', icon: ListChecks, label: 'السجل' },
-        { path: '/budgets', icon: Target, label: 'موازنات' },
-        { path: '/reports', icon: PieChart, label: 'تقارير' },
-        { path: '/notifications', icon: Bell, label: 'تنبيهات' },
-    ];
-
     const isActive = (path) => location.pathname === path;
 
     return (
-        <div className="min-h-screen bg-black text-slate-300 font-sans selection:bg-blue-500/30" dir="rtl">
+        <div className="min-h-screen bg-slate-950 text-slate-300 font-sans" dir="rtl">
             {/* Desktop Sidebar */}
-            <aside className="fixed right-0 top-0 h-screen w-80 bg-slate-950 border-l border-slate-900 hidden lg:flex flex-col z-50 overflow-hidden">
-                <div className="p-8 border-b border-slate-900 bg-slate-950/80 backdrop-blur-xl">
-                    <div className="flex items-center gap-3 px-2">
-                        <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-900/40">
+            <aside className="fixed right-0 top-0 h-screen w-80 bg-slate-900 border-l border-slate-800 hidden lg:flex flex-col z-50">
+                <div className="p-8 border-b border-slate-800">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-600 rounded-2xl flex items-center justify-center">
                             <Wallet className="text-white" size={24} />
                         </div>
-                        <h1 className="text-2xl font-black text-white tracking-tighter italic">جيبي <span className="text-blue-500">v4.0</span></h1>
+                        <h1 className="text-2xl font-black text-white italic">جيبي <span className="text-blue-500">v4.0</span></h1>
                     </div>
                 </div>
                 
-                <nav className="flex-1 overflow-y-auto p-4 space-y-8 no-scrollbar">
+                <nav className="flex-1 overflow-y-auto p-4 space-y-6 no-scrollbar">
                     <Link
                         to="/"
-                        className={`flex items-center justify-between gap-3 px-4 py-4 rounded-2xl transition-all duration-300 ${
-                            isActive('/') ? 'bg-blue-600 text-white shadow-xl shadow-blue-900/20' : 'hover:bg-slate-900'
+                        className={`flex items-center justify-between px-4 py-4 rounded-2xl transition-all ${
+                            isActive('/') ? 'bg-blue-600 text-white shadow-lg' : 'hover:bg-slate-800'
                         }`}
                     >
                         <div className="flex items-center gap-3">
                             <LayoutDashboard size={20} />
-                            <span className="font-black text-sm">لوحة القيادة المركزية</span>
+                            <span className="font-bold text-sm">لوحة القيادة</span>
                         </div>
-                        <ChevronLeft size={16} className={isActive('/') ? 'opacity-100' : 'opacity-0'} />
+                        {isActive('/') && <ChevronLeft size={16} />}
                     </Link>
 
                     {navigationGroups.map((group, idx) => (
                         <div key={idx} className="space-y-2">
-                            <h3 className="px-4 text-[10px] font-black text-slate-600 uppercase tracking-widest cursor-default">{group.title}</h3>
+                            <h3 className="px-4 text-[10px] font-black text-slate-500 uppercase tracking-widest">{group.title}</h3>
                             <div className="space-y-1">
                                 {group.items.map((item) => (
                                     <Link
                                         key={item.path}
                                         to={item.path}
-                                        className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl transition-all duration-300 group ${
-                                            isActive(item.path) 
-                                            ? 'bg-slate-800 text-white border-r-4 border-blue-500' 
-                                            : 'text-slate-500 hover:text-white hover:bg-slate-900/50'
+                                        className={`flex items-center justify-between px-4 py-3 rounded-xl transition-all group ${
+                                            isActive(item.path) ? 'bg-slate-800 text-white border-r-4 border-blue-500' : 'text-slate-400 hover:text-white hover:bg-slate-800'
                                         }`}
                                     >
                                         <div className="flex items-center gap-3">
-                                            <item.icon size={18} className={isActive(item.path) ? 'text-blue-500' : 'text-slate-700 group-hover:text-blue-400'} />
-                                            <span className="font-bold text-xs">{item.label}</span>
+                                            <item.icon size={18} className={isActive(item.path) ? 'text-blue-500' : 'text-slate-600 group-hover:text-blue-400'} />
+                                            <span className="text-xs font-bold">{item.label}</span>
                                         </div>
-                                        <ChevronLeft size={14} className={isActive(item.path) ? 'opacity-100' : 'opacity-0'} />
+                                        {isActive(item.path) && <ChevronLeft size={14} />}
                                     </Link>
                                 ))}
                             </div>
@@ -130,94 +115,62 @@ const Layout = ({ children }) => {
                     ))}
                 </nav>
 
-                <div className="p-6 border-t border-slate-900 bg-slate-950/50">
-                    <button 
-                        onClick={logout}
-                        className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-black text-xs"
-                    >
-                        <LogOut size={18} /> خروج من النظام
+                <div className="p-6 border-t border-slate-800">
+                    <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:bg-red-500/10 rounded-xl font-bold text-xs">
+                        <LogOut size={18} /> خروج
                     </button>
                 </div>
             </aside>
 
             {/* Mobile Header */}
-            <header className="lg:hidden fixed top-0 right-0 left-0 h-16 bg-black/90 backdrop-blur-xl border-b border-slate-900 flex items-center justify-between px-6 z-[60]">
+            <header className="lg:hidden fixed top-0 right-0 left-0 h-16 bg-slate-900 border-b border-slate-800 flex items-center justify-between px-6 z-[60]">
                 <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                        <Wallet className="text-white" size={18} />
-                    </div>
-                    <span className="font-black text-white text-lg italic">جيبي</span>
+                    <Wallet className="text-blue-500" size={24} />
+                    <span className="font-black text-white text-lg">جيبي</span>
                 </div>
-                <button 
-                    onClick={() => setIsSidebarOpen(true)} 
-                    className="p-2 text-slate-400 hover:text-white transition-transform active:scale-90 touch-none"
-                >
+                <button onClick={() => setIsSidebarOpen(true)} className="p-2 text-white">
                     <Menu size={24} />
                 </button>
             </header>
 
             {/* Mobile Sidebar Overlay */}
             {isSidebarOpen && (
-                <div 
-                    className="fixed inset-0 bg-black/95 z-[100] lg:hidden animate-in fade-in duration-300"
-                    onClick={(e) => { if(e.target === e.currentTarget) setIsSidebarOpen(false); }}
-                >
-                    <div className="h-full w-full flex flex-col p-8 overflow-y-auto" onClick={e => e.stopPropagation()}>
-                        <div className="flex justify-between items-center mb-10 border-b border-slate-900 pb-6">
-                            <h2 className="font-black text-white text-2xl italic">القائمة الشاملة</h2>
-                            <button onClick={() => setIsSidebarOpen(false)} className="p-3 bg-slate-900 rounded-2xl text-slate-500 active:scale-90">
-                                <X size={28} />
-                            </button>
+                <div className="fixed inset-0 bg-black/90 z-[100] lg:hidden flex justify-end">
+                    <div className="w-80 h-full bg-slate-900 shadow-2xl animate-in slide-in-from-right duration-300">
+                        <div className="p-6 flex justify-between items-center border-b border-slate-800">
+                            <span className="font-black text-white">القائمة</span>
+                            <button onClick={() => setIsSidebarOpen(false)} className="p-2 text-slate-400"><X size={24} /></button>
                         </div>
-                        <nav className="space-y-10">
+                        <nav className="p-4 space-y-6 overflow-y-auto h-[calc(100vh-80px)] no-scrollbar">
                             {navigationGroups.map((group, idx) => (
-                                <div key={idx} className="space-y-4">
-                                    <h3 className="text-blue-500 font-black text-sm uppercase tracking-widest">{group.title}</h3>
-                                    <div className="grid grid-cols-2 gap-4">
+                                <div key={idx} className="space-y-2">
+                                    <h3 className="px-4 text-[10px] font-black text-slate-500 uppercase">{group.title}</h3>
+                                    <div className="space-y-1">
                                         {group.items.map((item) => (
                                             <Link
                                                 key={item.path}
                                                 to={item.path}
-                                                onClick={closeSidebar}
-                                                className={`flex flex-col items-center gap-3 p-6 rounded-3xl transition-all border active:scale-95 ${
-                                                    isActive(item.path) ? 'bg-blue-600 border-blue-500 text-white shadow-xl shadow-blue-900/40' : 'bg-slate-900 border-slate-800 text-slate-400'
-                                                }`}
+                                                onClick={() => setIsSidebarOpen(false)}
+                                                className={`flex items-center gap-3 px-4 py-3 rounded-xl ${isActive(item.path) ? 'bg-blue-600 text-white' : 'text-slate-400'}`}
                                             >
-                                                <item.icon size={24} />
-                                                <span className="font-bold text-xs">{item.label}</span>
+                                                <item.icon size={18} />
+                                                <span className="text-sm font-bold">{item.label}</span>
                                             </Link>
                                         ))}
                                     </div>
                                 </div>
                             ))}
                         </nav>
-                        <button onClick={logout} className="mt-12 w-full py-5 bg-red-500/10 text-red-500 rounded-3xl font-black text-lg active:scale-95">خروج</button>
                     </div>
                 </div>
             )}
 
             {/* Main Content Area */}
-            <main className="lg:pr-80 pt-20 lg:pt-0 p-4 md:p-12 min-h-screen">
-                <div className="max-w-7xl mx-auto pb-32 lg:pb-0">
+            <main className="lg:pr-80 pt-20 lg:pt-0 min-h-screen relative z-10">
+                <div className="max-w-7xl mx-auto p-4 md:p-10">
                     {children}
                 </div>
             </main>
-
-            {/* Bottom Navigation for Mobile */}
-            <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-20 bg-slate-950/90 backdrop-blur-2xl border-t border-slate-900 flex items-center justify-around px-4 z-[70] pb-safe">
-                {bottomNavItems.map((item) => (
-                    <Link
-                        key={item.path}
-                        to={item.path}
-                        className={`flex flex-col items-center gap-1.5 transition-all duration-300 active:scale-110 ${
-                            isActive(item.path) ? 'text-blue-500 scale-110 font-black' : 'text-slate-600'
-                        }`}
-                    >
-                        <item.icon size={22} />
-                        <span className="text-[10px]">{item.label}</span>
-                    </Link>
-                ))}
-            </nav>
         </div>
     );
 };

@@ -47,7 +47,7 @@ const Ledger = () => {
     if (loading) return <div className="flex items-center justify-center h-screen"><div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div></div>;
 
     return (
-        <div className="space-y-10 fade-in text-right pb-24 md:pb-10" dir="rtl">
+        <div className="space-y-10 text-right pb-24 md:pb-10" dir="rtl">
             {/* Header */}
             <header className="px-4 md:px-0">
                 <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">السجل الموحد (Ledger)</h1>

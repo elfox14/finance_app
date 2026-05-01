@@ -58,7 +58,7 @@ const Dashboard = () => {
     const openModal = (type) => { setModalType(type); setShowModal(true); };
 
     return (
-        <div className="space-y-8 md:space-y-10 fade-in pb-24 md:pb-10" dir="rtl">
+        <div className="space-y-8 md:space-y-10 pb-24 md:pb-10" dir="rtl">
             {/* Header */}
             <header className="px-4 md:px-0">
                 <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">قمرة القيادة</h1>
