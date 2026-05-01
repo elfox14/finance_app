@@ -98,6 +98,15 @@ exports.getDashboardStats = async (req, res) => {
 
         const healthScore = Math.max(0, Math.min(100, 100 - (dtiRaw * 0.5) - (availableBalance < 0 ? 40 : 0) - (cardUtilization > 80 ? 20 : 0) + (savingsRateRaw > 20 ? 10 : 0)));
 
+        // --- Net Worth Calculation ---
+        const totalLoanBalance = loans.reduce((sum, l) => sum + (l.remainingAmount || l.principalAmount - l.paidAmount || 0), 0);
+        const totalBorrowedDebts = debts.filter(d => d.type === 'borrowed' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
+        const totalLentDebts = debts.filter(d => d.type === 'lent' && !d.isPaid).reduce((sum, d) => sum + (d.amount || 0), 0);
+        
+        const totalAssets = currentBalance + totalInvestments + totalLentDebts;
+        const totalLiabilities = totalCardBalance + totalLoanBalance + totalBorrowedDebts;
+        const netWorth = totalAssets - totalLiabilities;
+
         // 7. Budgets Array
         const budgetsResponse = budgets.map(b => {
             const spent = currentMonthTxs.filter(t => t.type === 'مصروف' && t.category === b.category).reduce((sum, t) => sum + t.amount, 0);
@@ -192,7 +201,10 @@ exports.getDashboardStats = async (req, res) => {
                     .filter(t => t.type === 'دخل' && new Date(t.date).getMonth() === prevMonthDate.getMonth() && new Date(t.date).getFullYear() === prevMonthDate.getFullYear())
                     .reduce((s, t) => s + t.amount, 0);
                 return prevMonthIncome > 0 ? Number((((currentMonthIncomes - prevMonthIncome) / prevMonthIncome) * 100).toFixed(1)) : 0;
-            })()
+            })(),
+            netWorth:                Math.round(netWorth),
+            totalAssets:             Math.round(totalAssets),
+            totalLiabilities:        Math.round(totalLiabilities)
         };
 
         res.json({
