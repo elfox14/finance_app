@@ -6,7 +6,7 @@ import {
     DollarSign, Activity, Calendar, X,
     Receipt, Clock, Tag,
     ShieldCheck, PieChart as PieIcon, Landmark,
-    Wallet, Users
+    Wallet, Users, CreditCard
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -39,7 +39,8 @@ const Dashboard = () => {
         accountingKPIs = {}, 
         currentMonthIncomesList = [], 
         currentMonthExpensesList = [],
-        assetsDetailed = []
+        assetsDetailed = [],
+        liabilitiesDetailed = []
     } = stats || {};
     
     const activeList = modalType === 'income' ? currentMonthIncomesList : currentMonthExpensesList;
@@ -115,66 +116,91 @@ const Dashboard = () => {
                     </div>
                 </section>
 
-                {/* Section 2: Assets Breakdown & Net Worth */}
-                <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
-                    
-                    {/* Detailed Assets List */}
-                    <section className="xl:col-span-1 bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl flex flex-col">
-                        <h3 className="text-xl font-black text-white flex items-center gap-2 mb-6">
-                            <Wallet className="text-emerald-500" /> تفاصيل الأصول
-                        </h3>
-                        <div className="space-y-4 flex-1 overflow-y-auto max-h-[400px] no-scrollbar">
-                            {assetsDetailed.map((asset, i) => (
-                                <div key={i} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-2xl border border-white/5 hover:border-emerald-500/20 transition-all">
-                                    <div className="flex items-center gap-3">
-                                        <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-lg">
-                                            {asset.icon === 'certificate' ? <Landmark size={16} /> : asset.icon === 'debt' ? <Users size={16} /> : <DollarSign size={16} />}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-black text-white">{asset.name}</p>
-                                            <p className="text-[10px] text-slate-500 font-bold uppercase">{asset.type.replace('_', ' ')}</p>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm font-black text-white">{asset.value.toLocaleString()} <span className="text-[10px] opacity-50">ج.م</span></p>
-                                </div>
-                            ))}
-                            {assetsDetailed.length === 0 && (
-                                <div className="py-10 text-center text-slate-500 italic text-xs">لا توجد أصول مسجلة حالياً</div>
-                            )}
-                        </div>
-                        <div className="mt-6 pt-6 border-t border-slate-800">
-                            <div className="flex justify-between items-center text-emerald-400 font-black">
-                                <span>إجمالي الأصول الشخصية</span>
-                                <span>{(accountingKPIs.totalAssets || 0).toLocaleString()} ج.م</span>
-                            </div>
-                        </div>
-                    </section>
-
-                    {/* Net Worth Card */}
-                    <div className="xl:col-span-2 bg-slate-900 border border-slate-800 p-8 md:p-10 rounded-[3rem] shadow-2xl flex flex-col md:flex-row items-center gap-10 relative overflow-hidden group">
+                {/* Section 2: Net Worth Hero */}
+                <section>
+                    <div className="bg-slate-900 border border-slate-800 p-8 md:p-12 rounded-[3.5rem] shadow-2xl flex flex-col md:flex-row items-center gap-10 relative overflow-hidden group">
                         <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform">
                             <ShieldCheck size={200} className="text-blue-500" />
                         </div>
                         
                         <div className="relative z-10 flex-1 text-center md:text-right">
-                            <p className="text-slate-500 font-bold uppercase text-[10px] mb-2 tracking-widest">صافي الثروة الحالية (Net Worth)</p>
-                            <h2 className="text-5xl md:text-6xl font-black text-white tracking-tighter">
+                            <p className="text-slate-500 font-bold uppercase text-xs mb-3 tracking-widest">صافي الثروة الحالية (Net Worth)</p>
+                            <h2 className="text-6xl md:text-8xl font-black text-white tracking-tighter">
                                 {(accountingKPIs.netWorth || 0).toLocaleString()}
-                                <span className="text-xl ml-2 opacity-50">ج.م</span>
+                                <span className="text-2xl md:text-3xl ml-3 opacity-50">ج.م</span>
                             </h2>
-                            <p className="text-blue-400 font-bold mt-4 text-sm flex items-center justify-center md:justify-start gap-2">
-                                <ShieldCheck size={16} /> أمانك المالي: ما تملك مطروحاً منه ما عليك
-                            </p>
+                            <div className="flex flex-wrap justify-center md:justify-start gap-4 mt-8">
+                                <div className="bg-emerald-500/10 border border-emerald-500/20 px-6 py-3 rounded-2xl">
+                                    <p className="text-[10px] text-emerald-500 font-black uppercase mb-1">إجمالي الأصول</p>
+                                    <p className="text-xl font-black text-white">{(accountingKPIs.totalAssets || 0).toLocaleString()}</p>
+                                </div>
+                                <div className="bg-red-500/10 border border-red-500/20 px-6 py-3 rounded-2xl">
+                                    <p className="text-[10px] text-red-500 font-black uppercase mb-1">إجمالي الالتزامات</p>
+                                    <p className="text-xl font-black text-white">{(accountingKPIs.totalLiabilities || 0).toLocaleString()}</p>
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="relative z-10 flex flex-col gap-4 w-full md:w-auto">
-                            <div className="bg-slate-800/50 p-6 rounded-[2rem] border border-white/5 text-center min-w-[180px]">
-                                <p className="text-[10px] text-slate-500 font-bold mb-1 uppercase">إجمالي الالتزامات</p>
-                                <p className="text-xl font-black text-red-400">{(accountingKPIs.totalLiabilities || 0).toLocaleString()}</p>
+                        <div className="relative z-10 hidden lg:block">
+                            <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white shadow-2xl shadow-blue-900/40 rotate-6 group-hover:rotate-12 transition-transform">
+                                <PieIcon size={48} />
                             </div>
                         </div>
                     </div>
-                </div>
+                </section>
+
+                {/* Section 3: Detailed Breakdown Grid */}
+                <section className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    
+                    {/* Assets Column */}
+                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl">
+                        <h3 className="text-xl font-black text-white flex items-center gap-3 mb-8">
+                            <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl"><Wallet size={20} /></div>
+                            تفاصيل الأصول الشخصية
+                        </h3>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar pr-1">
+                            {assetsDetailed.map((asset, i) => (
+                                <div key={i} className="flex items-center justify-between p-5 bg-slate-800/20 rounded-[1.5rem] border border-white/5 hover:border-emerald-500/20 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-emerald-500/50">
+                                            {asset.icon === 'certificate' ? <Landmark size={18} /> : asset.icon === 'debt' ? <Users size={18} /> : <DollarSign size={18} />}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-white">{asset.name}</p>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase">{asset.type}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-lg font-black text-white">{asset.value.toLocaleString()}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Liabilities Column */}
+                    <div className="bg-slate-900 border border-slate-800 p-8 rounded-[3rem] shadow-2xl">
+                        <h3 className="text-xl font-black text-white flex items-center gap-3 mb-8">
+                            <div className="p-2 bg-red-500/10 text-red-500 rounded-xl"><TrendingDown size={20} /></div>
+                            تفاصيل الالتزامات المالية
+                        </h3>
+                        <div className="space-y-4 max-h-[400px] overflow-y-auto no-scrollbar pr-1">
+                            {liabilitiesDetailed.map((lib, i) => (
+                                <div key={i} className="flex items-center justify-between p-5 bg-slate-800/20 rounded-[1.5rem] border border-white/5 hover:border-red-500/20 transition-all">
+                                    <div className="flex items-center gap-4">
+                                        <div className="text-red-500/50">
+                                            {lib.icon === 'card' ? <CreditCard size={18} /> : lib.icon === 'loan' ? <Landmark size={18} /> : <Users size={18} />}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-black text-white">{lib.name}</p>
+                                            <p className="text-[10px] text-slate-500 font-bold uppercase">{lib.type}</p>
+                                        </div>
+                                    </div>
+                                    <p className="text-lg font-black text-white">{lib.value.toLocaleString()}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                </section>
 
                 <section className="py-10 text-center">
                     <div className="inline-flex items-center gap-2 text-slate-600 bg-slate-900/30 px-6 py-3 rounded-full border border-slate-800/50">

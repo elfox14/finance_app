@@ -187,6 +187,12 @@ exports.getDashboardStats = async (req, res) => {
             ...activeLentDebts.map(d => ({ name: `حق طرف ${d.personName}`, value: d.amount, type: 'ديون مستحقة', icon: 'debt' }))
         ].filter(a => a.value > 0).sort((a,b) => b.value - a.value);
 
+        const liabilitiesDetailed = [
+            ...activeLoans.map(l => ({ name: l.loanName, value: l.remainingAmount || l.principalAmount - l.paidAmount || 0, type: l.loanType || 'قرض', icon: 'loan' })),
+            ...activeCards.map(c => ({ name: c.cardName, value: c.currentBalance || 0, type: 'بطاقة ائتمان', icon: 'card' })),
+            ...activeBorrowedDebts.map(d => ({ name: `دين لـ ${d.personName}`, value: d.amount, type: 'ديون شخصية', icon: 'debt' }))
+        ].filter(l => l.value > 0).sort((a,b) => b.value - a.value);
+
         if (totalInvestments > 0) assetDistribution.push({ name: 'شهادات استثمار', value: totalInvestments });
 
         // Count pending transactions
@@ -241,6 +247,7 @@ exports.getDashboardStats = async (req, res) => {
                 assets: assetDistribution.filter(a => a.value > 0)
             },
             assetsDetailed,
+            liabilitiesDetailed,
             currentMonthIncomesList: currentMonthTxs.filter(t => t.type === 'دخل').sort((a,b) => new Date(b.date) - new Date(a.date)),
             currentMonthExpensesList: currentMonthTxs.filter(t => t.type === 'مصروف').sort((a,b) => new Date(b.date) - new Date(a.date))
         });
