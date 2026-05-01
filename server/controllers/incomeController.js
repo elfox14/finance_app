@@ -65,7 +65,7 @@ exports.createIncome = async (req, res) => {
                 classification: 'operating_income',
                 affectsCashflow: true,
                 affectsNetworth: true,
-                linkedEntity: { entityType: 'None' }
+                linkedEntity: { entityType: 'Income', entityId: income._id }
             });
 
             // 3. Update Account Balance
@@ -100,12 +100,29 @@ exports.updateIncome = async (req, res) => {
 // @desc    Delete income
 exports.deleteIncome = async (req, res) => {
     try {
-        const income = await Income.findOneAndUpdate(
-            { _id: req.params.id, userId: req.user._id },
-            { deletedAt: new Date() }
-        );
+        const userId = req.user._id;
+        const income = await Income.findOne({ _id: req.params.id, userId });
+        
         if (!income) return res.status(404).json({ message: 'الدخل غير موجود' });
-        res.json({ message: 'تم الحذف بنجاح' });
+
+        // 1. Reverse accounting impact
+        if (income.accountId) {
+            const account = await Account.findById(income.accountId);
+            if (account) {
+                account.balance -= income.amount; // Deduct the income that was added
+                await account.save();
+            }
+            // Delete associated transaction
+            await Transaction.findOneAndDelete({ 
+                userId, 
+                accountId: income.accountId,
+                amount: income.amount,
+                linkedEntity: { entityType: 'Income', entityId: income._id }
+            });
+        }
+
+        await Income.findByIdAndDelete(income._id);
+        res.json({ message: 'تم الحذف وخصم المبلغ من الرصيد بنجاح' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

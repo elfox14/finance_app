@@ -93,10 +93,10 @@ exports.createExpense = async (req, res) => {
                 classification: 'operating_expense',
                 affectsCashflow: true,
                 affectsNetworth: true,
-                linkedEntity: { entityType: 'None' } // Independent expense
+                linkedEntity: { entityType: 'Expense', entityId: expense._id }
             });
 
-            // 3. Update Account Balance (Double-entry principle)
+            // 3. Update Account Balance
             const account = await Account.findById(data.accountId);
             if (account) {
                 account.balance -= data.amount;
@@ -126,9 +126,29 @@ exports.updateExpense = async (req, res) => {
 
 exports.deleteExpense = async (req, res) => {
     try {
-        const expense = await Expense.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+        const userId = req.user._id;
+        const expense = await Expense.findOne({ _id: req.params.id, userId });
+        
         if (!expense) return res.status(404).json({ message: 'المصروف غير موجود' });
-        res.json({ message: 'تم الحذف بنجاح' });
+
+        // 1. Reverse accounting impact
+        if (expense.accountId) {
+            const account = await Account.findById(expense.accountId);
+            if (account) {
+                account.balance += expense.amount; // Restore balance
+                await account.save();
+            }
+            // Delete associated transaction
+            await Transaction.findOneAndDelete({ 
+                userId, 
+                accountId: expense.accountId,
+                amount: expense.amount,
+                linkedEntity: { entityType: 'Expense', entityId: expense._id }
+            });
+        }
+
+        await Expense.findByIdAndDelete(expense._id);
+        res.json({ message: 'تم الحذف واسترجاع الرصيد بنجاح' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }

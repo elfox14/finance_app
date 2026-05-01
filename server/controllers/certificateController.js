@@ -119,10 +119,13 @@ exports.createCertificate = async (req, res) => {
                     amount: Number(principalAmount),
                     date: startDate || new Date(),
                     type: 'تحويل', // Transfer to asset
-                    category: 'استثمار',
+                    category: 'استثمار في شهادات',
                     counterparty: rest.bankName,
-                    notes: `ربط شهادة استثمارية: ${rest.certificateName}`,
+                    notes: `ربط شهادة: ${rest.certificateName}`,
                     status: 'مُسوّى',
+                    classification: 'asset_acquisition',
+                    affectsCashflow: false,
+                    affectsNetworth: true,
                     linkedEntity: { entityType: 'Certificate', entityId: cert._id }
                 });
             }
@@ -139,7 +142,7 @@ exports.updateCertificate = async (req, res) => {
     try {
         const userId = req.user._id;
         const { id } = req.params;
-        const { status } = req.body; // e.g. redeeming
+        const { status } = req.body; 
 
         const cert = await Certificate.findOne({ _id: id, userId });
         if (!cert) return res.status(404).json({ message: 'الشهادة غير موجودة' });
@@ -158,10 +161,13 @@ exports.updateCertificate = async (req, res) => {
                         amount: cert.principalAmount,
                         date: new Date(),
                         type: 'تحويل',
-                        category: 'استرداد استثمار',
+                        category: 'استرداد شهادة',
                         counterparty: cert.bankName,
-                        notes: `استرداد شهادة: ${cert.certificateName}`,
+                        notes: `فك استثمار الشهادة: ${cert.certificateName}`,
                         status: 'مُسوّى',
+                        classification: 'asset_liquidation',
+                        affectsCashflow: false,
+                        affectsNetworth: true,
                         linkedEntity: { entityType: 'Certificate', entityId: cert._id }
                     });
                 }

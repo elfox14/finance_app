@@ -27,13 +27,12 @@ exports.getAccounts = async (req, res) => {
                 if (tx.status === 'مُسوّى' || tx.status === 'مُرحَّل') {
                     if (isSource) {
                         if (tx.type === 'مصروف' || tx.type === 'سداد' || tx.type === 'تحويل') ledgerBalance -= tx.amount;
-                        if (tx.type === 'دخل' || tx.type === 'التزام') ledgerBalance += tx.amount; // التزام = قرض مستلم يرفع الرصيد
+                        if (tx.type === 'دخل' || tx.type === 'التزام') ledgerBalance += tx.amount;
                     }
                     if (isDest && tx.type === 'تحويل') {
                         ledgerBalance += tx.amount;
                     }
                 } else {
-                    // Pending / Uncategorized
                     if (tx.type === 'تحويل' && isDest) pendingTransfers += tx.amount;
                     if (tx.status !== 'مُسوّى') unReconciledCount++;
                 }
@@ -58,7 +57,7 @@ exports.getAccounts = async (req, res) => {
         }));
 
         const totalLedgerBalance = enrichedAccounts.reduce((sum, acc) => sum + (acc.balance || 0), 0);
-        const totalStatementBalance = enrichedAccounts.reduce((sum, acc) => sum + (acc.statementBalance || 0), 0);
+        const totalStatementBalance = enrichedAccounts.reduce((sum, acc) => sum + (acc.totalStatementBalance || 0), 0);
 
         res.json({ 
             accounts: enrichedAccounts, 
@@ -67,6 +66,53 @@ exports.getAccounts = async (req, res) => {
         });
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+};
+
+// @desc Transfer funds between accounts
+exports.transferFunds = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const { sourceAccountId, destinationAccountId, amount, date, notes } = req.body;
+
+        if (sourceAccountId === destinationAccountId) {
+            return res.status(400).json({ message: 'لا يمكن التحويل لنفس الحساب' });
+        }
+
+        const [sourceAcc, destAcc] = await Promise.all([
+            Account.findById(sourceAccountId),
+            Account.findById(destinationAccountId)
+        ]);
+
+        if (!sourceAcc || !destAcc) {
+            return res.status(404).json({ message: 'أحد الحسابات غير موجود' });
+        }
+
+        // 1. Create Internal Transfer Transaction
+        const transaction = await Transaction.create({
+            userId,
+            date: date || new Date(),
+            type: 'تحويل',
+            amount: Number(amount),
+            accountId: sourceAccountId,
+            destinationAccountId: destinationAccountId,
+            category: 'تحويل داخلي',
+            notes: notes || `تحويل من ${sourceAcc.name} إلى ${destAcc.name}`,
+            status: 'مُسوّى',
+            classification: 'asset_transfer',
+            affectsCashflow: false,
+            affectsNetworth: false
+        });
+
+        // 2. Atomic Balance Update
+        sourceAcc.balance -= Number(amount);
+        destAcc.balance += Number(amount);
+
+        await Promise.all([sourceAcc.save(), destAcc.save()]);
+
+        res.status(201).json({ message: 'تم التحويل بنجاح', transaction });
+    } catch (err) {
+        res.status(400).json({ message: err.message });
     }
 };
 
@@ -102,7 +148,7 @@ exports.updateAccount = async (req, res) => {
     }
 };
 
-// @desc Reconcile account with bank statement
+// @desc Reconcile account
 exports.reconcileAccount = async (req, res) => {
     try {
         const { statementBalance, reconciliationDate } = req.body;
