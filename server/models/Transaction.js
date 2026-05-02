@@ -57,7 +57,7 @@ const transactionSchema = new mongoose.Schema({
     
     // Link to other modules (Loans, Debts, etc)
     linkedEntity: {
-        entityType: { type: String, enum: ['Loan', 'Card', 'PeerDebt', 'Group', 'Certificate', 'None'], default: 'None' },
+        entityType: { type: String, enum: ['Loan', 'Card', 'PeerDebt', 'Group', 'Certificate', 'Expense', 'Income', 'None'], default: 'None' },
         entityId: { type: mongoose.Schema.Types.ObjectId }
     }
     

@@ -72,7 +72,8 @@ const Expenses = () => {
             setFormData({ ...formData, amount: '', description: '', vendor: '' });
             fetchData();
         } catch (err) {
-            alert('فشل في إضافة المصروف');
+            console.error('Error creating expense:', err.response?.data || err);
+            alert(err.response?.data?.message || 'فشل في إضافة المصروف');
         }
     };
 
