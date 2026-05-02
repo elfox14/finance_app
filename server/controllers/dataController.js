@@ -15,6 +15,7 @@ const Certificate     = require('../models/Certificate');
 const Budget          = require('../models/Budget');
 const Category        = require('../models/Category');
 const Account         = require('../models/Account');
+const Transaction     = require('../models/Transaction');
 const { PeerDebt, PeerDebtPayment } = require('../models/PeerDebt');
 
 // @desc    Delete ALL user data permanently (Nuclear Reset)
@@ -51,6 +52,7 @@ exports.deleteAllData = async (req, res) => {
             Budget.deleteMany({ userId }),
             Category.deleteMany({ userId }),
             Account.deleteMany({ userId }),
+            Transaction.deleteMany({ userId }),
             PeerDebt.deleteMany({ userId }),
             PeerDebtPayment.deleteMany({ userId }),
         ]);

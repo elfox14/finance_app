@@ -64,8 +64,28 @@ exports.getDashboardStats = async (req, res) => {
         ]);
 
         // Merge legacy into unified
+        // First, filter out orphaned transactions linked to deleted entities
+        const activeLoanIds = new Set(loans.map(l => l._id.toString()));
+        const activeCardIds = new Set(cards.map(c => c._id.toString()));
+        const activeDebtIds = new Set(debts.map(d => d._id.toString()));
+        const activeGroupIds = new Set(groups.map(g => g._id.toString()));
+
+        const activeTransactions = transactions.filter(tx => {
+            const entity = tx.linkedEntity;
+            if (!entity || !entity.entityType || entity.entityType === 'None' || !entity.entityId) return true;
+            
+            const eid = entity.entityId.toString();
+            switch (entity.entityType) {
+                case 'Loan': return activeLoanIds.has(eid);
+                case 'Card': return activeCardIds.has(eid);
+                case 'PeerDebt': return activeDebtIds.has(eid);
+                case 'Group': return activeGroupIds.has(eid);
+                default: return true;
+            }
+        });
+
         const unifiedTransactions = [
-            ...transactions,
+            ...activeTransactions,
             ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى', classification: 'operating_expense', affectsCashflow: true, affectsNetworth: true })),
             ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى', classification: 'operating_income', affectsCashflow: true, affectsNetworth: true }))
         ];

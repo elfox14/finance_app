@@ -105,7 +105,40 @@ exports.getTransactions = async (req, res) => {
         }
 
         const transactions = await transactionsQuery.exec();
-        res.json(transactions);
+
+        // Filter out orphaned transactions linked to deleted entities
+        const Loan = require('../models/Loan');
+        const Card = require('../models/Card');
+        const { PeerDebt } = require('../models/PeerDebt');
+        const Group = require('../models/Group');
+
+        const [loans, cards, debts, groups] = await Promise.all([
+            Loan.find({ userId, deletedAt: null }).select('_id'),
+            Card.find({ userId, deletedAt: null }).select('_id'),
+            PeerDebt.find({ userId, deletedAt: null }).select('_id'),
+            Group.find({ userId, deletedAt: null }).select('_id')
+        ]);
+
+        const activeLoanIds = new Set(loans.map(l => l._id.toString()));
+        const activeCardIds = new Set(cards.map(c => c._id.toString()));
+        const activeDebtIds = new Set(debts.map(d => d._id.toString()));
+        const activeGroupIds = new Set(groups.map(g => g._id.toString()));
+
+        const filtered = transactions.filter(tx => {
+            const entity = tx.linkedEntity;
+            if (!entity || !entity.entityType || entity.entityType === 'None' || !entity.entityId) return true;
+            
+            const eid = entity.entityId.toString();
+            switch (entity.entityType) {
+                case 'Loan': return activeLoanIds.has(eid);
+                case 'Card': return activeCardIds.has(eid);
+                case 'PeerDebt': return activeDebtIds.has(eid);
+                case 'Group': return activeGroupIds.has(eid);
+                default: return true;
+            }
+        });
+
+        res.json(filtered);
     } catch (err) {
         console.error('🔥 Fetch Transactions Error:', err);
         res.status(500).json({ message: 'خطأ في جلب العمليات المالية' });
