@@ -352,10 +352,21 @@ const Cards = () => {
                                 (cardDetails.transactions || []).map(t => (
                                     <div key={t._id} className="flex items-center justify-between p-5 bg-slate-900 rounded-2xl border border-slate-800">
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-3 h-3 rounded-full ${t.reconciliationStatus === 'matched' ? 'bg-emerald-500' : t.reconciliationStatus === 'disputed' ? 'bg-red-500' : 'bg-orange-500'}`}></div>
+                                            <div className={`w-3 h-3 rounded-full flex-shrink-0 ${t.reconciliationStatus === 'matched' ? 'bg-emerald-500' : t.reconciliationStatus === 'disputed' ? 'bg-red-500' : 'bg-orange-500'}`}></div>
                                             <div>
-                                                <p className="font-black text-white">{t.merchantName}</p>
-                                                <p className="text-xs text-slate-500">{new Date(t.transactionDate).toLocaleDateString('ar-EG')}</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="font-black text-white">{t.merchantName}</p>
+                                                    {t.isInstallment && (
+                                                        <span className="text-[10px] bg-blue-900/30 text-blue-400 border border-blue-500/20 px-2 py-0.5 rounded-md font-bold">تقسيط</span>
+                                                    )}
+                                                </div>
+                                                <p className="text-xs text-slate-500 mt-1">{new Date(t.transactionDate).toLocaleDateString('ar-EG')}</p>
+                                                {t.isInstallment && t.installmentId && (
+                                                    <p className="text-[10px] font-bold text-blue-400 mt-1 flex items-center gap-1">
+                                                        <PieIcon size={10} />
+                                                        {t.installmentId.installmentsCount} شهور • القسط {t.installmentId.installmentAmount?.toLocaleString()} ج.م
+                                                    </p>
+                                                )}
                                             </div>
                                         </div>
                                         <p className="text-xl font-black text-white">{t.amount?.toLocaleString()} <span className="text-xs opacity-50">ج.م</span></p>

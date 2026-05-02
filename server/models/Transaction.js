@@ -34,7 +34,7 @@ const transactionSchema = new mongoose.Schema({
     // === END NEW ===
 
     // Accounts
-    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account', required: true }, // Source Account
+    accountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // Source Account (optional for credit card purchases)
     destinationAccountId: { type: mongoose.Schema.Types.ObjectId, ref: 'Account' }, // For transfers
     
     // Classification

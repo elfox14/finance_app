@@ -214,7 +214,7 @@ exports.getCardDetails = async (req, res) => {
         const { id } = req.params;
 
         const [transactions, installments, payments] = await Promise.all([
-            CardTransaction.find({ userId, cardId: id, deletedAt: null }).sort({ transactionDate: -1 }),
+            CardTransaction.find({ userId, cardId: id, deletedAt: null }).populate('installmentId').sort({ transactionDate: -1 }),
             CardInstallment.find({ userId, cardId: id, deletedAt: null }).sort({ createdAt: -1 }),
             CardPayment.find({ userId, cardId: id, deletedAt: null }).populate('sourceAccount', 'name').sort({ paymentDate: -1 })
         ]);
