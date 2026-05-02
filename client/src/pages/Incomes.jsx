@@ -288,7 +288,7 @@ const Incomes = () => {
                                                     inc.cashFlowType === 'محصل' ? 'bg-emerald-900/20 text-emerald-400' : 'bg-amber-900/20 text-amber-400'
                                                 }`}>{inc.cashFlowType}</span>
                                                 <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Calendar size={10} />{new Date(inc.date).toLocaleDateString('ar-EG')}</span>
-                                                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1"><Wallet size={10}/> {accounts.find(a => a._id === inc.accountId)?.name || 'كاش'}</span>
+                                                <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1"><Wallet size={10}/> {(Array.isArray(accounts) ? accounts.find(a => a._id === inc.accountId) : null)?.name || 'كاش'}</span>
                                             </div>
                                         </div>
                                     </div>

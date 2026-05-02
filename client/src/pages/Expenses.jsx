@@ -272,7 +272,7 @@ const Expenses = () => {
                                         <div className="flex flex-wrap items-center gap-2 mt-2">
                                             <span className="text-[10px] font-bold text-slate-400 bg-slate-800/80 px-3 py-1 rounded-xl">{exp.category}</span>
                                             <span className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Calendar size={10} />{new Date(exp.date).toLocaleDateString('ar-EG')}</span>
-                                            <span className="text-[10px] font-bold text-indigo-400 bg-indigo-900/20 px-3 py-1 rounded-xl flex items-center gap-1"><Wallet size={10}/> {accounts.find(a => a._id === exp.accountId)?.name || 'كاش'}</span>
+                                            <span className="text-[10px] font-bold text-indigo-400 bg-indigo-900/20 px-3 py-1 rounded-xl flex items-center gap-1"><Wallet size={10}/> {(Array.isArray(accounts) ? accounts.find(a => a._id === exp.accountId) : null)?.name || 'كاش'}</span>
                                         </div>
                                     </div>
                                 </div>
