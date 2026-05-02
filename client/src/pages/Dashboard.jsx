@@ -37,23 +37,15 @@ const Dashboard = () => {
         </div>
     );
 
-    const { 
-        summary = {}, 
-        performance = {}, 
-        ratios = {}, 
-        details = {}, 
-        netWorthBreakdown = {}, 
-        insights = [], 
-        upcomingObligations = [] 
-    } = stats || {};
+    const { row1 = {}, row2 = {}, row3 = {}, details = {}, netWorthBreakdown = {}, insights = [], upcomingObligations = [] } = stats || {};
 
     const getModalData = () => {
         switch(modalType) {
-            case 'opIncome': return { title: 'إيرادات تشغيلية', icon: <ArrowDownLeft className="text-emerald-500" />, list: details.operatingIncomeList || [], color: 'emerald', total: performance.operatingIncome };
-            case 'opExpense': return { title: 'مصروفات تشغيلية', icon: <ArrowUpRight className="text-red-500" />, list: details.operatingExpenseList || [], color: 'red', total: performance.operatingExpense };
-            case 'finIn': return { title: 'تمويل وارد', icon: <Landmark className="text-blue-500" />, list: details.financingInList || [], color: 'blue', total: performance.financingIn };
-            case 'debtPay': return { title: 'سداد ديون', icon: <Shield className="text-orange-500" />, list: details.debtPaymentList || [], color: 'orange', total: performance.debtPrincipalPayment };
-            case 'finCost': return { title: 'فوائد وعمولات', icon: <Percent className="text-rose-500" />, list: details.financeCostList || [], color: 'rose', total: performance.financeCost };
+            case 'opIncome': return { title: 'إيرادات تشغيلية', icon: <ArrowDownLeft className="text-emerald-500" />, list: details.operatingIncomeList || [], color: 'emerald', total: row2.operatingIncome };
+            case 'opExpense': return { title: 'مصروفات تشغيلية', icon: <ArrowUpRight className="text-red-500" />, list: details.operatingExpenseList || [], color: 'red', total: row2.operatingExpense };
+            case 'finIn': return { title: 'تمويل وارد', icon: <Landmark className="text-blue-500" />, list: details.financingInList || [], color: 'blue', total: row2.financingIn };
+            case 'debtPay': return { title: 'سداد ديون', icon: <Shield className="text-orange-500" />, list: details.debtPaymentList || [], color: 'orange', total: row2.debtPrincipalPayment };
+            case 'finCost': return { title: 'فوائد وعمولات', icon: <Percent className="text-rose-500" />, list: details.financeCostList || [], color: 'rose', total: row2.financeCost };
             case 'assets': return { title: 'تفاصيل الأصول', icon: <Wallet className="text-emerald-500" />, list: details.assetsDetailed || [], color: 'emerald', total: netWorthBreakdown.totalAssets };
             case 'liabilities': return { title: 'تفاصيل الالتزامات', icon: <TrendingDown className="text-red-500" />, list: details.liabilitiesDetailed || [], color: 'red', total: netWorthBreakdown.totalLiabilities };
             default: return { title: '', icon: null, list: [], color: 'blue', total: 0 };
@@ -61,7 +53,7 @@ const Dashboard = () => {
     };
 
     const modalData = getModalData();
-    const isPositiveCF = (summary.operatingCashFlow || 0) >= 0;
+    const isPositiveCF = (row1.operatingCashFlow || 0) >= 0;
 
     const openModal = (type) => { setModalType(type); setShowModal(true); };
 
@@ -84,27 +76,27 @@ const Dashboard = () => {
                     <SectionLabel text="ملخص اليوم" icon={<Zap size={14} />} />
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                         <HeroCard 
-                            label="صافي السيولة" value={summary.liquidAssets}
+                            label="صافي السيولة" value={row1.liquidAssets}
                             icon={<Wallet size={20} />} color="blue"
                             sub="النقدية + البنك + المحافظ"
                         />
                         <HeroCard 
-                            label="التدفق النقدي" value={summary.operatingCashFlow}
+                            label="التدفق النقدي" value={row1.operatingCashFlow}
                             icon={<Activity size={20} />} 
                             color={isPositiveCF ? 'emerald' : 'red'}
                             sub="إيرادات − مصروفات − فوائد"
                             signed
                         />
                         <HeroCard 
-                            label="صافي الثروة" value={summary.netWorth}
+                            label="صافي الثروة" value={row1.netWorth}
                             icon={<ShieldCheck size={20} />} 
-                            color={summary.netWorth >= 0 ? 'emerald' : 'red'}
+                            color={row1.netWorth >= 0 ? 'emerald' : 'red'}
                             sub="الأصول − الالتزامات"
                             onClick={() => openModal('assets')}
                             signed
                         />
                         <HeroCard 
-                            label="الالتزامات القائمة" value={summary.outstandingObligations}
+                            label="الالتزامات القائمة" value={row1.outstandingObligations}
                             icon={<AlertTriangle size={20} />} color="orange"
                             sub="قروض + بطاقات + سلف + جمعيات"
                             onClick={() => openModal('liabilities')}
@@ -119,27 +111,27 @@ const Dashboard = () => {
                     <SectionLabel text="أداء الشهر" icon={<BarChart3 size={14} />} />
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 md:gap-4">
                         <DriverCard 
-                            label="إيرادات تشغيلية" value={performance.operatingIncome}
+                            label="إيرادات تشغيلية" value={row2.operatingIncome}
                             icon={<ArrowDownLeft size={16} />} color="emerald"
                             onClick={() => openModal('opIncome')}
                         />
                         <DriverCard 
-                            label="مصروفات تشغيلية" value={performance.operatingExpense}
+                            label="مصروفات تشغيلية" value={row2.operatingExpense}
                             icon={<ArrowUpRight size={16} />} color="red"
                             onClick={() => openModal('opExpense')}
                         />
                         <DriverCard 
-                            label="تمويل وارد" value={performance.financingIn}
+                            label="تمويل وارد" value={row2.financingIn}
                             icon={<Landmark size={16} />} color="blue"
                             onClick={() => openModal('finIn')}
                         />
                         <DriverCard 
-                            label="سداد ديون" value={performance.debtPrincipalPayment}
+                            label="سداد ديون" value={row2.debtPrincipalPayment}
                             icon={<Shield size={16} />} color="orange"
                             onClick={() => openModal('debtPay')}
                         />
                         <DriverCard 
-                            label="فوائد وعمولات" value={performance.financeCost}
+                            label="فوائد وعمولات" value={row2.financeCost}
                             icon={<Percent size={16} />} color="rose"
                             className="col-span-2 md:col-span-1"
                             onClick={() => openModal('finCost')}
@@ -155,31 +147,31 @@ const Dashboard = () => {
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                         <IndicatorCard 
                             label="نسبة الادخار" 
-                            value={`${ratios.savingsRate || 0}%`}
+                            value={`${row3.savingsRate || 0}%`}
                             icon={<PieIcon size={16} />}
-                            status={ratios.savingsRate >= 20 ? 'good' : ratios.savingsRate >= 10 ? 'ok' : 'bad'}
-                            hint={ratios.savingsRate >= 20 ? 'ممتاز' : ratios.savingsRate >= 10 ? 'مقبول' : 'ضعيف'}
+                            status={row3.savingsRate >= 20 ? 'good' : row3.savingsRate >= 10 ? 'ok' : 'bad'}
+                            hint={row3.savingsRate >= 20 ? 'ممتاز' : row3.savingsRate >= 10 ? 'مقبول' : 'ضعيف'}
                         />
                         <IndicatorCard 
                             label="الالتزامات / الدخل" 
-                            value={`${ratios.debtToIncomeRatio || 0}%`}
+                            value={`${row3.debtToIncomeRatio || 0}%`}
                             icon={<Heart size={16} />}
-                            status={ratios.debtToIncomeRatio <= 30 ? 'good' : ratios.debtToIncomeRatio <= 50 ? 'ok' : 'bad'}
-                            hint={ratios.debtToIncomeRatio <= 30 ? 'آمن' : ratios.debtToIncomeRatio <= 50 ? 'مرتفع' : 'خطر'}
+                            status={row3.debtToIncomeRatio <= 30 ? 'good' : row3.debtToIncomeRatio <= 50 ? 'ok' : 'bad'}
+                            hint={row3.debtToIncomeRatio <= 30 ? 'آمن' : row3.debtToIncomeRatio <= 50 ? 'مرتفع' : 'خطر'}
                         />
                         <IndicatorCard 
                             label="تغير الثروة" 
-                            value={ratios.netWorthChange || 0}
+                            value={row3.netWorthChange || 0}
                             icon={<TrendingUp size={16} />}
-                            status={ratios.netWorthChange >= 0 ? 'good' : 'bad'}
+                            status={row3.netWorthChange >= 0 ? 'good' : 'bad'}
                             isAmount
                         />
                         <IndicatorCard 
                             label="تغطية نقدية" 
-                            value={`${ratios.cashCoverageMonths || 0} شهر`}
+                            value={`${row3.cashCoverageMonths || 0} شهر`}
                             icon={<Clock size={16} />}
-                            status={ratios.cashCoverageMonths >= 3 ? 'good' : ratios.cashCoverageMonths >= 1 ? 'ok' : 'bad'}
-                            hint={ratios.cashCoverageMonths >= 3 ? 'مستقر' : ratios.cashCoverageMonths >= 1 ? 'حذر' : 'حرج'}
+                            status={row3.cashCoverageMonths >= 3 ? 'good' : row3.cashCoverageMonths >= 1 ? 'ok' : 'bad'}
+                            hint={row3.cashCoverageMonths >= 3 ? 'مستقر' : row3.cashCoverageMonths >= 1 ? 'حذر' : 'حرج'}
                         />
                     </div>
 
