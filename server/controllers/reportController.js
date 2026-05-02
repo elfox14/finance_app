@@ -79,10 +79,16 @@ exports.getReports = async (req, res) => {
             }
         });
 
+        const transactionExpenseIds = new Set(transactions.filter(t => t.linkedEntity?.entityType === 'Expense' && t.linkedEntity.entityId).map(t => t.linkedEntity.entityId.toString()));
+        const transactionIncomeIds = new Set(transactions.filter(t => t.linkedEntity?.entityType === 'Income' && t.linkedEntity.entityId).map(t => t.linkedEntity.entityId.toString()));
+
+        const unlinkedExpenses = legacyExpenses.filter(e => !transactionExpenseIds.has(e._id.toString()));
+        const unlinkedIncomes = legacyIncomes.filter(i => !transactionIncomeIds.has(i._id.toString()));
+
         const unifiedTransactions = [
             ...activeTransactions,
-            ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى' })),
-            ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى' }))
+            ...unlinkedExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى' })),
+            ...unlinkedIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى' }))
         ];
 
         // 2. Trend Analysis

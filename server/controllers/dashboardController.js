@@ -84,10 +84,16 @@ exports.getDashboardStats = async (req, res) => {
             }
         });
 
+        const transactionExpenseIds = new Set(transactions.filter(t => t.linkedEntity?.entityType === 'Expense' && t.linkedEntity.entityId).map(t => t.linkedEntity.entityId.toString()));
+        const transactionIncomeIds = new Set(transactions.filter(t => t.linkedEntity?.entityType === 'Income' && t.linkedEntity.entityId).map(t => t.linkedEntity.entityId.toString()));
+
+        const unlinkedExpenses = legacyExpenses.filter(e => !transactionExpenseIds.has(e._id.toString()));
+        const unlinkedIncomes = legacyIncomes.filter(i => !transactionIncomeIds.has(i._id.toString()));
+
         const unifiedTransactions = [
             ...activeTransactions,
-            ...legacyExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى', classification: 'operating_expense', affectsCashflow: true, affectsNetworth: true })),
-            ...legacyIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى', classification: 'operating_income', affectsCashflow: true, affectsNetworth: true }))
+            ...unlinkedExpenses.map(e => ({ type: 'مصروف', amount: e.amount, date: e.date, category: e.category || e.budgetCategory, status: 'مُسوّى', classification: 'operating_expense', affectsCashflow: true, affectsNetworth: true })),
+            ...unlinkedIncomes.map(i => ({ type: 'دخل', amount: i.amount, date: i.date, category: i.source, status: 'مُسوّى', classification: 'operating_income', affectsCashflow: true, affectsNetworth: true }))
         ];
 
         // Posted transactions only
