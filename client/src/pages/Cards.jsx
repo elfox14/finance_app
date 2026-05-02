@@ -133,6 +133,15 @@ const Cards = () => {
         } catch (err) { alert('خطأ في الحذف'); }
     };
 
+    const handleDeleteTransaction = async (txId) => {
+        if (!window.confirm('هل أنت متأكد من مسح هذه العملية؟ سيتم إرجاع الرصيد وإلغاء أي أقساط مرتبطة بها.')) return;
+        try {
+            await api.delete(`/cards/transaction/${txId}`);
+            fetchCardDetails(selectedCard._id);
+            fetchData();
+        } catch (err) { alert('خطأ في الحذف'); }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -369,7 +378,12 @@ const Cards = () => {
                                                 )}
                                             </div>
                                         </div>
-                                        <p className="text-xl font-black text-white">{t.amount?.toLocaleString()} <span className="text-xs opacity-50">ج.م</span></p>
+                                        <div className="flex items-center gap-4">
+                                            <p className="text-xl font-black text-white">{t.amount?.toLocaleString()} <span className="text-xs opacity-50">ج.م</span></p>
+                                            <button onClick={() => handleDeleteTransaction(t._id)} className="p-2 bg-red-500/10 text-red-500 hover:bg-red-500 hover:text-white rounded-xl transition-all">
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
                                     </div>
                                 ))
                             )}

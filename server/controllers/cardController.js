@@ -173,6 +173,46 @@ exports.reconcileTransaction = async (req, res) => {
     }
 };
 
+// @desc    Delete card transaction
+exports.deleteCardTransaction = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user._id;
+
+        const tx = await CardTransaction.findOne({ _id: id, userId });
+        if (!tx) throw new Error('العملية غير موجودة');
+
+        const card = await Card.findById(tx.cardId);
+        if (card) {
+            const isCredit = card.cardType === 'credit' || card.cardType === 'ائتمانية';
+            if (isCredit) {
+                card.currentBalance -= tx.amount;
+                if (card.currentBalance < 0) card.currentBalance = 0;
+                await card.save();
+            }
+
+            // Remove the corresponding Transaction from the ledger
+            await Transaction.findOneAndDelete({
+                userId,
+                'linkedEntity.entityType': 'Card',
+                'linkedEntity.entityId': card._id,
+                amount: tx.amount,
+                category: tx.category
+            });
+        }
+
+        if (tx.installmentId) {
+            await CardInstallment.findByIdAndDelete(tx.installmentId);
+        }
+
+        await CardTransaction.findByIdAndDelete(id);
+
+        res.json({ message: 'تم مسح العملية بنجاح' });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
+    }
+};
+
 // @desc    Create card
 exports.createCard = async (req, res) => {
     try {
