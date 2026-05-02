@@ -8,7 +8,8 @@ import {
     ShieldCheck, PieChart as PieIcon, Landmark,
     Wallet, Users, CreditCard, Zap,
     List, Lightbulb, AlertTriangle, Heart,
-    Banknote, Shield, BarChart3
+    Banknote, Shield, BarChart3,
+    Plus, Coins, Smartphone, PiggyBank, Save, CheckCircle2
 } from 'lucide-react';
 
 const Dashboard = () => {
@@ -16,11 +17,22 @@ const Dashboard = () => {
     const [loading, setLoading] = useState(true);
     const [showModal, setShowModal] = useState(false);
     const [modalType, setModalType] = useState('');
+    const [accounts, setAccounts] = useState([]);
+    const [showAccountForm, setShowAccountForm] = useState(false);
+    const [accountCreated, setAccountCreated] = useState(false);
+    const [accountForm, setAccountForm] = useState({
+        name: '', type: 'بنكي', bankName: '', openingBalance: '', accountNumber: ''
+    });
 
     const fetchData = async () => {
         try {
-            const res = await api.get('/dashboard');
-            setStats(res.data || {});
+            const [dashRes, accRes] = await Promise.all([
+                api.get('/dashboard'),
+                api.get('/accounts')
+            ]);
+            setStats(dashRes.data || {});
+            const fetched = accRes.data.accounts || accRes.data || [];
+            setAccounts(Array.isArray(fetched) ? fetched : []);
         } catch (err) { 
             console.error('🔥 Dashboard Error:', err);
             setStats({});
@@ -31,12 +43,24 @@ const Dashboard = () => {
 
     useEffect(() => { fetchData(); }, []);
 
+    const handleCreateAccount = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/accounts', accountForm);
+            setAccountCreated(true);
+            setTimeout(() => { setAccountCreated(false); setShowAccountForm(false); }, 1500);
+            setAccountForm({ name: '', type: 'بنكي', bankName: '', openingBalance: '', accountNumber: '' });
+            fetchData();
+        } catch (err) { alert('خطأ في إنشاء الحساب'); }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
     );
 
+    const hasAccounts = accounts.length > 0;
     const { row1 = {}, row2 = {}, row3 = {}, details = {}, netWorthBreakdown = {}, insights = [], upcomingObligations = [] } = stats || {};
 
     const getModalData = () => {
@@ -57,15 +81,128 @@ const Dashboard = () => {
 
     const openModal = (type) => { setModalType(type); setShowModal(true); };
 
+    const accountTypes = [
+        { key: 'نقدي', label: 'نقدي (كاش)', icon: Coins, color: 'emerald' },
+        { key: 'بنكي', label: 'حساب بنكي', icon: Landmark, color: 'blue' },
+        { key: 'محفظة_إلكترونية', label: 'محفظة إلكترونية', icon: Smartphone, color: 'purple' },
+        { key: 'توفير', label: 'حساب توفير', icon: PiggyBank, color: 'amber' },
+        { key: 'استثمار', label: 'حساب استثمار', icon: TrendingUp, color: 'rose' },
+    ];
+
     return (
         <div className="space-y-8 md:space-y-10 fade-in pb-24 md:pb-10" dir="rtl">
             {/* Header */}
-            <header className="px-4 md:px-0">
-                <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">قمرة القيادة</h1>
-                <p className="text-slate-500 text-xs md:text-sm mt-1 md:mt-2 flex items-center gap-2">
-                    <Calendar size={14} /> المركز المالي والأداء التشغيلي
-                </p>
+            <header className="px-4 md:px-0 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">قمرة القيادة</h1>
+                    <p className="text-slate-500 text-xs md:text-sm mt-1 md:mt-2 flex items-center gap-2">
+                        <Calendar size={14} /> المركز المالي والأداء التشغيلي
+                    </p>
+                </div>
+                <button 
+                    onClick={() => setShowAccountForm(!showAccountForm)}
+                    className="flex items-center gap-2 px-5 py-3 bg-blue-600 text-white rounded-2xl font-bold shadow-xl shadow-blue-900/40 hover:scale-105 transition-all text-sm"
+                >
+                    <Plus size={18} /> إضافة حساب
+                </button>
             </header>
+
+            {/* ═══ Onboarding: No Accounts Yet ═══ */}
+            {!hasAccounts && !showAccountForm && (
+                <div className="mx-4 md:mx-0 relative overflow-hidden bg-gradient-to-br from-blue-950/60 via-slate-900 to-indigo-950/60 border-2 border-dashed border-blue-500/30 rounded-[3rem] p-10 md:p-16 text-center">
+                    <div className="absolute -top-10 -left-10 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl"></div>
+                    <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-indigo-500/5 rounded-full blur-3xl"></div>
+                    <div className="relative z-10">
+                        <div className="w-20 h-20 bg-blue-600/20 rounded-3xl flex items-center justify-center mx-auto mb-6 border border-blue-500/30">
+                            <Landmark size={40} className="text-blue-500" />
+                        </div>
+                        <h2 className="text-2xl md:text-3xl font-black text-white mb-3">مرحباً بك في نظامك المالي</h2>
+                        <p className="text-slate-400 text-sm md:text-base mb-8 max-w-md mx-auto leading-relaxed">
+                            لبدء تتبع أموالك، أضف حسابك البنكي أو النقدي الأول. سيتم تسجيل جميع العمليات المالية تلقائياً.
+                        </p>
+                        <button 
+                            onClick={() => setShowAccountForm(true)}
+                            className="inline-flex items-center gap-3 px-8 py-5 bg-blue-600 text-white rounded-[2rem] font-black text-lg shadow-2xl shadow-blue-900/50 hover:bg-blue-500 hover:scale-105 transition-all"
+                        >
+                            <Plus size={22} /> إضافة حسابك الأول
+                        </button>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ Quick Add Account Form ═══ */}
+            {showAccountForm && (
+                <div className="mx-4 md:mx-0 bg-slate-900 border border-blue-500/30 rounded-[3rem] p-8 md:p-10 shadow-2xl animate-in zoom-in-95 duration-300 relative">
+                    {accountCreated && (
+                        <div className="absolute inset-0 z-50 bg-slate-900/95 rounded-[3rem] flex flex-col items-center justify-center gap-4 animate-in fade-in">
+                            <CheckCircle2 size={56} className="text-emerald-500" />
+                            <p className="text-xl font-black text-white">تم إنشاء الحساب بنجاح!</p>
+                        </div>
+                    )}
+                    <div className="flex justify-between items-center mb-8">
+                        <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-3">
+                            <Landmark className="text-blue-500" /> إضافة حساب جديد
+                        </h3>
+                        <button onClick={() => setShowAccountForm(false)} className="p-2 text-slate-500 hover:text-white rounded-xl transition-all">
+                            <X size={22} />
+                        </button>
+                    </div>
+
+                    <form onSubmit={handleCreateAccount} className="space-y-6">
+                        {/* Account Type Selection */}
+                        <div className="space-y-3">
+                            <label className="text-[10px] text-slate-400 font-bold uppercase">نوع الحساب</label>
+                            <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+                                {accountTypes.map(t => {
+                                    const Icon = t.icon;
+                                    const isActive = accountForm.type === t.key;
+                                    return (
+                                        <button key={t.key} type="button" onClick={() => setAccountForm({...accountForm, type: t.key})}
+                                            className={`flex flex-col items-center gap-2 p-4 rounded-2xl border transition-all ${isActive ? `bg-${t.color}-600 border-transparent text-white shadow-lg` : 'bg-slate-800/50 border-slate-700 text-slate-500 hover:text-white hover:bg-slate-800'}`}>
+                                            <Icon size={20} />
+                                            <span className="text-[10px] font-black">{t.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                <label className="text-[10px] text-slate-400 font-bold uppercase">الرصيد الافتتاحي</label>
+                                <input type="number" required placeholder="0.00"
+                                    className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-5 text-white font-black text-2xl focus:border-blue-500 outline-none text-center transition-all"
+                                    value={accountForm.openingBalance} onChange={e => setAccountForm({...accountForm, openingBalance: e.target.value})} />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[10px] text-slate-400 font-bold uppercase">اسم الحساب</label>
+                                <input type="text" required placeholder="مثال: حساب الراتب، كاش البيت..."
+                                    className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-5 text-white font-bold focus:border-blue-500 outline-none transition-all"
+                                    value={accountForm.name} onChange={e => setAccountForm({...accountForm, name: e.target.value})} />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-3">
+                                <label className="text-[10px] text-slate-400 font-bold uppercase">اسم البنك / المنصة (اختياري)</label>
+                                <input type="text" placeholder="البنك الأهلي، فودافون كاش..."
+                                    className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-4 text-white font-bold focus:border-blue-500 outline-none transition-all"
+                                    value={accountForm.bankName} onChange={e => setAccountForm({...accountForm, bankName: e.target.value})} />
+                            </div>
+                            <div className="space-y-3">
+                                <label className="text-[10px] text-slate-400 font-bold uppercase">آخر 4 أرقام (اختياري)</label>
+                                <input type="text" maxLength={4} placeholder="1234"
+                                    className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-4 text-white font-bold focus:border-blue-500 outline-none text-center tracking-widest transition-all"
+                                    value={accountForm.accountNumber} onChange={e => setAccountForm({...accountForm, accountNumber: e.target.value})} />
+                            </div>
+                        </div>
+
+                        <button type="submit" className="w-full py-5 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/40 transition-all flex items-center justify-center gap-3">
+                            <Save size={20} /> تعريف الحساب وبدء التتبع
+                        </button>
+                    </form>
+                </div>
+            )}
 
             <div className="px-4 md:px-0 space-y-8 md:space-y-10">
 
