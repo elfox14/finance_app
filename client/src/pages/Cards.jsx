@@ -407,6 +407,122 @@ const Cards = () => {
                 </div>
             )}
 
+            {/* ═══ Transaction Modal ═══ */}
+            {showTransactionModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-slate-950 border border-slate-800 w-full max-w-2xl rounded-[3rem] p-10 relative shadow-2xl text-right overflow-y-auto max-h-[90vh] no-scrollbar">
+                        <button onClick={() => setShowTransactionModal(false)} className="absolute top-8 left-8 text-slate-500 hover:text-white transition-colors"><X size={28} /></button>
+                        <h2 className="text-2xl font-black text-white mb-2 flex items-center gap-3">
+                            <Receipt className="text-blue-500" /> تسجيل عملية جديدة
+                        </h2>
+                        <p className="text-sm text-slate-500 mb-8 font-bold">{selectedCard?.cardName} • {selectedCard?.bankName}</p>
+
+                        <form onSubmit={handleAddTransaction} className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-slate-400 font-bold uppercase">قيمة العملية</label>
+                                    <input type="number" required className="w-full bg-slate-900 border border-slate-800 text-white p-4 rounded-xl font-black text-xl text-center focus:border-blue-500 outline-none" value={transForm.amount} onChange={e => setTransForm({...transForm, amount: e.target.value})} placeholder="0.00" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-slate-400 font-bold uppercase">اسم التاجر / المتجر</label>
+                                    <input type="text" required className="w-full bg-slate-900 border border-slate-800 text-white p-4 rounded-xl font-bold focus:border-blue-500 outline-none" value={transForm.merchantName} onChange={e => setTransForm({...transForm, merchantName: e.target.value})} placeholder="أمازون، كارفور..." />
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-slate-400 font-bold uppercase">التاريخ</label>
+                                    <input type="date" required className="w-full bg-slate-900 border border-slate-800 text-white p-4 rounded-xl font-bold focus:border-blue-500 outline-none" value={transForm.transactionDate} onChange={e => setTransForm({...transForm, transactionDate: e.target.value})} />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] text-slate-400 font-bold uppercase">تصنيف المصروف</label>
+                                    <input type="text" className="w-full bg-slate-900 border border-slate-800 text-white p-4 rounded-xl font-bold focus:border-blue-500 outline-none" value={transForm.category} onChange={e => setTransForm({...transForm, category: e.target.value})} placeholder="بقالة، إلكترونيات..." />
+                                </div>
+                            </div>
+
+                            {selectedCard?.cardType === 'credit' && (
+                                <div className="border border-slate-800 rounded-2xl p-6 bg-slate-900/50">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        <input type="checkbox" id="isInstallment" className="w-5 h-5 accent-blue-500" checked={transForm.isInstallment} onChange={e => setTransForm({...transForm, isInstallment: e.target.checked})} />
+                                        <label htmlFor="isInstallment" className="text-white font-black cursor-pointer flex items-center gap-2"><PieIcon size={18} className="text-blue-500"/> تحويل العملية إلى قسط شهري</label>
+                                    </div>
+                                    
+                                    {transForm.isInstallment && (
+                                        <div className="space-y-4 animate-in fade-in">
+                                            <div className="flex gap-4 p-1 bg-slate-800 rounded-xl mb-4">
+                                                <button type="button" onClick={() => setTransForm({...transForm, instLogic: 'interest'})} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${transForm.instLogic === 'interest' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}>معدل فائدة إجمالي</button>
+                                                <button type="button" onClick={() => setTransForm({...transForm, instLogic: 'monthly'})} className={`flex-1 py-2 rounded-lg text-xs font-black transition-all ${transForm.instLogic === 'monthly' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:bg-slate-700'}`}>قيمة القسط الثابتة</button>
+                                            </div>
+
+                                            <div className="grid grid-cols-2 gap-4">
+                                                <div className="space-y-2">
+                                                    <label className="text-[10px] text-slate-400 font-bold uppercase">عدد الشهور</label>
+                                                    <input type="number" required={transForm.isInstallment} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-center focus:ring-1 focus:ring-blue-500 outline-none" value={transForm.installmentsCount} onChange={e => setTransForm({...transForm, installmentsCount: e.target.value})} />
+                                                </div>
+                                                
+                                                {transForm.instLogic === 'interest' ? (
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] text-slate-400 font-bold uppercase">إجمالي الفائدة (%) على المبلغ</label>
+                                                        <input type="number" step="0.1" required={transForm.isInstallment && transForm.instLogic === 'interest'} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-center focus:ring-1 focus:ring-blue-500 outline-none" value={transForm.interestRate} onChange={e => setTransForm({...transForm, interestRate: e.target.value})} placeholder="مثال: 0 لتقسيط بدون فوائد" />
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        <label className="text-[10px] text-slate-400 font-bold uppercase">قيمة القسط الشهري الواحد</label>
+                                                        <input type="number" required={transForm.isInstallment && transForm.instLogic === 'monthly'} className="w-full bg-slate-800 text-white p-3 rounded-xl font-black text-center focus:ring-1 focus:ring-blue-500 outline-none" value={transForm.installmentAmount} onChange={e => setTransForm({...transForm, installmentAmount: e.target.value})} placeholder="القسط الثابت الذي سيخصم" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {transForm.instLogic === 'interest' && transForm.amount > 0 && (
+                                                <p className="text-xs font-bold text-emerald-400 mt-2 text-center">
+                                                    القسط التقريبي: {((Number(transForm.amount) * (1 + Number(transForm.interestRate)/100)) / Number(transForm.installmentsCount || 1)).toLocaleString()} ج.م
+                                                </p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            <button type="submit" className="w-full py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/30 transition-all">تسجيل العملية</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* ═══ Payment Modal ═══ */}
+            {showPaymentModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
+                    <div className="bg-slate-950 border border-slate-800 w-full max-w-md rounded-[3rem] p-10 relative shadow-2xl text-right">
+                        <button onClick={() => setShowPaymentModal(false)} className="absolute top-8 left-8 text-slate-500 hover:text-white transition-colors"><X size={28} /></button>
+                        <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3"><DollarSign className="text-emerald-500" /> سداد المديونية</h2>
+                        <form onSubmit={handleAddPayment} className="space-y-6">
+                            <div>
+                                <label className="text-[10px] text-slate-400 font-bold uppercase mb-1 block">المبلغ المراد سداده</label>
+                                <input type="number" required className="w-full bg-slate-900 border border-emerald-500/30 text-emerald-400 p-6 rounded-3xl text-3xl font-black text-center outline-none focus:border-emerald-500 transition-all" value={payForm.amount} onChange={e => setPayForm({...payForm, amount: e.target.value})} placeholder="0.00" />
+                            </div>
+                            
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-400 font-bold uppercase">الخصم من حساب</label>
+                                <select className="w-full bg-slate-900 border border-slate-800 text-white p-4 rounded-xl font-bold outline-none focus:border-emerald-500" value={payForm.sourceAccount} onChange={e => setPayForm({...payForm, sourceAccount: e.target.value})} required>
+                                    <option value="">اختر حساب...</option>
+                                    {accounts.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
+                                </select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] text-slate-400 font-bold uppercase">نوع السداد</label>
+                                <select className="w-full bg-slate-900 border border-slate-800 text-white p-4 rounded-xl font-bold outline-none focus:border-emerald-500" value={payForm.paymentType} onChange={e => setPayForm({...payForm, paymentType: e.target.value})}>
+                                    <option value="سداد كامل">سداد كامل</option>
+                                    <option value="سداد جزئي">سداد جزئي</option>
+                                    <option value="سداد أدنى">سداد أدنى</option>
+                                </select>
+                            </div>
+                            
+                            <button type="submit" className="w-full py-5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl font-black text-lg shadow-xl shadow-emerald-900/30 transition-all">تنفيذ السداد والتسوية</button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             {/* Add Card Modal */}
             {showAddModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/95 backdrop-blur-md animate-in fade-in duration-300">
