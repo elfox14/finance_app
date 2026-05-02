@@ -23,12 +23,13 @@ exports.getLoans = async (req, res) => {
 
         const allUpcomingInstallments = await LoanInstallment.find({
             userId,
+            deletedAt: null,
             status: { $in: ['unpaid', 'late'] },
             dueDate: { $lte: nextMonth }
         }).populate('loanId', 'loanName lenderName').sort({ dueDate: 1 }).limit(10);
 
         const loansWithAnalytics = await Promise.all(loans.map(async (loan) => {
-            const payments = await LoanPayment.find({ loanId: loan._id });
+            const payments = await LoanPayment.find({ loanId: loan._id, deletedAt: null });
             const interestPaidThisLoan = payments.reduce((sum, p) => sum + (p.interestPaid || 0), 0);
             const principalPaidThisLoan = payments.reduce((sum, p) => sum + (p.principalPaid || 0), 0);
 
@@ -37,6 +38,7 @@ exports.getLoans = async (req, res) => {
             // Check arrears (متأخرات)
             const lateInstallments = await LoanInstallment.find({
                 loanId: loan._id,
+                deletedAt: null,
                 status: 'unpaid',
                 dueDate: { $lt: now }
             });
@@ -298,15 +300,61 @@ exports.updateLoan = async (req, res) => {
     }
 };
 
-// @desc    Delete loan
+// @desc    Delete loan (cascade: installments, payments, transactions, account reversal)
 exports.deleteLoan = async (req, res) => {
     try {
+        const userId = req.user._id;
+        const now = new Date();
+
+        // 1. Find and soft-delete the loan itself
         const loan = await Loan.findOneAndUpdate(
-            { _id: req.params.id, userId: req.user._id },
-            { deletedAt: new Date() }
+            { _id: req.params.id, userId },
+            { deletedAt: now }
         );
         if (!loan) return res.status(404).json({ message: 'القرض غير موجود' });
-        res.json({ message: 'تم حذف القرض' });
+
+        const loanId = loan._id;
+
+        // 2. Soft-delete all related installments
+        await LoanInstallment.updateMany(
+            { loanId, userId },
+            { deletedAt: now }
+        );
+
+        // 3. Soft-delete all related payments & reverse account deductions
+        const payments = await LoanPayment.find({ loanId, userId, deletedAt: null });
+        for (const payment of payments) {
+            // Reverse source account balance (re-add the payment amount)
+            if (payment.sourceAccountId) {
+                const sourceAccount = await Account.findById(payment.sourceAccountId);
+                if (sourceAccount) {
+                    sourceAccount.balance += Number(payment.amount || 0);
+                    await sourceAccount.save();
+                }
+            }
+        }
+        await LoanPayment.updateMany(
+            { loanId, userId },
+            { deletedAt: now }
+        );
+
+        // 4. Delete all linked transactions (financing_in, debt payments, interest)
+        await Transaction.deleteMany({
+            userId,
+            'linkedEntity.entityType': 'Loan',
+            'linkedEntity.entityId': loanId
+        });
+
+        // 5. Reverse the initial loan deposit to the receiving account
+        if (loan.receivingAccountId) {
+            const receivingAccount = await Account.findById(loan.receivingAccountId);
+            if (receivingAccount) {
+                receivingAccount.balance -= Number(loan.principalAmount || 0);
+                await receivingAccount.save();
+            }
+        }
+
+        res.json({ message: 'تم حذف القرض وجميع البيانات المرتبطة به' });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
