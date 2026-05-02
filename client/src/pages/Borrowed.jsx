@@ -105,6 +105,8 @@ const Borrowed = () => {
                         </div>
                         <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-500 mr-2">إيداع في حساب</label>
+                            <select className="w-full bg-slate-800/50 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold focus:border-red-500" value={form.accountId} onChange={e => setForm({...form, accountId: e.target.value})} required>
+                                <option value="">اختر الحساب...</option>
                                 {Array.isArray(accounts) && accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
                             </select>
                         </div>
