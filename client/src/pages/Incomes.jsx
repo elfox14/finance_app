@@ -44,12 +44,14 @@ const Incomes = () => {
                 api.get('/incomes'),
                 api.get('/accounts')
             ]);
-            setIncomes(incRes.data.incomes);
-            setStats(incRes.data.stats);
-            setAccounts(accRes.data);
+            setIncomes(incRes.data.incomes || []);
+            setStats(incRes.data.stats || null);
+            const fetchedAccounts = accRes.data.accounts || accRes.data || [];
+            const accList = Array.isArray(fetchedAccounts) ? fetchedAccounts : [];
+            setAccounts(accList);
 
-            if (accRes.data.length > 0 && !formData.accountId) {
-                setFormData(prev => ({ ...prev, accountId: accRes.data[0]._id }));
+            if (accList.length > 0 && !formData.accountId) {
+                setFormData(prev => ({ ...prev, accountId: accList[0]._id }));
             }
         } catch (err) {
             console.error('Error fetching incomes:', err);
@@ -177,7 +179,7 @@ const Incomes = () => {
                                 required
                             >
                                 <option value="">اختر الحساب...</option>
-                                {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
+                                {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({(acc.balance || 0).toLocaleString()} ج.م)</option>)}
                             </select>
                         </div>
                         <div className="space-y-3 md:col-span-2">

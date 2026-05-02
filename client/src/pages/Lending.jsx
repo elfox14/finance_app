@@ -27,11 +27,13 @@ const Lending = () => {
             const allDebts = Array.isArray(debtRes.data.debts) ? debtRes.data.debts : [];
             setDebts(allDebts.filter(d => d.type === 'lent'));
             setStats(debtRes.data.stats);
-            setAccounts(accRes.data);
+            const fetchedAccounts = accRes.data.accounts || accRes.data || [];
+            const accList = Array.isArray(fetchedAccounts) ? fetchedAccounts : [];
+            setAccounts(accList);
 
-            if (accRes.data.length > 0) {
-                if (!form.accountId) setForm(prev => ({ ...prev, accountId: accRes.data[0]._id }));
-                if (!paymentAccountId) setPaymentAccountId(accRes.data[0]._id);
+            if (accList.length > 0) {
+                if (!form.accountId) setForm(prev => ({ ...prev, accountId: accList[0]._id }));
+                if (!paymentAccountId) setPaymentAccountId(accList[0]._id);
             }
         } catch (err) { console.error(err); }
         finally { setLoading(false); }

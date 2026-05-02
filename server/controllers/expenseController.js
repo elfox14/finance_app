@@ -63,6 +63,7 @@ exports.getExpenses = async (req, res) => {
                 fixedTotal,
                 variableTotal,
                 budgetStatus,
+                categoryAnalysis,
                 topCategory: Object.entries(categoryAnalysis).sort((a, b) => b[1] - a[1])[0]?.[0] || 'لا يوجد'
             }
         });

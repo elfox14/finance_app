@@ -30,10 +30,12 @@ const Groups = () => {
                 api.get('/accounts')
             ]);
             setGroups(Array.isArray(groupRes.data) ? groupRes.data : []);
-            setAccounts(accRes.data);
-            if (accRes.data.length > 0) {
-                setPaymentAccountId(accRes.data[0]._id);
-                setPayoutAccountId(accRes.data[0]._id);
+            const fetchedAccounts = accRes.data.accounts || accRes.data || [];
+            const accList = Array.isArray(fetchedAccounts) ? fetchedAccounts : [];
+            setAccounts(accList);
+            if (accList.length > 0) {
+                setPaymentAccountId(accList[0]._id);
+                setPayoutAccountId(accList[0]._id);
             }
         } catch (err) { console.error(err); }
         finally { setLoading(false); }

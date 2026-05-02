@@ -39,13 +39,15 @@ const Expenses = () => {
                 api.get('/expenses'),
                 api.get('/accounts')
             ]);
-            setExpenses(expRes.data.expenses);
-            setStats(expRes.data.stats);
-            setAccounts(accRes.data);
+            setExpenses(expRes.data.expenses || []);
+            setStats(expRes.data.stats || null);
+            const fetchedAccounts = accRes.data.accounts || accRes.data || [];
+            setAccounts(Array.isArray(fetchedAccounts) ? fetchedAccounts : []);
             
             // Set default account if available
-            if (accRes.data.length > 0 && !formData.accountId) {
-                setFormData(prev => ({ ...prev, accountId: accRes.data[0]._id }));
+            const accList = Array.isArray(fetchedAccounts) ? fetchedAccounts : [];
+            if (accList.length > 0 && !formData.accountId) {
+                setFormData(prev => ({ ...prev, accountId: accList[0]._id }));
             }
         } catch (err) {
             console.error('Error fetching data:', err);
@@ -146,7 +148,7 @@ const Expenses = () => {
                                 <select name="accountId" value={formData.accountId} onChange={handleChange} required
                                     className="w-full bg-slate-800/50 border border-slate-700 rounded-2xl px-6 py-4 text-white font-bold outline-none focus:border-blue-500">
                                     <option value="">اختر الحساب...</option>
-                                    {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
+                                    {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({(acc.balance || 0).toLocaleString()} ج.م)</option>)}
                                 </select>
                             </div>
                             <div className="space-y-3">
