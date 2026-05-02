@@ -186,7 +186,7 @@ const Groups = () => {
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-slate-500 mr-2">الخصم من حساب</label>
                                 <select className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold focus:border-blue-500" value={paymentAccountId} onChange={e => setPaymentAccountId(e.target.value)} required>
-                                    {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
+                                    {Array.isArray(accounts) && accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
                                 </select>
                             </div>
                             <button type="submit" className="w-full py-5 bg-blue-600 rounded-2xl font-black text-white shadow-xl shadow-blue-900/40 hover:bg-blue-500 transition-all">تأكيد الدفع</button>
@@ -208,7 +208,7 @@ const Groups = () => {
                             <div className="space-y-2">
                                 <label className="text-xs font-bold text-slate-500 mr-2">الإيداع في حساب</label>
                                 <select className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none font-bold focus:border-emerald-500" value={payoutAccountId} onChange={e => setPayoutAccountId(e.target.value)} required>
-                                    {accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
+                                    {Array.isArray(accounts) && accounts.map(acc => <option key={acc._id} value={acc._id}>{acc.name} ({acc.balance.toLocaleString()} ج.م)</option>)}
                                 </select>
                             </div>
                             <button type="submit" className="w-full py-5 bg-emerald-600 rounded-2xl font-black text-white shadow-xl shadow-emerald-900/40 hover:bg-emerald-500 transition-all">تأكيد الاستلام</button>

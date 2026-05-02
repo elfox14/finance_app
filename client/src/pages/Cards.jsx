@@ -180,7 +180,7 @@ const Cards = () => {
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 px-4 md:px-0">
                 {/* 2) Cards List */}
                 <div className="xl:col-span-2 space-y-6">
-                    {cards.map((card) => {
+                    {(Array.isArray(cards) ? cards : []).map((card) => {
                         const isCredit = card.cardType === 'credit' || card.cardType === 'ائتمانية';
                         const analytics = card.analytics || {};
                         return (
@@ -274,7 +274,7 @@ const Cards = () => {
                             <History className="text-slate-400" /> أحدث عمليات البطاقات
                         </h3>
                         <div className="space-y-4">
-                            {recentTransactions.map(tx => (
+                            {(Array.isArray(recentTransactions) ? recentTransactions : []).map(tx => (
                                 <div key={tx._id} className="flex items-center justify-between p-4 bg-slate-800/50 rounded-2xl border border-slate-700/50">
                                     <div>
                                         <p className="font-black text-white text-sm">{tx.merchantName}</p>
@@ -440,7 +440,7 @@ const Cards = () => {
                                     <label className="text-[10px] text-slate-400 font-bold uppercase">الحساب البنكي المرتبط</label>
                                     <select className="w-full bg-slate-900 border border-slate-800 text-white p-4 rounded-xl font-bold focus:border-blue-500 outline-none" value={newCardForm.linkedAccountId} onChange={e => setNewCardForm({...newCardForm, linkedAccountId: e.target.value})}>
                                         <option value="">بدون حساب</option>
-                                        {accounts.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
+                                        {Array.isArray(accounts) && accounts.map(a => <option key={a._id} value={a._id}>{a.name}</option>)}
                                     </select>
                                 </div>
                             )}

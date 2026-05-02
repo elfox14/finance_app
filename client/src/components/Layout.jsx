@@ -6,7 +6,7 @@ import {
     ArrowDownLeft, CreditCard, Landmark, 
     Users, Bell, LogOut, Menu, X, PieChart, 
     Receipt, ShieldCheck, Target, Handshake,
-    Coins, Banknote, History, Settings, FileText
+    Coins, Banknote, History, Settings
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
