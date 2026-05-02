@@ -3,7 +3,7 @@ import api from '../api/axios';
 import { 
     Search, Filter, ArrowUpRight, ArrowDownLeft, 
     ArrowLeftRight, Calendar, Tag, CreditCard, 
-    CheckCircle2, Clock, Trash2, ChevronDown, Landmark, Wallet
+    CheckCircle2, Clock, Trash2, Landmark, Wallet, History
 } from 'lucide-react';
 
 const Ledger = () => {
@@ -114,7 +114,7 @@ const Ledger = () => {
                                             <span className="text-xs font-bold">{tx.accountId?.name || 'حساب مجهول'}</span>
                                             {tx.destinationAccountId && (
                                                 <>
-                                                    <ChevronDown size={12} className="-rotate-90" />
+                                                    <span className="text-[10px] text-blue-500 mx-1">←</span>
                                                     <span className="text-xs font-bold text-blue-400">{tx.destinationAccountId?.name}</span>
                                                 </>
                                             )}

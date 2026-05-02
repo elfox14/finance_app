@@ -6,7 +6,7 @@ import {
     ArrowDownLeft, CreditCard, Landmark, 
     Users, Bell, LogOut, Menu, X, PieChart, 
     Receipt, ShieldCheck, Target, Handshake,
-    Coins, Banknote, History, Settings, ListChecks
+    Coins, Banknote, History, Settings, FileText
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -45,7 +45,7 @@ const Layout = ({ children }) => {
         {
             title: "الموازنات والتدقيق",
             items: [
-                { path: '/ledger', icon: ListChecks, label: 'السجل الموحد' },
+                { path: '/ledger', icon: History, label: 'السجل الموحد' },
                 { path: '/budgets', icon: Target, label: 'إدارة الموازنات' },
             ]
         },
@@ -66,7 +66,7 @@ const Layout = ({ children }) => {
 
     const bottomNavItems = [
         { path: '/', icon: LayoutDashboard, label: 'الرئيسية' },
-        { path: '/ledger', icon: ListChecks, label: 'السجل' },
+        { path: '/ledger', icon: History, label: 'السجل' },
         { path: '/budgets', icon: Target, label: 'موازنات' },
         { path: '/reports', icon: PieChart, label: 'تقارير' },
         { path: '/notifications', icon: Bell, label: 'تنبيهات' },
