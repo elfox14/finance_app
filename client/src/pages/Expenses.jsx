@@ -108,7 +108,7 @@ const Expenses = () => {
     };
 
     return (
-        <div className="space-y-10 pb-24 md:pb-10" dir="rtl">
+        <div className="space-y-10 fade-in pb-24 md:pb-10" dir="rtl">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 px-4 md:px-0">
                 <div>
                     <h1 className="text-3xl md:text-5xl font-black text-white italic tracking-tighter">إدارة المصروفات</h1>

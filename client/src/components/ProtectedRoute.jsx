@@ -4,16 +4,11 @@ import { useAuth } from '../context/AuthContext';
 const ProtectedRoute = ({ children }) => {
     const { user, loading } = useAuth();
 
-    // بدلاً من إرجاع null (التي تظهر كصفحة فارغة)، سنعرض مؤشر تحميل بسيط
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-            </div>
-        );
-    }
+    // بما أن AuthProvider يتعامل مع حالة التحميل العالمية، هنا نتعامل فقط مع التوجيه
+    if (loading) return null; // تجنب الرندر المزدوج
 
     if (!user) {
+        // العودة لصفحة الدخول إذا لم يكن المستخدم مسجلاً
         return <Navigate to="/login" replace />;
     }
 

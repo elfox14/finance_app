@@ -25,17 +25,14 @@ const connectDB = async () => {
         console.log(`✅ MongoDB Connected`);
     } catch (error) {
         console.error(`❌ DB Connection Failed: ${error.message}`);
-        // لا نغلق السيرفر للسماح له بخدمة ملفات الـ Frontend حتى لو القاعدة معطلة مؤقتاً
+        process.exit(1);
     }
 };
 
 const app = express();
 app.use(express.json());
 app.use(cors());
-app.use(helmet({ 
-    contentSecurityPolicy: false,
-    crossOriginEmbedderPolicy: false 
-}));
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(morgan('dev'));
 
 // API Routes
@@ -56,17 +53,19 @@ apiRouter.use('/accounts', require('./routes/accountRoutes'));
 apiRouter.use('/transactions', require('./routes/transactionRoutes'));
 
 app.use('/api', apiRouter);
+app.use('/fin/api', apiRouter);
 
-// 🚀 Static Files
+// 🚀 دعم المسار الفرعي /fin للملفات الثابتة
 const clientDistPath = path.join(__dirname, '../client/dist');
-app.use(express.static(clientDistPath));
+app.use('/fin', express.static(clientDistPath));
+app.use(express.static(clientDistPath)); // دعم المسار الرئيسي أيضاً للاحتياط
 
-// 🔄 SPA Fallback
-app.get('*', (req, res) => {
-    if (req.url.startsWith('/api')) {
-        return res.status(404).json({ message: 'API Route Not Found' });
+// أي طلب لا يخص الـ API يتم توجيهه لـ index.html لدعم React Router
+app.use((req, res, next) => {
+    if (req.url.startsWith('/api') || req.url.startsWith('/fin/api')) {
+        return next();
     }
-    res.sendFile(path.resolve(clientDistPath, 'index.html'));
+    return res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
 const PORT = process.env.PORT || 10000;
@@ -76,6 +75,7 @@ const startServer = async () => {
     app.listen(PORT, () => {
         console.log(`🚀 Server running on port ${PORT}`);
         
+        // Start Cron Jobs
         cron.schedule('0 1 * * *', () => {
             console.log('⏳ Running scheduled KPI Snapshots...');
             kpiService.generateDailySnapshotsForAll();
