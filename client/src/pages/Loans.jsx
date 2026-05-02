@@ -83,13 +83,15 @@ const Loans = () => {
         try {
             await api.post('/loans/payment', { 
                 ...paymentForm, 
-                loanId: selectedLoan._id,
+                loanId: selectedLoan?._id || selectedLoan,
                 amount: Number(paymentForm.amount),
                 principalPaid: Number(paymentForm.principalPaid),
                 interestPaid: Number(paymentForm.interestPaid)
             });
             setShowPaymentModal(false);
-            fetchLoanDetails(selectedLoan._id);
+            if (showDetailsModal && selectedLoan?._id) {
+                fetchLoanDetails(selectedLoan._id);
+            }
             fetchData();
         } catch (err) { alert('خطأ في تسجيل السداد'); }
     };
@@ -122,7 +124,8 @@ const Loans = () => {
         };
     };
 
-    const preparePaymentForm = (inst) => {
+    const preparePaymentForm = (inst, loan) => {
+        if (loan) setSelectedLoan(loan);
         setPaymentForm(f => ({
             ...f,
             installmentId: inst._id,
@@ -168,6 +171,12 @@ const Loans = () => {
                                     <span className="font-bold text-slate-400">{new Date(inst.dueDate).toLocaleDateString('ar-EG', { day: 'numeric', month: 'short' })}</span>
                                     <span className={inst.status === 'late' ? 'text-red-500 font-black' : 'text-orange-400 font-black'}>{inst.status === 'late' ? 'متأخر!' : 'قادم'}</span>
                                 </div>
+                                <button 
+                                    onClick={() => preparePaymentForm(inst, inst.loanId)} 
+                                    className="w-full mt-4 py-2 bg-emerald-600/10 hover:bg-emerald-600 text-emerald-500 hover:text-white rounded-xl text-xs font-black transition-all"
+                                >
+                                    سداد القسط
+                                </button>
                             </div>
                         ))}
                         {upcomingInstallments.length === 0 && (
@@ -295,7 +304,7 @@ const Loans = () => {
                                                     <p className="text-2xl font-black text-white border-r border-slate-700 pr-4 ml-4">{inst.amount?.toLocaleString()}</p>
                                                 </div>
                                                 {inst.status !== 'paid' && (
-                                                    <button onClick={() => preparePaymentForm(inst)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-900/30">
+                                                    <button onClick={() => preparePaymentForm(inst, selectedLoan)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl text-xs font-black shadow-lg shadow-emerald-900/30">
                                                         سداد
                                                     </button>
                                                 )}
