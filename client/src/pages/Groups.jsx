@@ -22,6 +22,7 @@ const Groups = () => {
         groupName: '', totalAmount: '', monthlyAmount: '', durationMonths: '', 
         userPayoutOrder: '', startDate: new Date().toISOString().split('T')[0]
     });
+    const [errorMsg, setErrorMsg] = useState('');
 
     const fetchData = async () => {
         try {
@@ -44,7 +45,8 @@ const Groups = () => {
     useEffect(() => { fetchData(); }, []);
 
     const handleCreateGroup = async (e) => {
-        e.preventDefault();
+        if (e && e.preventDefault) e.preventDefault();
+        setErrorMsg('');
         try {
             const payload = {
                 ...newGroupForm,
@@ -61,7 +63,8 @@ const Groups = () => {
             setNewGroupForm({ groupName: '', totalAmount: '', monthlyAmount: '', durationMonths: '', userPayoutOrder: '', startDate: new Date().toISOString().split('T')[0] });
             fetchData();
         } catch (err) { 
-            alert('خطأ في إضافة الجمعية: ' + (err.response?.data?.message || err.message)); 
+            console.error(err);
+            setErrorMsg(err.response?.data?.message || err.message || 'حدث خطأ غير معروف');
         }
     };
 
@@ -240,7 +243,8 @@ const Groups = () => {
                         <h2 className="text-2xl font-black text-white mb-8 flex items-center gap-3">
                             <Users className="text-blue-500" /> إضافة جمعية جديدة
                         </h2>
-                        <form onSubmit={handleCreateGroup} className="space-y-4">
+                        {errorMsg && <div className="p-4 mb-6 bg-red-500/20 border border-red-500 rounded-xl text-red-400 font-bold text-sm">{errorMsg}</div>}
+                        <form className="space-y-4">
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black text-slate-500 uppercase px-2">اسم الجمعية</label>
                                 <input required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newGroupForm.groupName} onChange={e => setNewGroupForm({...newGroupForm, groupName: e.target.value})} placeholder="مثلاً: جمعية العائلة" />
@@ -269,7 +273,7 @@ const Groups = () => {
                                 <label className="text-[10px] font-black text-slate-500 uppercase px-2">تاريخ البداية</label>
                                 <input type="date" required className="w-full bg-slate-800 border border-slate-700 text-white p-4 rounded-2xl outline-none focus:border-blue-500 transition-all" value={newGroupForm.startDate} onChange={e => setNewGroupForm({...newGroupForm, startDate: e.target.value})} />
                             </div>
-                            <button type="submit" className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/40 transition-all mt-4">
+                            <button type="button" onClick={handleCreateGroup} className="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-black text-lg shadow-xl shadow-blue-900/40 transition-all mt-4">
                                 إنشاء الجمعية
                             </button>
                         </form>
