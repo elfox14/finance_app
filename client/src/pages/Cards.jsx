@@ -142,6 +142,16 @@ const Cards = () => {
         } catch (err) { alert('خطأ في الحذف'); }
     };
 
+    const handlePayInstallment = async (instId, scheduleId) => {
+        const sourceAcc = accounts.length > 0 ? accounts[0]._id : null;
+        if (!window.confirm('هل أنت متأكد من سداد هذه الدفعة من القسط؟')) return;
+        try {
+            await api.post(`/cards/installments/${instId}/schedule/${scheduleId}/pay`, { sourceAccount: sourceAcc });
+            fetchCardDetails(selectedCard._id);
+            fetchData();
+        } catch (err) { alert('خطأ في السداد'); }
+    };
+
     if (loading) return (
         <div className="flex items-center justify-center h-[60vh]">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -409,6 +419,33 @@ const Cards = () => {
                                                 <p className="text-lg md:text-xl font-black text-blue-500">{i.installmentsCount}</p>
                                             </div>
                                         </div>
+                                        {i.schedule && i.schedule.length > 0 && (
+                                            <div className="mt-6 border-t border-slate-800 pt-6">
+                                                <p className="text-sm font-bold text-slate-400 mb-4">جدول الدفعات</p>
+                                                <div className="space-y-3">
+                                                    {i.schedule.map(s => (
+                                                        <div key={s._id} className="flex items-center justify-between p-3 bg-slate-800/30 rounded-xl border border-slate-700/50">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${s.status === 'paid' ? 'bg-emerald-900/50 text-emerald-400' : 'bg-slate-700 text-slate-400'}`}>
+                                                                    {s.installmentNumber}
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-sm font-black text-white">{s.amount?.toLocaleString()} ج.م</p>
+                                                                    <p className="text-xs text-slate-500">{new Date(s.dueDate).toLocaleDateString('ar-EG', { month: 'short', year: 'numeric' })}</p>
+                                                                </div>
+                                                            </div>
+                                                            {s.status === 'unpaid' ? (
+                                                                <button onClick={() => handlePayInstallment(i._id, s._id)} className="px-4 py-2 bg-blue-600/20 text-blue-400 hover:bg-blue-600 hover:text-white rounded-lg text-xs font-black transition-all">
+                                                                    سداد
+                                                                </button>
+                                                            ) : (
+                                                                <span className="text-xs font-bold text-emerald-500 flex items-center gap-1"><CheckCircle2 size={14}/> مسددة</span>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )) : <div className="py-20 text-center text-slate-500">لا توجد أقساط نشطة</div>
                             )}

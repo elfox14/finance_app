@@ -13,6 +13,13 @@ const cardInstallmentSchema = new mongoose.Schema({
     startMonth: { type: Number, required: true }, // شهر البداية
     startYear: { type: Number, required: true }, // سنة البداية
     status: { type: String, enum: ['نشط', 'مكتمل', 'ملغى', 'active', 'completed', 'cancelled'], default: 'نشط' },
+    schedule: [{
+        installmentNumber: Number,
+        dueDate: Date,
+        amount: Number,
+        status: { type: String, enum: ['unpaid', 'paid'], default: 'unpaid' },
+        paymentDate: Date
+    }],
     notes: String,
     deletedAt: { type: Date, default: null }
 }, { timestamps: true });

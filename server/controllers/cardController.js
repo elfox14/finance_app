@@ -104,12 +104,33 @@ exports.addCardTransaction = async (req, res) => {
                 total = monthly * Number(installmentsCount);
             }
 
+            const startMonth = new Date(transactionDate).getMonth() + 1;
+            const startYear = new Date(transactionDate).getFullYear();
+            
+            const schedule = [];
+            let currentMonth = startMonth;
+            let currentYear = startYear;
+            
+            for (let i = 1; i <= installmentsCount; i++) {
+                const dueDate = new Date(currentYear, currentMonth, 1);
+                schedule.push({
+                    installmentNumber: i,
+                    dueDate: dueDate,
+                    amount: monthly,
+                    status: 'unpaid'
+                });
+                currentMonth++;
+                if (currentMonth > 12) {
+                    currentMonth = 1;
+                    currentYear++;
+                }
+            }
+
             const installment = await CardInstallment.create({
                 userId, cardId, transactionId: cardTx._id,
                 principalAmount: principal, installmentsCount, installmentAmount: monthly,
                 interestRate: Number(interestRate || 0), totalAfterInterest: total,
-                startMonth: new Date(transactionDate).getMonth() + 1,
-                startYear: new Date(transactionDate).getFullYear()
+                startMonth, startYear, schedule
             });
 
             cardTx.installmentId = installment._id;
@@ -314,5 +335,63 @@ exports.deleteCard = async (req, res) => {
         res.json({ message: 'تم الحذف بنجاح' });
     } catch (error) {
         res.status(500).json({ message: error.message });
+    }
+};
+
+// @desc    Pay specific card installment
+exports.payCardInstallment = async (req, res) => {
+    try {
+        const { id, scheduleId } = req.params;
+        const { sourceAccount } = req.body;
+        
+        const installment = await CardInstallment.findById(id);
+        if (!installment) throw new Error('القسط غير موجود');
+
+        const scheduleItem = installment.schedule.id(scheduleId);
+        if (!scheduleItem) throw new Error('الدفعة غير موجودة');
+        
+        if (scheduleItem.status === 'paid') throw new Error('الدفعة مسددة بالفعل');
+
+        const card = await Card.findById(installment.cardId);
+        if (!card) throw new Error('البطاقة غير موجودة');
+
+        // Decrease card balance
+        card.currentBalance -= scheduleItem.amount;
+        if (card.currentBalance < 0) card.currentBalance = 0;
+        await card.save();
+
+        // Create transaction from source account if provided
+        if (sourceAccount) {
+            await Transaction.create({
+                userId: req.user._id,
+                date: new Date(),
+                type: 'سداد',
+                amount: scheduleItem.amount,
+                accountId: sourceAccount,
+                category: 'سداد بطاقة ائتمان',
+                counterparty: card.bankName,
+                status: 'مُسوّى',
+                notes: `سداد قسط رقم ${scheduleItem.installmentNumber} لبطاقة: ${card.cardName}`,
+                classification: 'debt_principal_payment',
+                affectsCashflow: false,
+                affectsNetworth: false,
+                linkedEntity: { entityType: 'Card', entityId: card._id }
+            });
+        }
+
+        // Mark as paid
+        scheduleItem.status = 'paid';
+        scheduleItem.paymentDate = new Date();
+        installment.paidInstallments += 1;
+        
+        if (installment.paidInstallments >= installment.installmentsCount) {
+            installment.status = 'completed';
+        }
+        
+        await installment.save();
+
+        res.json({ message: 'تم سداد القسط بنجاح', installment });
+    } catch (error) {
+        res.status(400).json({ message: error.message });
     }
 };
