@@ -20,7 +20,7 @@ const Groups = () => {
     
     const [newGroupForm, setNewGroupForm] = useState({
         groupName: '', totalAmount: '', monthlyAmount: '', durationMonths: '', 
-        userPayoutOrder: '', startDate: ''
+        userPayoutOrder: '', startDate: new Date().toISOString().split('T')[0]
     });
 
     const fetchData = async () => {
@@ -46,11 +46,23 @@ const Groups = () => {
     const handleCreateGroup = async (e) => {
         e.preventDefault();
         try {
-            await api.post('/groups', newGroupForm);
+            const payload = {
+                ...newGroupForm,
+                totalAmount: Number(newGroupForm.totalAmount),
+                monthlyAmount: Number(newGroupForm.monthlyAmount),
+                durationMonths: Number(newGroupForm.durationMonths),
+                userPayoutOrder: Number(newGroupForm.userPayoutOrder),
+            };
+            if (!payload.startDate) {
+                delete payload.startDate; // Let mongoose use default Date.now
+            }
+            await api.post('/groups', payload);
             setShowAddModal(false);
-            setNewGroupForm({ groupName: '', totalAmount: '', monthlyAmount: '', durationMonths: '', userPayoutOrder: '', startDate: '' });
+            setNewGroupForm({ groupName: '', totalAmount: '', monthlyAmount: '', durationMonths: '', userPayoutOrder: '', startDate: new Date().toISOString().split('T')[0] });
             fetchData();
-        } catch (err) { alert('خطأ في إضافة الجمعية'); }
+        } catch (err) { 
+            alert('خطأ في إضافة الجمعية: ' + (err.response?.data?.message || err.message)); 
+        }
     };
 
     const handleRecordPayment = async (e) => {
