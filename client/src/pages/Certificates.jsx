@@ -32,10 +32,12 @@ const Certificates = () => {
             ]);
             setCerts(Array.isArray(resCerts.data.certificates) ? resCerts.data.certificates : []);
             setStats(resCerts.data.stats || {});
-            setAccounts(Array.isArray(resAccs.data) ? resAccs.data : []);
+            const fetchedAccounts = resAccs.data.accounts || resAccs.data || [];
+            const accList = Array.isArray(fetchedAccounts) ? fetchedAccounts : [];
+            setAccounts(accList);
             
-            if (resAccs.data?.length > 0) {
-                setForm(f => ({ ...f, linkedAccountId: resAccs.data[0]._id }));
+            if (accList.length > 0) {
+                setForm(f => ({ ...f, linkedAccountId: accList[0]._id }));
             }
         } catch (err) { console.error(err); }
         finally { setLoading(false); }
